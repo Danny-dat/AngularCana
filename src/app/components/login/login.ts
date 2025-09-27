@@ -14,8 +14,10 @@ import { AuthService } from '../../services/auth.service'; // <-- Korrekter Impo
 export class LoginComponent {
   email = ''; password = ''; isLoading = false; errorMessage: string | null = null;
   constructor(private authService: AuthService, private router: Router) { }
+ 
   async doLogin(): Promise<void> {
-    this.isLoading = true; this.errorMessage = null;
+    this.isLoading = true;
+    this.errorMessage = null;
     try {
       await this.authService.login(this.email, this.password);
       this.router.navigate(['/dashboard']);
