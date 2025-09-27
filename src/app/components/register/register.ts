@@ -1,35 +1,26 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // Für [(ngModel)]
-import { Router, RouterModule } from '@angular/router'; // Für routerLink
-import { AuthService } from '../../services/auth.service';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService, RegisterData } from '../../services/auth.service'; // <-- Korrekter Import
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-register',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './login.html',  // <-- Korrigierter Pfad
-  styleUrls: ['./login.css']   // <-- Korrigierter Pfad
+  templateUrl: './register.html',
+  styleUrls: ['./register.css']
 })
-export class LoginComponent {
-  // Die Logik hier bleibt unverändert
-  email = '';
-  password = '';
-  isLoading = false;
-  errorMessage: string | null = null;
-
+export class RegisterComponent {
+  form: RegisterData = { email: '', password: '', displayName: '', phoneNumber: '' };
+  isLoading = false; errorMessage: string | null = null;
   constructor(private authService: AuthService, private router: Router) { }
-
-  async doLogin(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = null;
+  async doRegister(): Promise<void> {
+    this.isLoading = true; this.errorMessage = null;
     try {
-      await this.authService.login(this.email, this.password);
-      this.router.navigate(['/dashboard']); // Weiterleitung nach Erfolg
-    } catch (error: any) {
-      this.errorMessage = 'Login fehlgeschlagen. Bitte prüfe deine Eingaben.';
-    } finally {
-      this.isLoading = false;
-    }
+      await this.authService.register(this.form);
+      this.router.navigate(['/dashboard']);
+    } catch (error) { this.errorMessage = 'Registrierung fehlgeschlagen.'; }
+    finally { this.isLoading = false; }
   }
 }

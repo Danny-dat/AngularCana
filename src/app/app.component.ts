@@ -1,19 +1,16 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common'; // <-- Wichtig für *ngIf, async pipe etc.
-import { Router, RouterModule } from '@angular/router'; // <-- Wichtig für routerLink und <router-outlet>
+import { CommonModule } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { User } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-root',
-  standalone: true, // <-- Markiert die Komponente als "standalone"
-  imports: [
-    CommonModule, // Stellt *ngIf, *ngFor, async pipe etc. bereit
-    RouterModule  // Stellt routerLink und <router-outlet> bereit
-  ],
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  templateUrl: './app.html',
+  styleUrls: ['./app.css']
 })
 export class AppComponent {
   showMenu = false;

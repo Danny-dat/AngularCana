@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, collectionData, addDoc, serverTimestamp, orderBy, query, limit, Timestamp, doc, getDoc } from '@angular/fire/firestore';
-import { Observable, combineLatest, of } from 'rxjs';
+import { Observable, combineLatest, of, from } from 'rxjs'; // <-- 'from' HIER HINZUGEFÜGT
 import { map, switchMap } from 'rxjs/operators';
 
 // Interface für eine globale Chat-Nachricht

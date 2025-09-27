@@ -1,17 +1,16 @@
 import { Injectable } from '@angular/core';
-import { Firestore, doc, setDoc, deleteDoc, serverTimestamp } from '@angular/fire/firestore';
-import { Unsubscribe } from '@angular/fire/auth';
-import { collectionData, query, collection, where, onSnapshot } from '@angular/fire/firestore';
-import { Observable, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Firestore, doc, setDoc, deleteDoc, serverTimestamp, collectionData, query, collection, where } from '@angular/fire/firestore';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators'; // <-- Wichtiger Import für den map-Operator
 
 // Interface für die Daten in der "presence" Collection
 export interface Presence {
+  id?: string; // Wird durch collectionData hinzugefügt
   heartbeatAt: any;
   lastSeenAt: any;
   activeGlobalChat?: boolean;
   activeChatId?: string | null;
-  displayName?: string; // Denormalisiert für einfachere Abfragen
+  displayName?: string;
 }
 
 export interface OnlineUser {
@@ -42,7 +41,7 @@ export class PresenceService {
     const presenceRef = doc(this.firestore, `presence/${this.uid}`);
 
     const beat = () => {
-      const data: Presence = {
+      const data: Omit<Presence, 'id'> = { // Omit, da id nicht geschrieben wird
         heartbeatAt: serverTimestamp(),
         lastSeenAt: serverTimestamp(),
         displayName: displayName
@@ -93,21 +92,20 @@ export class PresenceService {
    */
   listenForOnlineUsers(thresholdSeconds: number = 20): Observable<OnlineUser[]> {
       const presenceRef = collection(this.firestore, 'presence');
-      // Wir filtern clientseitig, da Zeit-basierte Abfragen in Firestore komplex sind
       const q = query(presenceRef, where('activeGlobalChat', '==', true));
 
-      return collectionData(q, { idField: 'id' }).pipe(
-          map(users => {
+      return (collectionData(q, { idField: 'id' }) as Observable<Presence[]>).pipe(
+          map((users: Presence[]) => { // <-- Expliziter Typ hier
               const now = Date.now();
               return users
-                  .filter(user => {
-                      const heartbeat = user['heartbeatAt']?.toDate();
+                  .filter((user: Presence) => { // <-- Expliziter Typ hier
+                      const heartbeat = (user.heartbeatAt as any)?.toDate();
                       if (!heartbeat) return false;
                       return (now - heartbeat.getTime()) / 1000 <= thresholdSeconds;
                   })
-                  .map(user => ({
-                      id: user['id'],
-                      displayName: user['displayName'] || `User...`
+                  .map((user: Presence) => ({ // <-- Expliziter Typ hier
+                      id: user.id!,
+                      displayName: user.displayName || `User...`
                   }));
           })
       );
