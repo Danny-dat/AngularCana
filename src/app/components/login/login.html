@@ -1,0 +1,18 @@
+<div class="landing-form card">
+  <img class="logo" src="assets/logo.png" alt="Logo" />
+  <h2>Login</h2>
+
+  <form (ngSubmit)="doLogin()">
+    <input [(ngModel)]="email" name="email" type="email" autocomplete="username" placeholder="Email" required>
+    <input [(ngModel)]="password" name="password" type="password" autocomplete="current-password" placeholder="Passwort" required>
+    
+    <button type="submit" [disabled]="isLoading">
+      {{ isLoading ? 'Logge ein...' : 'Login' }}
+    </button>
+  </form>
+
+  <p class="auth-switch"><a routerLink="/register">Noch kein Account? Registrieren</a></p>
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+</div>
