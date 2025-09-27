@@ -1,7 +1,10 @@
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app'; // <-- Korrigiert von 'App' zu 'AppComponent'
+// src/main.server.ts
+import 'zone.js/node'; // <-- Zone.js für SSR laden (wichtig!)
+import { bootstrapApplication, type BootstrapContext } from '@angular/platform-browser';
+import { AppComponent } from './app/app';
 import { config } from './app/app.config.server';
 
-const bootstrap = () => bootstrapApplication(AppComponent, config); // <-- Korrigiert
-
-export default bootstrap;
+// SSR: BootstrapContext an Angular durchreichen (v20+)
+export default function bootstrap(context: BootstrapContext) {
+  return bootstrapApplication(AppComponent, config, context);
+}

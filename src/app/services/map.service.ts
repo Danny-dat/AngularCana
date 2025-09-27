@@ -1,82 +1,106 @@
-import { Injectable } from '@angular/core';
-import { Firestore, collection, query, where, orderBy, limit, onSnapshot, Unsubscribe, Timestamp } from '@angular/fire/firestore';
-import * as L from 'leaflet'; // Leaflet wird als 'L' importiert
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  Firestore, collection, query, where, orderBy, limit, onSnapshot, Unsubscribe
+} from '@angular/fire/firestore';
 
-// Einmaliger Fix, um die Standard-Icons von Leaflet in Angular zu laden.
-// Stelle sicher, dass du die Bilder in den 'src/assets'-Ordner kopiert hast.
-const iconDefault = L.icon({
-  iconRetinaUrl: 'assets/marker-icon-2x.png',
-  iconUrl: 'assets/marker-icon.png',
-  shadowUrl: 'assets/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41]
-});
-L.Marker.prototype.options.icon = iconDefault;
+// 👉 Nur Typen importieren (führt keinen Leaflet-Code auf dem Server aus)
+import type * as Leaflet from 'leaflet';
 
-
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class MapService {
-  private map: L.Map | null = null;
+  private platformId = inject(PLATFORM_ID);
 
-  constructor(private firestore: Firestore) { }
+  // Laufzeit-Referenz auf das Leaflet-Modul (wird nur im Browser gesetzt)
+  private L: typeof import('leaflet') | null = null;
 
-  /**
-   * Initialisiert und rendert die Leaflet-Karte in einem HTML-Container.
-   * @param elementId Die ID des HTML-Elements, in dem die Karte angezeigt werden soll.
-   */
-  initializeMap(elementId: string): L.Map {
-    if (this.map) {
-      this.map.remove();
+  // Streng typisierte Karteninstanz
+  private map: Leaflet.Map | null = null;
+
+  constructor(private firestore: Firestore) {
+    // Leaflet nur im Browser laden (verhindert "window is not defined" bei SSR)
+    if (isPlatformBrowser(this.platformId)) {
+      import('leaflet').then((leaflet) => {
+        this.L = leaflet;
+
+        // Icon-Fix, nachdem Leaflet geladen wurde
+        const iconDefault = this.L.icon({
+          iconRetinaUrl: 'assets/marker-icon-2x.png',
+          iconUrl: 'assets/marker-icon.png',
+          shadowUrl: 'assets/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          tooltipAnchor: [16, -28],
+          shadowSize: [41, 41]
+        });
+        this.L.Marker.prototype.options.icon = iconDefault;
+      });
     }
-
-    this.map = L.map(elementId).setView([51.16, 10.45], 6); // Zentrum Deutschland
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(this.map);
-
-    // Wichtig: Berechnet die Kartengrösse neu, falls sie beim Start versteckt war.
-    setTimeout(() => this.map?.invalidateSize(), 100);
-
-    return this.map;
   }
 
   /**
-   * Zerstört die Karteninstanz, um Speicherlecks zu vermeiden (wichtig bei Seitenwechsel).
+   * Initialisiert die Karte im angegebenen Container.
+   * Führt nur im Browser aus und erst, wenn Leaflet geladen ist.
+   */
+  initializeMap(elementId: string): void {
+    if (!isPlatformBrowser(this.platformId) || !this.L) return;
+
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (!el) return; // Sicherheitscheck
+
+      if (!this.map) {
+        this.map = this.L!.map(elementId).setView([51.16, 10.45], 6);
+        this.L!.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(this.map);
+      }
+
+      // Größe neu berechnen (falls Container anfangs versteckt war)
+      this.map?.invalidateSize();
+    }, 100);
+  }
+
+  /**
+   * Zerstört die Karteninstanz (z. B. beim Verlassen der Seite).
    */
   destroyMap(): void {
-    this.map?.remove();
-    this.map = null;
+    if (isPlatformBrowser(this.platformId) && this.map) {
+      this.map.remove();
+      this.map = null;
+    }
   }
 
   /**
-   * Streamt die Konsum-Standorte eines Nutzers und zeichnet sie als Marker auf die Karte.
-   * Gibt eine "Unsubscribe"-Funktion zurück, um den Listener zu beenden.
+   * Lauscht in Echtzeit auf Nutzer-Konsumstandorte und setzt Marker.
+   * Gibt eine Unsubscribe-Funktion zurück.
    */
-  listenForConsumptionMarkers(uid: string, onMarkersReady: (markers: L.Marker[]) => void): Unsubscribe {
-    if (!this.map) {
-      // Gibt eine leere Funktion zurück, wenn keine Karte initialisiert ist.
+  listenForConsumptionMarkers(
+    uid: string,
+    onMarkersReady: (markers: Leaflet.Marker[]) => void
+  ): Unsubscribe {
+    // Wenn kein Browser/keine Map/kein Leaflet vorhanden: No-Op-Unsubscribe
+    if (!isPlatformBrowser(this.platformId) || !this.map || !this.L) {
       return () => {};
     }
 
     const consumptionsRef = collection(this.firestore, 'consumptions');
-    const q = query(consumptionsRef, where('userId', '==', uid), orderBy('timestamp', 'desc'), limit(100));
+    const q = query(
+      consumptionsRef,
+      where('userId', '==', uid),
+      orderBy('timestamp', 'desc'),
+      limit(100)
+    );
 
-    // onSnapshot ist die Echtzeit-Funktion von Firestore.
     return onSnapshot(q, (snapshot) => {
-      const markers: L.Marker[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const latLng = this.toLatLng(data['location']);
-
+      const markers: Leaflet.Marker[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as any;
+        const latLng = this.toLatLng(data?.location);
         if (latLng && this.map) {
-          const marker = L.marker(latLng, { icon: this.createMarkerIcon('green') }).addTo(this.map);
+          const marker = this.L!.marker(latLng, { icon: this.createMarkerIcon('green') }).addTo(this.map);
           markers.push(marker);
         }
       });
@@ -85,11 +109,13 @@ export class MapService {
   }
 
   /**
-   * Erstellt ein benutzerdefiniertes HTML-Icon für die Marker.
+   * Erstellt ein benutzerdefiniertes HTML-Icon für Marker.
    */
-  private createMarkerIcon(color: string): L.DivIcon {
-    const html = `<div style="background:${color};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 5px rgba(0,0,0,.5)"></div>`;
-    return L.divIcon({
+  private createMarkerIcon(color: string): Leaflet.DivIcon {
+    const html =
+      `<div style="background:${color};width:20px;height:20px;border-radius:50%;` +
+      `border:3px solid white;box-shadow:0 0 5px rgba(0,0,0,.5)"></div>`;
+    return this.L!.divIcon({
       html,
       className: 'custom-map-icon-container',
       iconSize: [26, 26],
@@ -98,14 +124,13 @@ export class MapService {
   }
 
   /**
-   * Konvertiert verschiedene Standortformate (GeoPoint, Objekt, Array)
-   * in ein für Leaflet lesbares Format.
+   * Konvertiert verschiedene Standortformate in Leaflet-Koordinaten.
    */
-  private toLatLng(loc: any): L.LatLngTuple | null {
+  private toLatLng(loc: any): Leaflet.LatLngTuple | null {
     if (!loc) return null;
     if (Array.isArray(loc) && loc.length === 2 && !isNaN(loc[0]) && !isNaN(loc[1])) return [loc[0], loc[1]];
-    if (loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng)) return [loc.lat, loc.lng];
-    if (loc.latitude && loc.longitude && !isNaN(loc.latitude) && !isNaN(loc.longitude)) return [loc.latitude, loc.longitude];
+    if (loc.lat != null && loc.lng != null && !isNaN(loc.lat) && !isNaN(loc.lng)) return [loc.lat, loc.lng];
+    if (loc.latitude != null && loc.longitude != null && !isNaN(loc.latitude) && !isNaN(loc.longitude)) return [loc.latitude, loc.longitude];
     return null;
   }
 }
