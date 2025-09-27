@@ -17,7 +17,6 @@ interface Consumable {
   styleUrls: ['./dashboard.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // Wir weisen den Arrays den korrekten Typ zu
   products: Consumable[] = [
     { name: "Hash", img: "assets/produkte/hash.png" },
     { name: "Blüte", img: "assets/produkte/flower.png" },
