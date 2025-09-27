@@ -1,0 +1,31 @@
+<ng-container *ngIf="user$ | async as user; else loggedOut">
+
+  <header class="app-header">
+    <div class="burger-menu" (click)="showMenu = !showMenu">
+      </div>
+    <h2>CannaTrack</h2>
+    <div class="header-actions">
+       <p>{{ user.displayName || user.email }}</p>
+    </div>
+  </header>
+
+  <div *ngIf="showMenu" class="sidebar-overlay" (click)="showMenu = false">
+    <div class="sidebar-menu" (click)="$event.stopPropagation()">
+      <h3>Menü</h3>
+      <a routerLink="/dashboard" (click)="showMenu = false">Dashboard</a>
+      <a routerLink="/global-chat" (click)="showMenu = false">Globaler Chat</a>
+      <a routerLink="/friends" (click)="showMenu = false">Freunde</a>
+      <hr>
+      <a (click)="doLogout()">Abmelden</a>
+    </div>
+  </div>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+
+</ng-container>
+
+<ng-template #loggedOut>
+  <router-outlet></router-outlet>
+</ng-template>
