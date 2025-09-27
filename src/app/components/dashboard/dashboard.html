@@ -1,0 +1,30 @@
+<div class="tracker-container card">
+  <h3>Neuen Konsum loggen</h3>
+
+  <div class="selection">
+    <div *ngFor="let item of products" 
+         (click)="selectProduct(item.name)"
+         [class.selected]="selection.product === item.name">
+      <img [src]="item.img" [alt]="item.name">
+      <p>{{ item.name }}</p>
+    </div>
+  </div>
+
+  <div class="selection">
+    <div *ngFor="let item of devices"
+         (click)="selectDevice(item.name)"
+         [class.selected]="selection.device === item.name">
+      <img [src]="item.img" [alt]="item.name">
+      <p>{{ item.name }}</p>
+    </div>
+  </div>
+
+  <button (click)="logConsumption()" [disabled]="!selection.product || !selection.device">
+    Bestätigen & Standort loggen
+  </button>
+</div>
+
+<div class="map-container card">
+  <h3>Event-Karte</h3>
+  <div id="map-container" style="height: 420px;"></div>
+</div>

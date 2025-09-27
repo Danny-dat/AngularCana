@@ -1,13 +1,12 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { FormsModule } from '@angular/forms'; // <-- Wichtig für Formulare
 
-import { routes } from './app.routes';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { routes } from './app.routes'; // <-- Importiere unsere Routen
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideZonelessChangeDetection(),
-    provideRouter(routes), provideClientHydration(withEventReplay())
+    provideRouter(routes), // <-- Stellt den Router mit unseren Routen bereit
+    importProvidersFrom(FormsModule) // <-- Macht [(ngModel)] etc. verfügbar
   ]
 };
