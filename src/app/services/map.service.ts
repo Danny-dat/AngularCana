@@ -1,30 +1,28 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import {
-  Firestore, collection, query, where, orderBy, limit, onSnapshot, Unsubscribe
-} from '@angular/fire/firestore';
-
-// 👉 Nur Typen importieren (führt keinen Leaflet-Code auf dem Server aus)
+import { Firestore, collection, query, where, orderBy, limit, onSnapshot, Unsubscribe } from '@angular/fire/firestore';
 import type * as Leaflet from 'leaflet';
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
   private platformId = inject(PLATFORM_ID);
-
-  // Laufzeit-Referenz auf das Leaflet-Modul (wird nur im Browser gesetzt)
   private L: typeof import('leaflet') | null = null;
-
-  // Streng typisierte Karteninstanz
   private map: Leaflet.Map | null = null;
 
-  constructor(private firestore: Firestore) {
-    // Leaflet nur im Browser laden (verhindert "window is not defined" bei SSR)
-    if (isPlatformBrowser(this.platformId)) {
-      import('leaflet').then((leaflet) => {
-        this.L = leaflet;
+  // EINZIGE Quelle der Wahrheit: lädt Leaflet genau einmal und merkt sich das Ergebnis
+  private leafletReadyPromise: Promise<typeof import('leaflet')> | null = null;
 
-        // Icon-Fix, nachdem Leaflet geladen wurde
-        const iconDefault = this.L.icon({
+  constructor(private firestore: Firestore) {}
+
+  private loadLeaflet(): Promise<typeof import('leaflet')> {
+    if (!isPlatformBrowser(this.platformId)) {
+      // auf dem Server niemals laden
+      return Promise.reject('SSR: Leaflet wird nicht geladen');
+    }
+    if (!this.leafletReadyPromise) {
+      this.leafletReadyPromise = import('leaflet').then((leaflet) => {
+        // Icon-Fix (falls benötigt)
+        const iconDefault = leaflet.icon({
           iconRetinaUrl: 'assets/marker-icon-2x.png',
           iconUrl: 'assets/marker-icon.png',
           shadowUrl: 'assets/marker-shadow.png',
@@ -34,38 +32,44 @@ export class MapService {
           tooltipAnchor: [16, -28],
           shadowSize: [41, 41]
         });
-        this.L.Marker.prototype.options.icon = iconDefault;
+        leaflet.Marker.prototype.options.icon = iconDefault;
+        this.L = leaflet;
+        return leaflet;
       });
     }
+    return this.leafletReadyPromise;
   }
 
-  /**
-   * Initialisiert die Karte im angegebenen Container.
-   * Führt nur im Browser aus und erst, wenn Leaflet geladen ist.
-   */
-  initializeMap(elementId: string): void {
-    if (!isPlatformBrowser(this.platformId) || !this.L) return;
+  /** Initialisiert die Karte zuverlässig (wartet auf Leaflet + DOM). */
+  async initializeMap(elementId: string): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
 
-    setTimeout(() => {
-      const el = document.getElementById(elementId);
-      if (!el) return; // Sicherheitscheck
+    // 1) Leaflet laden (wartet, statt frühzeitig return)
+    const L = await this.loadLeaflet().catch(() => null);
+    if (!L) return;
 
-      if (!this.map) {
-        this.map = this.L!.map(elementId).setView([51.16, 10.45], 6);
-        this.L!.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '© OpenStreetMap'
-        }).addTo(this.map);
-      }
+    // 2) Auf das Ziel-Element warten (falls DOM noch nicht da)
+    const el = await this.waitForElement(elementId, 1000);
+    if (!el) return;
 
-      // Größe neu berechnen (falls Container anfangs versteckt war)
-      this.map?.invalidateSize();
-    }, 100);
+    // 3) Existierende Map entsorgen
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+
+    // 4) Map erstellen
+    this.map = L.map(elementId).setView([51.16, 10.45], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(this.map);
+
+    // 5) Sicherstellen, dass die Größe passt (nach Render/Animation)
+    setTimeout(() => this.map?.invalidateSize(), 0);
   }
 
-  /**
-   * Zerstört die Karteninstanz (z. B. beim Verlassen der Seite).
-   */
+  /** Zerstört die Karte. */
   destroyMap(): void {
     if (isPlatformBrowser(this.platformId) && this.map) {
       this.map.remove();
@@ -73,26 +77,15 @@ export class MapService {
     }
   }
 
-  /**
-   * Lauscht in Echtzeit auf Nutzer-Konsumstandorte und setzt Marker.
-   * Gibt eine Unsubscribe-Funktion zurück.
-   */
+  /** Marker-Listen-Stream (nur aufrufen, wenn Map bereits initialisiert ist). */
   listenForConsumptionMarkers(
     uid: string,
     onMarkersReady: (markers: Leaflet.Marker[]) => void
   ): Unsubscribe {
-    // Wenn kein Browser/keine Map/kein Leaflet vorhanden: No-Op-Unsubscribe
-    if (!isPlatformBrowser(this.platformId) || !this.map || !this.L) {
-      return () => {};
-    }
+    if (!isPlatformBrowser(this.platformId) || !this.map || !this.L) return () => {};
 
     const consumptionsRef = collection(this.firestore, 'consumptions');
-    const q = query(
-      consumptionsRef,
-      where('userId', '==', uid),
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    );
+    const q = query(consumptionsRef, where('userId', '==', uid), orderBy('timestamp', 'desc'), limit(100));
 
     return onSnapshot(q, (snapshot) => {
       const markers: Leaflet.Marker[] = [];
@@ -108,24 +101,27 @@ export class MapService {
     });
   }
 
-  /**
-   * Erstellt ein benutzerdefiniertes HTML-Icon für Marker.
-   */
-  private createMarkerIcon(color: string): Leaflet.DivIcon {
-    const html =
-      `<div style="background:${color};width:20px;height:20px;border-radius:50%;` +
-      `border:3px solid white;box-shadow:0 0 5px rgba(0,0,0,.5)"></div>`;
-    return this.L!.divIcon({
-      html,
-      className: 'custom-map-icon-container',
-      iconSize: [26, 26],
-      iconAnchor: [13, 13],
-    });
+  invalidateSizeSoon(delay = 50) {
+    setTimeout(() => this.map?.invalidateSize(), delay);
   }
 
-  /**
-   * Konvertiert verschiedene Standortformate in Leaflet-Koordinaten.
-   */
+  // Helpers
+  private async waitForElement(id: string, timeoutMs = 800): Promise<HTMLElement | null> {
+    const start = Date.now();
+    let el = document.getElementById(id);
+    while (!el && Date.now() - start < timeoutMs) {
+      await new Promise(r => setTimeout(r, 16)); // ~1 Frame
+      el = document.getElementById(id);
+    }
+    return el;
+  }
+
+  private createMarkerIcon(color: string): Leaflet.DivIcon {
+    const html = `<div style="background:${color};width:20px;height:20px;border-radius:50%;
+                   border:3px solid white;box-shadow:0 0 5px rgba(0,0,0,.5)"></div>`;
+    return this.L!.divIcon({ html, className: 'custom-map-icon-container', iconSize: [26, 26], iconAnchor: [13, 13] });
+    }
+
   private toLatLng(loc: any): Leaflet.LatLngTuple | null {
     if (!loc) return null;
     if (Array.isArray(loc) && loc.length === 2 && !isNaN(loc[0]) && !isNaN(loc[1])) return [loc[0], loc[1]];
