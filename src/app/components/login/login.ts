@@ -59,7 +59,7 @@ export class LoginComponent {
       // Fallback: Falls mal kein .code da ist, nehmen wir message/JSON
       const code = err?.code || err?.error?.error?.message;
       const msg = this.mapAuthError(code);
-      this.errorMessage = err?.message ? `${msg} (${err.message})` : msg;
+      this.errorMessage = err?.message ? `${msg}` : msg;
       this.cdr.markForCheck();
     } finally {
       this.isLoading = false;
