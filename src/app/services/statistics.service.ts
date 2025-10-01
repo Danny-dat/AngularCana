@@ -1,152 +1,128 @@
+// src/app/services/statistics.service.ts
 import { Injectable } from '@angular/core';
 import { Firestore, collection, query, where, getDocs, Timestamp } from '@angular/fire/firestore';
-import { Chart, ChartItem, registerables } from 'chart.js';
 
-Chart.register(...registerables); // Chart.js initialisieren
+export type StatsRange = 'week' | 'month' | 'year';
 
-// Interfaces für unsere Statistik-Daten
-export interface ChartStats {
-  [key: string]: number; // z.B. { '27.09.2025': 5, '28.09.2025': 3 }
+export interface RankingItem { name: string; count: number; }
+export interface AdvancedStatsResult {
+  chartLabels: string[];
+  chartValues: number[];
+  rankings: {
+    byProduct: RankingItem[];
+    byDevice: RankingItem[];
+    byPair: RankingItem[];
+  };
 }
 
-export interface RankingItem {
-  name: string;
-  count: number;
-}
-
-export interface Rankings {
-  byProduct: RankingItem[];
-  byDevice: RankingItem[];
-  byPair: RankingItem[];
-}
-
-export interface AdvancedStats {
-  chartStats: ChartStats;
-  rankings: Rankings;
-}
-
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class StatisticsService {
-  private chartInstance: Chart | null = null;
+  constructor(private firestore: Firestore) {}
 
-  constructor(private firestore: Firestore) { }
+  async loadAdvancedConsumptionStats(uid: string, range: StatsRange = 'week'): Promise<AdvancedStatsResult> {
+    try {
+      const today = new Date();
+      const startDate = this.getStartDate(today, range);
 
-  /**
-   * Lädt die Konsum-Statistiken für einen Nutzer und einen bestimmten Zeitraum.
-   */
-  async loadAdvancedConsumptionStats(uid: string, range: 'week' | 'month' | 'year' = 'week'): Promise<AdvancedStats> {
-    const today = new Date();
-    let startDate: Date;
+      const col = collection(this.firestore, 'consumptions');
+      const q = query(col, where('userId', '==', uid), where('timestamp', '>=', Timestamp.fromDate(startDate)));
+      const snap = await getDocs(q);
 
-    if (range === 'month') {
-      startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-    } else if (range === 'year') {
-      startDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    } else { // 'week'
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
-    }
+      const chartStats = new Map<string, number>();
+      const productCounts = new Map<string, number>();
+      const deviceCounts = new Map<string, number>();
+      const pairCounts = new Map<string, number>();
 
-    // Daten aus Firestore abrufen
-    const consumptionsRef = collection(this.firestore, 'consumptions');
-    const q = query(consumptionsRef, where('userId', '==', uid), where('timestamp', '>=', startDate));
-    const querySnapshot = await getDocs(q);
-
-    const chartStats: ChartStats = {};
-    const productCounts: { [key: string]: number } = {};
-    const deviceCounts: { [key: string]: number } = {};
-    const pairCounts: { [key: string]: number } = {};
-
-    // Chart-Daten für die Woche mit Nullen vor belegen, um alle Tage anzuzeigen
-    if (range === 'week') {
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        chartStats[d.toLocaleDateString('de-DE')] = 0;
-      }
-    }
-
-    querySnapshot.forEach(doc => {
-      const data = doc.data();
-      const timestamp = (data['timestamp'] as Timestamp).toDate();
-
-      // Chart-Daten füllen
-      let key: string;
+      // Woche vorbefüllen (7 Tage)
       if (range === 'week') {
-        key = timestamp.toLocaleDateString('de-DE');
-      } else if (range === 'month') {
-        key = `${timestamp.getDate()}.${timestamp.getMonth() + 1}.`;
-      } else { // 'year'
-        key = timestamp.toLocaleString('de-DE', { month: 'short', year: '2-digit' });
-      }
-      if (!chartStats[key]) chartStats[key] = 0;
-      chartStats[key]++;
-
-      // Ranglisten-Daten zählen
-      const product = data['product'];
-      const device = data['device'];
-      if (product) {
-        productCounts[product] = (productCounts[product] || 0) + 1;
-      }
-      if (device) {
-        deviceCounts[device] = (deviceCounts[device] || 0) + 1;
-      }
-      if (product && device) {
-        const pairKey = `${product} + ${device}`;
-        pairCounts[pairKey] = (pairCounts[pairKey] || 0) + 1;
-      }
-    });
-
-    // Helper-Funktion zum Sortieren
-    const sortRankings = (counts: { [key: string]: number }): RankingItem[] => {
-      return Object.entries(counts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
-    };
-
-    return {
-      chartStats,
-      rankings: {
-        byProduct: sortRankings(productCounts),
-        byDevice: sortRankings(deviceCounts),
-        byPair: sortRankings(pairCounts),
-      }
-    };
-  }
-
-  /**
-   * Rendert ein Balkendiagramm in einem Canvas-Element.
-   */
-  renderChart(canvasId: string, stats: ChartStats): void {
-    const ctx = document.getElementById(canvasId) as ChartItem;
-    if (!ctx) return;
-
-    // Zerstört ein eventuell vorhandenes altes Diagramm, um Speicherlecks zu vermeiden
-    if (this.chartInstance) {
-      this.chartInstance.destroy();
-    }
-
-    this.chartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: Object.keys(stats),
-        datasets: [{
-          label: 'Anzahl Konsumeinheiten',
-          data: Object.values(stats),
-          backgroundColor: 'rgba(76, 175, 80, 0.5)',
-          borderColor: 'rgba(76, 175, 80, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 1 } // Nur ganze Zahlen auf der Y-Achse
-          }
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const key = d.toLocaleDateString('de-DE');
+          chartStats.set(key, 0);
         }
       }
-    });
+
+      snap.forEach(doc => {
+        const data: any = doc.data();
+        const ts: Date = (data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp));
+
+        let label: string;
+        if (range === 'week') {
+          label = ts.toLocaleDateString('de-DE'); // z. B. 02.10.2025
+        } else if (range === 'month') {
+          label = `${ts.getDate()}.${ts.getMonth() + 1}.`; // 1.–31.
+        } else {
+          label = ts.toLocaleString('de-DE', { month: 'short', year: '2-digit' }); // „Okt. 25“
+        }
+
+        chartStats.set(label, (chartStats.get(label) ?? 0) + 1);
+
+        const product = data.product as string | undefined;
+        const device = data.device as string | undefined;
+        if (product) productCounts.set(product, (productCounts.get(product) ?? 0) + 1);
+        if (device) deviceCounts.set(device, (deviceCounts.get(device) ?? 0) + 1);
+        if (product && device) {
+          const pair = `${product} + ${device}`;
+          pairCounts.set(pair, (pairCounts.get(pair) ?? 0) + 1);
+        }
+      });
+
+      const labels = this.sortLabels(chartStats.keys(), range);
+      const values = labels.map(l => chartStats.get(l) ?? 0);
+
+      return {
+        chartLabels: labels,
+        chartValues: values,
+        rankings: {
+          byProduct: this.sortMap(productCounts),
+          byDevice: this.sortMap(deviceCounts),
+          byPair: this.sortMap(pairCounts),
+        }
+      };
+    } catch {
+      // Fallback – garantiert ein Return-Wert
+      return {
+        chartLabels: [],
+        chartValues: [],
+        rankings: { byProduct: [], byDevice: [], byPair: [] }
+      };
+    }
+  }
+
+  // --- Helpers ---
+
+  private getStartDate(today: Date, range: StatsRange): Date {
+    switch (range) {
+      case 'month':
+        return new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+      case 'year':
+        return new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+      case 'week':
+      default:
+        return new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+    }
+  }
+
+  private sortMap(m: Map<string, number>): RankingItem[] {
+    // explizites return verhindert 2355 bei manchen TS-Konfigurationen
+    return [...m.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  private sortLabels(keys: Iterable<string>, range: StatsRange): string[] {
+    const labels = [...keys];
+    if (range === 'week') {
+      return labels.sort((a, b) => {
+        const [da, ma, ya] = a.split('.');
+        const [db, mb, yb] = b.split('.');
+        const A = new Date(Number(ya), Number(ma) - 1, Number(da));
+        const B = new Date(Number(yb), Number(mb) - 1, Number(db));
+        return A.getTime() - B.getTime();
+      });
+    }
+    // Monat/Jahr belassen (einfaches, stabiles Sorting)
+    return labels;
   }
 }

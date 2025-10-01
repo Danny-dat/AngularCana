@@ -1,0 +1,57 @@
+<div class="stats-container card">
+    <div class="stats-header">
+    <h3>Deine Statistik</h3>
+    <div class="time-range-selector">
+    <button (click)="setRange('week')" [class.active]="range() === 'week'">Woche</button>
+    <button (click)="setRange('month')" [class.active]="range() === 'month'">Monat</button>
+    <button (click)="setRange('year')" [class.active]="range() === 'year'">Jahr</button>
+    </div>
+    </div>
+
+
+    <div class="chart-wrap">
+        <canvas id="consumptionChart"></canvas>
+    </div>
+
+
+    <div class="rankings-container">
+        <hr>
+        <h4>Deine Top-Listen</h4>
+            <div class="ranking-grids">
+                <div class="ranking-list">
+                    <h5>Produkt</h5>
+                        <ul>
+                            <li *ngFor="let item of rankings().byProduct">
+                            <span>{{ item.name }}</span>
+                            <span class="count-badge">{{ item.count }}x</span>
+                            </li>
+                        </ul>
+                    <div *ngIf="rankings().byProduct.length === 0" class="empty-state-small">Keine Daten</div>
+                </div>
+
+
+                <div class="ranking-list">
+                <h5>Gerät</h5>
+                <ul>
+                <li *ngFor="let item of rankings().byDevice">
+                <span>{{ item.name }}</span>
+                <span class="count-badge">{{ item.count }}x</span>
+                </li>
+                </ul>
+                <div *ngIf="rankings().byDevice.length === 0" class="empty-state-small">Keine Daten</div>
+                </div>
+
+
+                <div class="ranking-list full-width">
+                <h5>Kombination</h5>
+                <ul>
+                <li *ngFor="let item of rankings().byPair">
+                <span>{{ item.name }}</span>
+                <span class="count-badge">{{ item.count }}x</span>
+                </li>
+                </ul>
+                <div *ngIf="rankings().byPair.length === 0" class="empty-state-small">Keine Daten</div>
+                </div>
+            </div>
+    </div>
+</div>
