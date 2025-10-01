@@ -1,1 +1,37 @@
-<p>app-sidenav works!</p>
+@if (open) {
+  <!-- Overlay -->
+  <div class="sidebar-overlay" (click)="close()">
+    <!-- Panel -->
+    <nav class="sidebar-menu" (click)="$event.stopPropagation()">
+      <h3>Menü</h3>
+
+      @for (it of items; track it.label) {
+        <!-- Normale Items -->
+        @if (!it.adminOnly) {
+          <a
+            matRipple
+            [routerLink]="it.link || null"
+            (click)="onItemClick(it, $event)"
+          >
+            <mat-icon fontSet="material-icons-outlined">{{ it.icon }}</mat-icon>
+            <span>{{ it.label }}</span>
+          </a>
+          @if (it.dividerAfter) { <hr /> }
+        }
+
+        <!-- Admin-Only Items -->
+        @if (it.adminOnly && (isAdmin$ | async)) {
+          <a
+            matRipple
+            [routerLink]="it.link || null"
+            (click)="onItemClick(it, $event)"
+          >
+            <mat-icon fontSet="material-icons-outlined">{{ it.icon }}</mat-icon>
+            <span>{{ it.label }}</span>
+          </a>
+          @if (it.dividerAfter) { <hr /> }
+        }
+      }
+    </nav>
+  </div>
+}

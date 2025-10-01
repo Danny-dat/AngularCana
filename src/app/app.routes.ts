@@ -4,14 +4,66 @@ import { RegisterComponent } from './components/register/register';
 import { DashboardComponent } from './components/dashboard/dashboard';
 import { authGuard } from './services/auth';
 
+import { AppLayoutComponent } from './layouts/app-layout';
+import { PublicLayoutComponent } from './layouts/public-layout';
+import { adminGuard, adminMatchGuard } from './guards/admin.guard';
+
+// Helper für Platzhalterseiten
+const comingSoon = (title: string) => () =>
+  import('@angular/core').then(({ Component }) => {
+    @Component({
+      standalone: true,
+      template: `
+        <div style="padding:16px">
+          <h2 style="margin-top:0">{{ title }}</h2>
+          <p>Diese Seite ist noch in Arbeit.</p>
+        </div>
+      `,
+    })
+    class ComingSoonComponent { title = title; }
+    return ComingSoonComponent;
+  });
+
 export const routes: Routes = [
-    { path: 'login', component: LoginComponent },
-    { path: 'register', component: RegisterComponent },
-    {
-      path: 'dashboard',
-      component: DashboardComponent,
-      canActivate: [authGuard]
-    },
-    { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-    { path: '**', redirectTo: 'dashboard' }
+  // --- Öffentliches Layout: ohne Header ---
+  {
+    path: '',
+    component: PublicLayoutComponent,
+    children: [
+      { path: 'login', component: LoginComponent, data: { title: 'Login', hideHeader: true } },
+      { path: 'register', component: RegisterComponent, data: { title: 'Registrieren', hideHeader: true } },
+    ],
+  },
+
+  // --- App-Layout: mit Header ---
+  {
+    path: '',
+    component: AppLayoutComponent,
+    children: [
+      { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard], data: { title: 'Dashboard' } },
+      { path: 'chat', loadComponent: comingSoon('Globaler Chat'), canActivate: [authGuard], data: { title: 'Globaler Chat' } },
+      { path: 'social', loadComponent: comingSoon('Freunde & Soziales'), canActivate: [authGuard], data: { title: 'Freunde & Soziales' } },
+      { path: 'events', loadComponent: comingSoon('Events'), canActivate: [authGuard], data: { title: 'Events' } },
+      { path: 'stats', loadComponent: comingSoon('Statistik'), canActivate: [authGuard], data: { title: 'Statistik' } },
+      { path: 'thc', loadComponent: comingSoon('THC Rechner'), canActivate: [authGuard], data: { title: 'THC Rechner' } },
+      { path: 'me', loadComponent: comingSoon('Meine Daten'), canActivate: [authGuard], data: { title: 'Meine Daten' } },
+
+      // --- Admin-Bereich: nur mit Auth + Admin-UID ---
+      {
+        path: 'admin',
+        loadComponent: comingSoon('Admin Bereich'),
+        canMatch: [adminMatchGuard], // verhindert schon das Matching
+        canActivate: [authGuard, adminGuard], // doppelt sicher
+        data: { title: 'Admin Bereich' },
+      },
+
+      // Öffentlich, aber mit Header:
+      { path: 'privacy', loadComponent: comingSoon('Datenschutz'), data: { title: 'Datenschutz' } },
+      { path: 'terms', loadComponent: comingSoon('AGB'), data: { title: 'AGB' } },
+    ],
+  },
+
+  // Redirects
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: '**', redirectTo: 'dashboard' },
 ];

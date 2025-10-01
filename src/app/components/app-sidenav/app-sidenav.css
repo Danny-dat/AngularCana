@@ -1,27 +1,55 @@
 :host { display:block; }
 
+/* Overlay */
 .sidebar-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2000;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 2000;
+  /* Fade-In */
+  animation: fadeIn .12s ease-out;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* Panel */
 .sidebar-menu {
-  position:fixed; top:0; left:0; width:280px; height:100%;
-  background:var(--surface-color); box-shadow:5px 0 15px rgba(0,0,0,.2);
-  padding:20px; box-sizing:border-box;
-  display:flex; flex-direction:column;
+  position: fixed; top: 0; left: 0;
+  width: 280px; height: 100%;
+  background: var(--surface-color);
+  box-shadow: 5px 0 15px rgba(0,0,0,.18);
+  padding: 20px 18px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 6px;
+
+  /* Slide-In */
+  transform: translateX(-8px);
+  animation: slideIn .16s ease-out forwards;
+}
+@keyframes slideIn { to { transform: translateX(0); } }
+
+.sidebar-menu h3{
+  margin: 0 0 12px 0;
+  font-size: 22px; font-weight: 800;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.sidebar-menu h3 {
-  margin-top:0; font-size:24px;
-  border-bottom:1px solid var(--border-color);
-  padding-bottom:15px;
+/* Einträge */
+.sidebar-menu a{
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 10px;
+  font-size: 16.5px; line-height: 1;
+  color: var(--text-color); text-decoration: none;
+  border-radius: 10px; cursor: pointer; user-select: none;
+}
+.sidebar-menu a:hover{ background: var(--background-color); }
+
+.sidebar-menu mat-icon{
+  font-size: 24px; width: 24px; height: 24px; line-height: 24px;
+  color: var(--icon-color, #555);
 }
 
-.sidebar-menu a {
-  display:block; padding:15px 10px; font-size:18px;
-  color:var(--text-color); text-decoration:none;
-  border-radius:8px; cursor:pointer;
+/* Trennlinien (optisch wie im Screenshot) */
+.sidebar-menu hr{
+  height: 0; border: 0; border-top: 1px solid var(--border-color);
+  margin: 8px 0;
 }
-
-.sidebar-menu a:hover { background-color: var(--background-color); }
-.sidebar-menu hr { margin:10px 0; border:0; border-top:1px solid var(--border-color); }
