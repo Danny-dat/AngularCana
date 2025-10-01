@@ -2,8 +2,9 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { Auth, user } from '@angular/fire/auth';
+import { Auth, user, updateProfile } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs/operators';
 import { ProfileService } from '../../services/profile.service';
 import { UserDataModel, UserDataService, UserSettingsModel } from '../../services/user-data.service';
 import { ThemeService, Theme } from '../../services/theme.service';
@@ -35,27 +36,41 @@ export class UserDataComponent implements OnInit, OnDestroy {
     phoneNumber: [''],
   });
 
-  // ⚠️ Startet mit dem aktuell gesetzten Theme (kein Rückfall auf "light")
+  // Startet mit aktuell gesetztem Theme (kein Rückfall auf "light")
   settingsForm = this.fb.group({
     theme: [this.theme.getTheme() as Theme, Validators.required],
-    consumptionThreshold: [3, [Validators.min(0), Validators.max(20)]], // Beispiel
+    consumptionThreshold: [3, [Validators.min(0), Validators.max(20)]],
   });
 
   private subAuth?: Subscription;
   private subThemeChanges?: Subscription;
+  private subLiveName?: Subscription;
+  private saveNameTimer?: any;
 
   ngOnInit() {
-    // Live-Speichern & Umschalten bei Theme-Änderung (verhindert Inkonsistenzen)
+    // Theme-Livewechsel: nur Theme speichern, nicht Profilfelder überschreiben
     this.subThemeChanges = this.settingsForm.get('theme')!.valueChanges.subscribe(async t => {
       if (!this.uid) return;
       const mode = (t as Theme) ?? this.theme.getTheme();
       this.applyTheme(mode);
-      // in DB persistieren (merge)
       await this.svc.saveUserData(this.uid, {
-        displayName: this.profileForm.value.displayName ?? '',
-        phoneNumber: this.profileForm.value.phoneNumber ?? '',
-        theme: mode,
-      } as UserDataModel);
+        personalization: { theme: mode },
+      } as any); // saveUserData sollte { merge:true } verwenden
+    });
+
+    // Live: Anzeigename -> localStorage + CustomEvent + verzögert (15s) persistieren
+    this.subLiveName = this.profileForm.controls.displayName.valueChanges.pipe(
+      map(v => (v ?? '').trim()),
+      debounceTime(300),
+      distinctUntilChanged(),
+      filter(() => !!this.uid)
+    ).subscribe(name => {
+      try { localStorage.setItem('displayName', name); } catch {}
+      // NEU: Live-Event für denselben Tab (Header zieht sofort mit)
+      try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
+
+      clearTimeout(this.saveNameTimer);
+      this.saveNameTimer = setTimeout(() => this.persistDisplayName(name), 15000);
     });
 
     // User laden + Daten ziehen
@@ -71,15 +86,19 @@ export class UserDataComponent implements OnInit, OnDestroy {
         const settings = await this.svc.loadUserSettings(this.uid);
 
         // Profilfelder
-        this.profileForm.reset({
-          displayName: data.displayName ?? '',
-          phoneNumber: data.phoneNumber ?? '',
-        });
+        const displayName = (data.displayName ?? '').trim();
+        const phoneNumber = data.phoneNumber ?? '';
+        this.profileForm.reset({ displayName, phoneNumber });
 
-        // DB-Theme nur anwenden, wenn vorhanden – sonst aktuelles Theme beibehalten
-        const dbTheme = data.theme as Theme | undefined;
+        // initial auch in localStorage spiegeln (damit Header stimmt)
+        try { localStorage.setItem('displayName', displayName); } catch {}
+        // NEU: Initialen Wert sofort an den Header funken
+        try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: displayName })); } catch {}
 
-        // Werte in Settings-Form setzen, aber Events NICHT feuern (kein valueChanges-Trigger)
+        // DB-Theme lesen: personalization.theme bevorzugen
+        const dbTheme = ((data as any)?.personalization?.theme ?? (data as any)?.theme) as Theme | undefined;
+
+        // Werte in Settings-Form setzen, aber Events NICHT feuern
         this.settingsForm.patchValue(
           {
             theme: dbTheme ?? this.theme.getTheme(),
@@ -88,7 +107,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
           { emitEvent: false }
         );
 
-        // Nur wirklich umschalten, wenn DB einen Wert hat und er vom aktuellen abweicht
+        // Nur wirklich umschalten, wenn DB einen Wert hat und er abweicht
         if (dbTheme && dbTheme !== this.theme.getTheme()) {
           this.applyTheme(dbTheme);
         }
@@ -102,18 +121,38 @@ export class UserDataComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    clearTimeout(this.saveNameTimer);
     this.subAuth?.unsubscribe();
     this.subThemeChanges?.unsubscribe();
+    this.subLiveName?.unsubscribe();
+
+    // Optional: bei ungespeichertem Namen noch flushen
+    const name = (this.profileForm.value.displayName ?? '').trim();
+    if (this.uid && name) void this.persistDisplayName(name);
   }
 
   // THEME
   applyTheme(theme: Theme) {
     this.theme.setTheme(theme); // setzt Body-Klasse + localStorage
   }
-
   onThemeSelect(theme: Theme) {
-    // Setzt den Form-Wert (triggert valueChanges → live switch + persist)
     this.settingsForm.get('theme')!.setValue(theme);
+  }
+
+  // Sofort-Speichern des Anzeigenamens (DB + öffentlich + Auth)
+  async persistDisplayName(name: string) {
+    if (!this.uid) return;
+    try {
+      await this.svc.saveUserData(this.uid, { displayName: name } as UserDataModel);
+      await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
+      if (this.auth.currentUser) {
+        await updateProfile(this.auth.currentUser, { displayName: name });
+      }
+      // NEU: Nach erfolgreichem Persistieren Event erneut schicken (synchronisiert andere Tabs/Listener)
+      try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
+    } catch (e) {
+      // optional: Fehlerfeedback
+    }
   }
 
   // SAVE
@@ -122,14 +161,21 @@ export class UserDataComponent implements OnInit, OnDestroy {
     this.savingProfile.set(true);
     this.errorMsg.set(null);
 
-    const { displayName, phoneNumber } = this.profileForm.value as UserDataModel;
+    const name = (this.profileForm.value.displayName ?? '').trim();
+    const phoneNumber = this.profileForm.value.phoneNumber ?? '';
+
     try {
+      clearTimeout(this.saveNameTimer); // vermeidet Doppelspeichern kurz danach
       await this.svc.saveUserData(this.uid, {
-        displayName: displayName ?? '',
-        phoneNumber: phoneNumber ?? '',
-        theme: (this.settingsForm.value.theme as Theme) ?? this.theme.getTheme(),
-      });
-      await this.profileSvc.updatePublicProfile(this.uid, { displayName });
+        displayName: name,
+        phoneNumber: phoneNumber,
+      } as UserDataModel);
+      await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
+      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
+
+      try { localStorage.setItem('displayName', name); } catch {}
+      // NEU: Auch beim Button-Speichern Event feuern
+      try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Profil konnte nicht gespeichert werden.');
     } finally {
@@ -148,7 +194,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
 
     try {
       await this.svc.saveUserSettings(this.uid, settings);
-      // Theme wird bereits via valueChanges gespeichert
+      // Theme wurde bereits via valueChanges gespeichert
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Einstellungen konnten nicht gespeichert werden.');
     } finally {

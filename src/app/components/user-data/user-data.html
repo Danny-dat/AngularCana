@@ -13,7 +13,7 @@
 
       <div class="setting-item">
         <label for="displayName">Anzeigename</label>
-        <input id="displayName" type="text" [formControl]="profileForm.controls.displayName" />
+        <input id="displayName" type="text" [formControl]="profileForm.controls.displayName" (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
       </div>
 
       <div class="setting-item">
