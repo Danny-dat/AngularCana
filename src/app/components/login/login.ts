@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { Auth } from '@angular/fire/auth';
+import { UserDataService } from '../../services/user-data.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +23,10 @@ export class LoginComponent {
   constructor(
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef  // <— wichtig für Zoneless/Edge-Cases
+    private readonly cdr: ChangeDetectorRef,  // <— wichtig für Zoneless/Edge-Cases
+    private readonly auth: Auth,
+    private readonly userData: UserDataService,
+    private readonly theme: ThemeService,
   ) {}
 
   private mapAuthError(code?: string): string {
@@ -53,6 +59,25 @@ export class LoginComponent {
 
     try {
       await this.authService.login(email, password);
+
+      const u = this.auth.currentUser;
+      if (u?.uid) {
+        try {
+          const data = await this.userData.loadUserData(u.uid);
+
+          // erst personalization.theme prüfen, sonst theme
+          const t: 'light' | 'dark' =
+            ((data as any)?.personalization?.theme ?? (data as any)?.theme) === 'dark'
+              ? 'dark'
+              : 'light';
+
+          this.theme.setTheme(t);   // sofort setzen
+        } catch {
+          // Fallback: behalte lokales Theme
+          this.theme.setTheme(this.theme.getTheme());
+        }
+      }
+
       await this.router.navigate(['/dashboard'], { replaceUrl: true });
     } catch (err: any) {
       console.error('Login-Fehler:', err);

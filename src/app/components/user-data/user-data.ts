@@ -6,9 +6,7 @@ import { Auth, user } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
 import { ProfileService } from '../../services/profile.service';
 import { UserDataModel, UserDataService, UserSettingsModel } from '../../services/user-data.service';
-
-
-type Theme = 'light' | 'dark';
+import { ThemeService, Theme } from '../../services/theme.service';
 
 @Component({
   selector: 'app-user-data',
@@ -22,6 +20,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
   private auth = inject(Auth);
   private svc = inject(UserDataService);
   private profileSvc = inject(ProfileService);
+  private theme = inject(ThemeService);
 
   // UI state
   loading = signal(true);
@@ -36,15 +35,31 @@ export class UserDataComponent implements OnInit, OnDestroy {
     phoneNumber: [''],
   });
 
+  // ⚠️ Startet mit dem aktuell gesetzten Theme (kein Rückfall auf "light")
   settingsForm = this.fb.group({
-    theme: ['light' as Theme, Validators.required],
+    theme: [this.theme.getTheme() as Theme, Validators.required],
     consumptionThreshold: [3, [Validators.min(0), Validators.max(20)]], // Beispiel
   });
 
-  private sub?: Subscription;
+  private subAuth?: Subscription;
+  private subThemeChanges?: Subscription;
 
   ngOnInit() {
-    this.sub = user(this.auth).subscribe(async (u) => {
+    // Live-Speichern & Umschalten bei Theme-Änderung (verhindert Inkonsistenzen)
+    this.subThemeChanges = this.settingsForm.get('theme')!.valueChanges.subscribe(async t => {
+      if (!this.uid) return;
+      const mode = (t as Theme) ?? this.theme.getTheme();
+      this.applyTheme(mode);
+      // in DB persistieren (merge)
+      await this.svc.saveUserData(this.uid, {
+        displayName: this.profileForm.value.displayName ?? '',
+        phoneNumber: this.profileForm.value.phoneNumber ?? '',
+        theme: mode,
+      } as UserDataModel);
+    });
+
+    // User laden + Daten ziehen
+    this.subAuth = user(this.auth).subscribe(async (u) => {
       this.uid = u?.uid ?? null;
       if (!this.uid) {
         this.loading.set(false);
@@ -55,17 +70,29 @@ export class UserDataComponent implements OnInit, OnDestroy {
         const data = await this.svc.loadUserData(this.uid);
         const settings = await this.svc.loadUserSettings(this.uid);
 
+        // Profilfelder
         this.profileForm.reset({
           displayName: data.displayName ?? '',
           phoneNumber: data.phoneNumber ?? '',
         });
 
-        const theme = (data.theme as Theme) ?? 'light';
-        this.settingsForm.reset({
-          theme,
-          consumptionThreshold: settings.consumptionThreshold ?? 3,
-        });
-        this.applyTheme(theme);
+        // DB-Theme nur anwenden, wenn vorhanden – sonst aktuelles Theme beibehalten
+        const dbTheme = data.theme as Theme | undefined;
+
+        // Werte in Settings-Form setzen, aber Events NICHT feuern (kein valueChanges-Trigger)
+        this.settingsForm.patchValue(
+          {
+            theme: dbTheme ?? this.theme.getTheme(),
+            consumptionThreshold: settings.consumptionThreshold ?? 3,
+          },
+          { emitEvent: false }
+        );
+
+        // Nur wirklich umschalten, wenn DB einen Wert hat und er vom aktuellen abweicht
+        if (dbTheme && dbTheme !== this.theme.getTheme()) {
+          this.applyTheme(dbTheme);
+        }
+
         this.loading.set(false);
       } catch (e: any) {
         this.loading.set(false);
@@ -74,16 +101,19 @@ export class UserDataComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() { this.sub?.unsubscribe(); }
+  ngOnDestroy() {
+    this.subAuth?.unsubscribe();
+    this.subThemeChanges?.unsubscribe();
+  }
 
   // THEME
   applyTheme(theme: Theme) {
-    const root = document.documentElement; // <html>
-    root.setAttribute('data-theme', theme);
+    this.theme.setTheme(theme); // setzt Body-Klasse + localStorage
   }
+
   onThemeSelect(theme: Theme) {
+    // Setzt den Form-Wert (triggert valueChanges → live switch + persist)
     this.settingsForm.get('theme')!.setValue(theme);
-    this.applyTheme(theme);
   }
 
   // SAVE
@@ -97,9 +127,8 @@ export class UserDataComponent implements OnInit, OnDestroy {
       await this.svc.saveUserData(this.uid, {
         displayName: displayName ?? '',
         phoneNumber: phoneNumber ?? '',
-        theme: (this.settingsForm.value.theme as Theme) ?? 'light',
+        theme: (this.settingsForm.value.theme as Theme) ?? this.theme.getTheme(),
       });
-      // Öffentlichen Anzeigenamen pflegen (wie im alten JS)
       await this.profileSvc.updatePublicProfile(this.uid, { displayName });
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Profil konnte nicht gespeichert werden.');
@@ -119,7 +148,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
 
     try {
       await this.svc.saveUserSettings(this.uid, settings);
-      // Theme wird bereits live gesetzt, hier nichts weiter nötig
+      // Theme wird bereits via valueChanges gespeichert
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Einstellungen konnten nicht gespeichert werden.');
     } finally {

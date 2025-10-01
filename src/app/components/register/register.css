@@ -35,3 +35,21 @@
   border-radius:8px;
   font-size:14px;
 }
+
+/* Theme-Selector */
+.theme-selector{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px; margin: 10px 0 4px;
+}
+.theme-selector button{
+  width: 100%; padding:10px; border-radius:8px; font-weight:600;
+  border:2px solid var(--border-color, #e7e7e7);
+  background: var(--surface-color, #fff); color: var(--text-color, #222);
+  cursor: pointer;
+}
+.theme-selector button.active{
+  border-color: var(--primary-color, #36a546);
+  background: var(--primary-color, #36a546);
+  color:#fff;
+}

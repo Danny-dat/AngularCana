@@ -20,7 +20,9 @@ const comingSoon = (title: string) => () =>
         </div>
       `,
     })
-    class ComingSoonComponent { title = title; }
+    class ComingSoonComponent {
+      title = title;
+    }
     return ComingSoonComponent;
   });
 
@@ -31,7 +33,11 @@ export const routes: Routes = [
     component: PublicLayoutComponent,
     children: [
       { path: 'login', component: LoginComponent, data: { title: 'Login', hideHeader: true } },
-      { path: 'register', component: RegisterComponent, data: { title: 'Registrieren', hideHeader: true } },
+      {
+        path: 'register',
+        component: RegisterComponent,
+        data: { title: 'Registrieren', hideHeader: true },
+      },
     ],
   },
 
@@ -40,13 +46,49 @@ export const routes: Routes = [
     path: '',
     component: AppLayoutComponent,
     children: [
-      { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard], data: { title: 'Dashboard' } },
-      { path: 'chat', loadComponent: comingSoon('Globaler Chat'), canActivate: [authGuard], data: { title: 'Globaler Chat' } },
-      { path: 'social', loadComponent: comingSoon('Freunde & Soziales'), canActivate: [authGuard], data: { title: 'Freunde & Soziales' } },
-      { path: 'events', loadComponent: comingSoon('Events'), canActivate: [authGuard], data: { title: 'Events' } },
-      { path: 'stats', loadComponent: comingSoon('Statistik'), canActivate: [authGuard], data: { title: 'Statistik' } },
-      { path: 'thc', loadComponent: comingSoon('THC Rechner'), canActivate: [authGuard], data: { title: 'THC Rechner' } },
-      { path: 'me', canActivate: [authGuard], loadComponent: () => import('./components/user-data/user-data').then(m => m.UserDataComponent), data: { title: 'Meine Daten' } },
+      {
+        path: 'dashboard',
+        component: DashboardComponent,
+        canActivate: [authGuard],
+        data: { title: 'Dashboard' },
+      },
+      {
+        path: 'chat',
+        loadComponent: comingSoon('Globaler Chat'),
+        canActivate: [authGuard],
+        data: { title: 'Globaler Chat' },
+      },
+      {
+        path: 'social',
+        loadComponent: comingSoon('Freunde & Soziales'),
+        canActivate: [authGuard],
+        data: { title: 'Freunde & Soziales' },
+      },
+      {
+        path: 'events',
+        loadComponent: comingSoon('Events'),
+        canActivate: [authGuard],
+        data: { title: 'Events' },
+      },
+      {
+        path: 'stats',
+        loadComponent: comingSoon('Statistik'),
+        canActivate: [authGuard],
+        data: { title: 'Statistik' },
+      },
+      {
+        path: 'thc',
+        canActivate: [authGuard],
+        loadComponent: () => import('./pages/thc/thc.component').then((m) => m.ThcComponent),
+        data: { title: 'THC Rechner' },
+      },
+      {
+        path: 'me',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./components/user-data/user-data').then((m) => m.UserDataComponent),
+        data: { title: 'Meine Daten' },
+      },
 
       // --- Admin-Bereich: nur mit Auth + Admin-UID ---
       {
@@ -58,8 +100,17 @@ export const routes: Routes = [
       },
 
       // Öffentlich, aber mit Header:
-      { path: 'privacy', loadComponent: comingSoon('Datenschutz'), data: { title: 'Datenschutz' } },
-      { path: 'terms', loadComponent: comingSoon('AGB'), data: { title: 'AGB' } },
+      {
+        path: 'privacy',
+        loadComponent: () =>
+          import('./pages/privacy/privacy.component').then((m) => m.PrivacyComponent),
+        data: { title: 'Datenschutz' },
+      },
+      {
+        path: 'terms',
+        loadComponent: () => import('./pages/terms/terms.component').then((m) => m.TermsComponent),
+        data: { title: 'AGB' },
+      },
     ],
   },
 

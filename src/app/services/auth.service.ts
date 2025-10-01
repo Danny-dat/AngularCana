@@ -29,9 +29,22 @@ export class AuthService {
 
   async register({ email, password, displayName, phoneNumber }: RegisterData): Promise<User> {
     const cred = await createUserWithEmailAndPassword(this.auth, email, password);
+
     if (displayName?.trim()) {
       await updateProfile(cred.user, { displayName: displayName.trim() });
     }
+
+    // System-/lokale Präferenz respektieren
+    let initialTheme: 'light' | 'dark' = 'light';
+    try {
+      const local = (localStorage.getItem('pref-theme') || '').toLowerCase();
+      if (local === 'dark' || local === 'light') {
+        initialTheme = local as any;
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        initialTheme = 'dark';
+      }
+    } catch {}
+
     const userDocRef = doc(this.firestore, `users/${cred.user.uid}`);
     await setDoc(userDocRef, {
       email,
@@ -39,10 +52,11 @@ export class AuthService {
       phoneNumber: phoneNumber || null,
       friends: [],
       settings: { consumptionThreshold: 3 },
-      personalization: { theme: 'light' },
+      personalization: { theme: initialTheme }, // <-- hier Variable verwenden
       createdAt: serverTimestamp(),
       lastActiveAt: serverTimestamp(),
     });
+
     const publicDocRef = doc(this.firestore, `profiles_public/${cred.user.uid}`);
     await setDoc(publicDocRef, {
       displayName: displayName?.trim() || null,
@@ -52,6 +66,7 @@ export class AuthService {
       lastActiveAt: serverTimestamp(),
       createdAt: serverTimestamp(),
     });
+
     return cred.user;
   }
 

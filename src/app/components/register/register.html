@@ -43,6 +43,19 @@
       [disabled]="isLoading"
     />
 
+    <div class="theme-selector" role="group" aria-label="Theme wählen">
+  <button type="button"
+          [class.active]="selectedTheme==='light'"
+          (click)="selectTheme('light')">
+    Hell
+  </button>
+  <button type="button"
+          [class.active]="selectedTheme==='dark'"
+          (click)="selectTheme('dark')">
+    Dunkel
+  </button>
+</div>
+
     <button type="submit" [disabled]="isLoading || !f.form.valid">
       {{ isLoading ? 'Registriere…' : 'Registrieren' }}
     </button>

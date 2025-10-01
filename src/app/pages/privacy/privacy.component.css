@@ -1,0 +1,20 @@
+/* identisch zum AGB-Layout, ggf. getrennt lassen für spätere Abweichungen */
+.legal-page { padding: 16px; }
+.legal-page h2 { margin: 0 0 8px; font-size: 24px; font-weight: 800; }
+.muted { color: var(--muted-color, #6b7280); }
+
+.card{
+  background: var(--surface-color, #fff);
+  border: 1px solid var(--border-color, #e7e7e7);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.05);
+  margin: 12px 0;
+}
+
+.toc { padding: 12px 16px; }
+.toc ol{ margin: 8px 0 0 18px; }
+.toc a{ color: var(--primary-color, #36a546); text-decoration: underline; }
+
+h3 { margin: 0 0 10px; font-size: 18px; }
+.foot { margin-top: 10px; font-size: 13px; }
