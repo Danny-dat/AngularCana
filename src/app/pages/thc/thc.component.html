@@ -1,68 +1,99 @@
-<div class="page">
-  <h2 class="title">THC Rechner</h2>
+<div class="thc-calculator-page">
+  <div class="thc-calculator-container card">
+    <h3>THC Restgehalt Rechner</h3>
 
-  <div class="card">
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="grid">
-        <label>Alter
-          <input type="number" formControlName="age" />
-        </label>
-
-        <label>Gewicht (kg)
-          <input type="number" step="0.1" formControlName="weight" />
-        </label>
-
-        <label>Körperfett (%)
-          <input type="number" step="0.1" formControlName="bodyFat" />
-        </label>
-
-        <label>Konsumhäufigkeit
-          <select formControlName="frequency">
-            <option value="rare">selten</option>
-            <option value="often">oft</option>
-            <option value="daily">täglich</option>
+      <div class="calc-grid">
+        <div class="setting-item">
+          <label for="gender">Geschlecht</label>
+          <select id="gender" formControlName="gender">
+            <option value="male">mannish</option>
+            <option value="female">Weiblich</option>
           </select>
-        </label>
+        </div>
 
-        <label>Menge (g)
-          <input type="number" step="0.01" formControlName="amount" />
-        </label>
+        <div class="setting-item">
+          <label for="age">Alter</label>
+          <input id="age" type="number" formControlName="age" min="18">
+        </div>
 
-        <label>THC-Gehalt (%)
-          <input type="number" step="1" formControlName="thcPercentage" />
-        </label>
+        <div class="setting-item">
+          <label for="weight">Gewicht (kg)</label>
+          <input id="weight" type="number" step="0.1" formControlName="weight">
+        </div>
 
-        <label>Letzter Konsum
-          <input type="datetime-local" formControlName="lastConsumption" />
-        </label>
+        <div class="setting-item">
+          <label for="bodyFat">Körperfettanteil (%)</label>
+          <input id="bodyFat" type="number" step="0.1" formControlName="bodyFat" min="5" max="50">
+        </div>
       </div>
 
-      <button class="btn" type="submit" [disabled]="form.invalid">Berechnen</button>
-    </form>
-  </div>
+      <div class="setting-item">
+        <label for="frequency">Konsumhäufigkeit</label>
+        <select id="frequency" formControlName="frequency">
+          <option value="once">Einmalig / Selten</option>
+          <option value="often">Regelmäßig (meals pro Woche)</option>
+          <option value="daily">tillich</option>
+        </select>
+      </div>
 
-  @if (result(); as r) {
-    <div class="card result" [class.error]="r.error" [class.red]="r.status==='red'" [class.orange]="r.status==='orange'">
+      <hr>
+
+      <div class="calc-grid">
+        <div class="setting-item">
+          <label for="amount">Menge (g)</label>
+          <input id="amount" type="number" step="0.01" formControlName="amount">
+        </div>
+        <div class="setting-item">
+          <label for="thcPercentage">THC-Gehalt (%)</label>
+          <input id="thcPercentage" type="number" step="1" formControlName="thcPercentage">
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <label for="lastConsumption">Letzter Konsum (Datum & Uhrzeit)</label>
+        <input id="lastConsumption" type="datetime-local" formControlName="lastConsumption">
+      </div>
+
+      <button class="btn-calculate" type="submit" [disabled]="form.invalid">Berechnen</button>
+    </form>
+
+    @if (result(); as r) {
       @if (r.error) {
-        <p class="error-text">{{ r.error }}</p>
+        <div class="result-box result-box-error">
+          <p>{{ r.error }}</p>
+        </div>
       } @else {
-        <p class="value">
-          Aktuelle Schätzung: <strong>{{ r.value }} ng/ml</strong>
-        </p>
-        <p class="status">
-          Status:
-          <span class="pill" [class.green]="r.status==='green'"
-                            [class.orange]="r.status==='orange'"
-                            [class.red]="r.status==='red'">
-            {{ r.status }}
-          </span>
-        </p>
-        @if (r.waitTime) {
-          <p class="hint">Voraussichtliche Wartezeit bis &le; 3.5 ng/ml:
-            <strong>{{ r.waitTime }}</strong>
-          </p>
+        @if (r.status === 'red') {
+          <div class="result-box result-box-red">
+            <h4>Nicht Fahrtüchtig</h4>
+            <p>Geschätzter Wert: <strong>{{ r.value }} ng/ml</strong></p>
+            <p>Warte noch ca. <strong>{{ r.waitTime }}</strong>, um unter den Grenzwert zu fallen.</p>
+          </div>
+        }
+        @if (r.status === 'orange') {
+          <div class="result-box result-box-orange">
+            <h4>Eingeschränkt Fahrtüchtig</h4>
+            <p>Geschätzter Wert: <strong>{{ r.value }} ng/ml</strong></p>
+            <p>Achte auf dein Empfinden; Reaktionsfähigkeit kann eingeschränkt sein.</p>
+          </div>
+        }
+        @if (r.status === 'green') {
+          <div class="result-box result-box-green">
+            <h4>Fahrtüchtig</h4>
+            <p>Geschätzter Wert: <strong>{{ r.value }} ng/ml</strong></p>
+            <p>Dein geschätzter Wert liegt in einem Bereich, der als unbedenklich für die Fahrtüchtigkeit angesehen wird. Fahre trotzdem nur, wenn du dich absolut fit fühlst.</p>
+          </div>
         }
       }
-    </div>
-  }
+    }
+  </div>
+
+  <div class="warning-text">
+    <p><strong>Haftungsausschluss:</strong> Die hier angezeigten Ergebnisse sind lediglich Schätzungen und basieren auf vereinfachten Modellen. Der tatsächliche Abbau von THC ist von zahlreichen individuellen Faktoren wie Stoffwechsel, Körpergewicht und Konsumhäufigkeit abhängig. Diese Berechnung ist nicht rechtsverbindlich und sollte nicht zur Beurteilung der Fahrtüchtigkeit oder für medizinische Zwecke verwendet werden.</p>
+  </div>
+
+  <div class="ad-container card">
+    <p>WERBUNG</p>
+  </div>
 </div>

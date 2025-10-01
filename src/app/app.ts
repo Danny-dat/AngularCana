@@ -9,7 +9,7 @@ import { AppHeaderComponent } from './components/app-header/app-header';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterModule, AppHeaderComponent],
+  imports: [CommonModule, RouterModule],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
 })
