@@ -46,7 +46,7 @@ export const routes: Routes = [
       { path: 'events', loadComponent: comingSoon('Events'), canActivate: [authGuard], data: { title: 'Events' } },
       { path: 'stats', loadComponent: comingSoon('Statistik'), canActivate: [authGuard], data: { title: 'Statistik' } },
       { path: 'thc', loadComponent: comingSoon('THC Rechner'), canActivate: [authGuard], data: { title: 'THC Rechner' } },
-      { path: 'me', loadComponent: comingSoon('Meine Daten'), canActivate: [authGuard], data: { title: 'Meine Daten' } },
+      { path: 'me', canActivate: [authGuard], loadComponent: () => import('./components/user-data/user-data').then(m => m.UserDataComponent), data: { title: 'Meine Daten' } },
 
       // --- Admin-Bereich: nur mit Auth + Admin-UID ---
       {
