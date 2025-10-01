@@ -5,6 +5,7 @@ import { AuthService } from './services/auth.service';
 import { Observable } from 'rxjs';
 import { User } from '@angular/fire/auth';
 import { AppHeaderComponent } from "./components/app-header/app-header";
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -17,8 +18,9 @@ export class AppComponent {
   showMenu = false;
   user$: Observable<User | null>;
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(private authService: AuthService, private router: Router, private theme: ThemeService) {
     this.user$ = this.authService.authState$;
+    this.theme.setTheme('light');
   }
 
   async doLogout() {

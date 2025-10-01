@@ -1,0 +1,27 @@
+:host { display:block; }
+
+.sidebar-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2000;
+}
+
+.sidebar-menu {
+  position:fixed; top:0; left:0; width:280px; height:100%;
+  background:var(--surface-color); box-shadow:5px 0 15px rgba(0,0,0,.2);
+  padding:20px; box-sizing:border-box;
+  display:flex; flex-direction:column;
+}
+
+.sidebar-menu h3 {
+  margin-top:0; font-size:24px;
+  border-bottom:1px solid var(--border-color);
+  padding-bottom:15px;
+}
+
+.sidebar-menu a {
+  display:block; padding:15px 10px; font-size:18px;
+  color:var(--text-color); text-decoration:none;
+  border-radius:8px; cursor:pointer;
+}
+
+.sidebar-menu a:hover { background-color: var(--background-color); }
+.sidebar-menu hr { margin:10px 0; border:0; border-top:1px solid var(--border-color); }

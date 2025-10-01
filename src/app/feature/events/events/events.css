@@ -1,0 +1,17 @@
+.event-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0;
+  border-bottom:1px solid var(--border-color); }
+.event-item:last-child{ border-bottom:none; }
+.event-name{ font-weight:700; margin:0 0 5px 0; }
+.event-address{ font-size:14px; color:var(--text-muted-color); margin:0; }
+
+.event-actions{ display:flex; gap:10px; }
+.event-actions button{
+  background:none; border:1px solid var(--border-color); color:var(--text-muted-color);
+  width:40px; height:40px; border-radius:50%; cursor:pointer; transition:.2s;
+}
+.event-actions button:hover{ background:var(--background-color); }
+.event-actions button.voted{ background:var(--primary-color); color:#fff; border-color:var(--primary-color); }
+
+.vote-counters{ display:flex; gap:15px; font-size:14px; margin-top:8px; color:var(--text-muted-color); }
+.vote-counters .fa-thumbs-up{ color:var(--success-color); }
+.vote-counters .fa-thumbs-down{ color:var(--error-color); }
