@@ -9,18 +9,24 @@ import { AuthService, RegisterData } from '../../services/auth.service'; // <-- 
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './register.html',
-  styleUrls: ['./register.css']
+  styleUrls: ['./register.css'],
 })
 export class RegisterComponent {
   form: RegisterData = { email: '', password: '', displayName: '', phoneNumber: '' };
-  isLoading = false; errorMessage: string | null = null;
-  constructor(private authService: AuthService, private router: Router) { }
+  isLoading = false;
+  errorMessage: string | null = null;
+  constructor(private authService: AuthService, private router: Router) {}
+
   async doRegister(): Promise<void> {
-    this.isLoading = true; this.errorMessage = null;
+    this.isLoading = true;
+    this.errorMessage = null;
     try {
       await this.authService.register(this.form);
       this.router.navigate(['/dashboard']);
-    } catch (error) { this.errorMessage = 'Registrierung fehlgeschlagen.'; }
-    finally { this.isLoading = false; }
+    } catch (error) {
+      this.errorMessage = 'Registrierung fehlgeschlagen.';
+    } finally {
+      this.isLoading = false;
+    }
   }
 }

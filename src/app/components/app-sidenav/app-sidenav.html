@@ -1,0 +1,17 @@
+@if (open) {
+  <div class="sidebar-overlay" (click)="close()">
+    <nav class="sidebar-menu" (click)="$event.stopPropagation()">
+      <h3>Menü</h3>
+
+      @if (visibleItems$ | async; as vis) {
+        @for (it of vis; track it.label) {
+          <a matRipple [routerLink]="it.link || null" (click)="onItemClick(it, $event)">
+            <mat-icon fontSet="material-icons-outlined">{{ it.icon }}</mat-icon>
+            <span>{{ it.label }}</span>
+          </a>
+          @if (it.dividerAfter) { <hr /> }
+        }
+      }
+    </nav>
+  </div>
+}

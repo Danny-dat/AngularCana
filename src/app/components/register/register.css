@@ -1,0 +1,37 @@
+/* identisch zum Login-Look */
+.landing-container {
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  min-height: calc(100vh - 40px);
+}
+
+.logo { width:120px; height:120px; margin-top:20px; border-radius:50%; object-fit:cover; }
+
+.landing-form {
+  width:100%; max-width:400px; padding:30px; box-sizing:border-box; text-align:center;
+}
+.landing-form h2 { margin-top:0; color: var(--primary-dark); }
+
+/* Inputs & Button wie in login.css */
+.landing-form input{
+  display:block; width:calc(100% - 24px); padding:12px; margin:0 auto 15px;
+  border:1px solid var(--border-color); border-radius:8px; font-size:16px;
+  background:var(--background-color); color:var(--text-color);
+}
+.landing-form button{
+  width:100%; padding:14px; background:var(--primary-color); color:#fff;
+  border:0; border-radius:8px; cursor:pointer; font-size:16px; font-weight:700;
+}
+
+/* Link unter dem Formular */
+.auth-switch { color:var(--primary-color); cursor:pointer; margin-top:20px; font-size:14px; }
+
+/* Fehlermeldung (falls Login-Seite die schon hat, gerne identisch lassen) */
+.error-message{
+  margin-top:12px;
+  color:#b91c1c;
+  background:#fee2e2;
+  border:1px solid #fecaca;
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:14px;
+}

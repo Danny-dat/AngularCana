@@ -2,20 +2,59 @@
   <img class="logo" src="assets/logo.png" alt="Logo" />
   <h2>Registrieren</h2>
 
-  <form (ngSubmit)="doRegister()">
-    <input [(ngModel)]="form.email" name="email" type="email" placeholder="Email" required>
-    <input [(ngModel)]="form.password" name="password" type="password" placeholder="Passwort" required>
-    <input [(ngModel)]="form.displayName" name="displayName" type="text" placeholder="Anzeigename" required>
-    <input [(ngModel)]="form.phoneNumber" name="phoneNumber" type="tel" placeholder="Telefonnummer" required>
-    
-    <button type="submit" [disabled]="isLoading">
-       {{ isLoading ? 'Registriere...' : 'Registrieren' }}
+  <form (ngSubmit)="doRegister()" #f="ngForm" novalidate>
+    <input
+      [(ngModel)]="form.email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      placeholder="Email"
+      required
+      [disabled]="isLoading"
+    />
+
+    <input
+      [(ngModel)]="form.password"
+      name="password"
+      type="password"
+      autocomplete="new-password"
+      placeholder="Passwort"
+      minlength="6"
+      required
+      [disabled]="isLoading"
+    />
+
+    <input
+      [(ngModel)]="form.displayName"
+      name="displayName"
+      type="text"
+      autocomplete="nickname"
+      placeholder="Anzeigename"
+      required
+      [disabled]="isLoading"
+    />
+
+    <input
+      [(ngModel)]="form.phoneNumber"
+      name="phoneNumber"
+      type="tel"
+      autocomplete="tel"
+      placeholder="Telefonnummer"
+      [disabled]="isLoading"
+    />
+
+    <button type="submit" [disabled]="isLoading || !f.form.valid">
+      {{ isLoading ? 'Registriere…' : 'Registrieren' }}
     </button>
   </form>
 
-  <p class="auth-switch"><a routerLink="/login">Schon ein Konto? Zum Login</a></p>
+  <p class="auth-switch">
+    <a routerLink="/login">Schon ein Konto? Zum Login</a>
+  </p>
 
-  <div *ngIf="errorMessage" class="error-message">
-    {{ errorMessage }}
-  </div>
+  @if (errorMessage) {
+    <div class="error-message" role="alert" aria-live="polite">
+      {{ errorMessage }}
+    </div>
+  }
 </div>

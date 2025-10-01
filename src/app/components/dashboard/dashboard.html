@@ -10,19 +10,23 @@
     }
   </div>
 
-  <div class="selection">
-    @for (item of devices; track item.name) {
-      <div (click)="selectDevice(item.name)" [class.selected]="selection.device === item.name">
-        <img [src]="item.img" [alt]="item.name" />
-        <p>{{ item.name }}</p>
-      </div>
-    }
-  </div>
+<div class="selection">
+  @for (item of devices; track item.name) {
+    <div (click)="selectDevice(item.name)" [class.selected]="selection.device === item.name">
+      <img [src]="item.img" [alt]="item.name" />
+      <p>{{ item.name }}</p>
+    </div>
+  }
+</div>
 
   <button (click)="logConsumption()" [disabled]="!selection.product || !selection.device">
     Bestätigen & Standort loggen
   </button>
 </div>
+
+  <div class="ad-container card">
+    <p>WERBUNG</p>
+  </div>
 
 <div class="map-container card">
   <h3>Event-Karte</h3>
