@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { RegisterComponent } from './components/register/register';
 import { DashboardComponent } from './components/dashboard/dashboard';
-import { authGuard } from './services/auth';
+import { authGuard } from './guards/auth-guard'; 
 
 import { AppLayoutComponent } from './layouts/app-layout';
 import { PublicLayoutComponent } from './layouts/public-layout';
@@ -72,8 +72,8 @@ export const routes: Routes = [
       },
       {
         path: 'stats',
-        loadComponent: comingSoon('Statistik'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/statistics/statistics.component').then((m) => m.StatisticsComponent),
         data: { title: 'Statistik' },
       },
       {

@@ -49,16 +49,26 @@ export class AppHeaderComponent {
   constructor() {
     // 1) Auth-Änderungen -> Anzeigename und Noti-Stream
     this.subAuth = user(this.auth).subscribe((u) => {
-      this.applyLocalOrAuthName(u?.displayName, u?.email);
+      // Abgemeldet? -> Namen neutral setzen und Listener schließen
+      if (!u) {
+        this.userDisplayName = 'User'; // oder '' / 'Gast'
+        this.unsubNoti?.();
+        this.unsubNoti = undefined;
+        return;
+      }
+      // Angemeldet -> Namen aus Auth/Local anwenden und Notis verbinden
+      this.applyLocalOrAuthName(u.displayName, u.email);
       this.unsubNoti?.();
-      this.unsubNoti = u?.uid ? this.noti.listen(u.uid) : undefined;
+      this.unsubNoti = this.noti.listen(u.uid);
     });
 
-    // 2) Live-Updates aus ANDEREN Tabs/Fenstern (storage feuert nicht im selben Tab)
+    // 2) Live-Updates aus ANDEREN Tabs/Fenstern
     this.subStorage = fromEvent<StorageEvent>(window, 'storage')
       .pipe(startWith(null as any)) // initial prüfen (liest localStorage einmal)
       .subscribe((ev) => {
+        // Nur reagieren, wenn ein User angemeldet ist
         if (ev === null || ev.key === 'displayName') {
+          if (!this.auth.currentUser) return;
           const ls = this.getLocalName();
           if (ls) this.userDisplayName = ls;
         }
@@ -101,19 +111,20 @@ export class AppHeaderComponent {
     catch { return ''; }
   }
 
-  // Einheitliche Logik: localStorage bevorzugen, sonst Auth-Daten/Fallback
+  // Auth priorisieren, LocalStorage nur als Fallback
   private applyLocalOrAuthName(authDisplayName?: string | null, email?: string | null) {
-    const local = this.getLocalName();
-    if (local) {
-      this.userDisplayName = local;
-      return;
-    }
+    // 1) Auth-Daten zuerst (Quelle der Wahrheit)
     if (authDisplayName && authDisplayName.trim()) {
       this.userDisplayName = authDisplayName.trim();
       return;
     }
-    const mailName = (email ?? '').split('@')[0];
-    this.userDisplayName = mailName || 'User';
+    if (email && email.trim()) {
+      this.userDisplayName = email.split('@')[0] || 'User';
+      return;
+    }
+    // 2) Falls Auth nichts liefert: optional LocalStorage
+    const local = this.getLocalName();
+    this.userDisplayName = local || 'User';
   }
 
   toggleSidebar(ev?: MouseEvent) {
@@ -138,6 +149,12 @@ export class AppHeaderComponent {
   }
 
   async logout() {
+    // Hartes Aufräumen + UI-Update im selben Tab
+    try {
+      localStorage.removeItem('displayName'); // konsistenter Key
+      localStorage.removeItem('username');    // Legacy-Key falls vorhanden
+      window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
+    } catch {}
     await signOut(this.auth);
     this.router.navigateByUrl('/login');
   }

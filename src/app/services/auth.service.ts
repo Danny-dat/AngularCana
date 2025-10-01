@@ -1,3 +1,4 @@
+// auth.service.ts
 import { Injectable } from '@angular/core';
 import {
   Auth,
@@ -34,7 +35,6 @@ export class AuthService {
       await updateProfile(cred.user, { displayName: displayName.trim() });
     }
 
-    // System-/lokale Präferenz respektieren
     let initialTheme: 'light' | 'dark' = 'light';
     try {
       const local = (localStorage.getItem('pref-theme') || '').toLowerCase();
@@ -52,7 +52,7 @@ export class AuthService {
       phoneNumber: phoneNumber || null,
       friends: [],
       settings: { consumptionThreshold: 3 },
-      personalization: { theme: initialTheme }, // <-- hier Variable verwenden
+      personalization: { theme: initialTheme },
       createdAt: serverTimestamp(),
       lastActiveAt: serverTimestamp(),
     });
@@ -70,12 +70,32 @@ export class AuthService {
     return cred.user;
   }
 
-  login(email: string, password: string) {
-    return signInWithEmailAndPassword(this.auth, email, password);
+  // WICHTIG: Beim Login zuerst alten Namen entfernen
+  async login(email: string, password: string) {
+    try {
+      localStorage.removeItem('displayName');
+      localStorage.removeItem('username');   
+    } catch {}
+
+      const cred = await signInWithEmailAndPassword(this.auth, email, password);
+
+    // nach Erfolg frischen Namen setzen (für Header)
+    try {
+      const display = cred.user.displayName ?? cred.user.email ?? 'User';
+      localStorage.setItem('displayName', display);
+    } catch {}
+
+    return cred;
   }
+
   logout() {
+    try {
+      localStorage.removeItem('displayName');
+      localStorage.removeItem('username');
+    } catch {}
     return signOut(this.auth);
   }
+
   resetPassword(email: string) {
     if (!email?.trim()) return Promise.reject(new Error('Bitte E-Mail eingeben.'));
     return sendPasswordResetEmail(this.auth, email.trim());

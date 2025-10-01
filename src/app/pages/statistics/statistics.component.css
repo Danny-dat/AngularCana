@@ -1,0 +1,9 @@
+.stats-container { display: grid; gap: 12px; }
+.stats-header { display:flex; align-items:center; justify-content:space-between; }
+.time-range-selector button { margin-right: 6px; }
+.time-range-selector .active { font-weight: 700; text-decoration: underline; }
+.chart-wrap { position: relative; height: 300px; }
+.ranking-grids { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ranking-list.full-width { grid-column: 1 / -1; }
+.count-badge { background: var(--border-color, #eee); border-radius: 999px; padding: 2px 8px; }
+.empty-state-small { color: #888; font-size: 12px; }
