@@ -1,15 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd, ActivatedRoute } from '@angular/router';
-import { filter, map } from 'rxjs/operators';
+import { filter, map, startWith } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
 import { Auth, user, signOut } from '@angular/fire/auth';
-import { NotificationService, AppNotification } from '../../services/notification.service';
-import { Observable, Subscription } from 'rxjs';
+import { NotificationService } from '../../services/notification.service';
+import { AppNotification } from '../../models/notification-module';
+import { Observable, Subscription, fromEvent } from 'rxjs';
 import { playSoundAndVibrate } from '../../utils/notify';
 import { Timestamp } from 'firebase/firestore';
 import { AppSidenav } from '../app-sidenav/app-sidenav';
-
 
 @Component({
   selector: 'app-header',
@@ -34,31 +34,51 @@ export class AppHeaderComponent {
   notifications$: Observable<AppNotification[]> = this.noti.notifications$;
 
   userDisplayName = '';
+
   private unsubNoti?: () => void;
   private subAuth?: Subscription;
   private subCount?: Subscription;
   private subRoute?: Subscription;
+  private subStorage?: Subscription;
+  private subNameEvent?: Subscription;
 
   asDate(x: Date | Timestamp): Date {
     return x instanceof Date ? x : x.toDate();
   }
 
   constructor() {
-    // User & Noti-Listener
+    // 1) Auth-Änderungen -> Anzeigename und Noti-Stream
     this.subAuth = user(this.auth).subscribe((u) => {
-      this.userDisplayName = u?.displayName ?? (u?.email ?? '').split('@')[0];
+      this.applyLocalOrAuthName(u?.displayName, u?.email);
       this.unsubNoti?.();
       this.unsubNoti = u?.uid ? this.noti.listen(u.uid) : undefined;
     });
 
-    // Sound/Vibration bei neuem Unread
+    // 2) Live-Updates aus ANDEREN Tabs/Fenstern (storage feuert nicht im selben Tab)
+    this.subStorage = fromEvent<StorageEvent>(window, 'storage')
+      .pipe(startWith(null as any)) // initial prüfen (liest localStorage einmal)
+      .subscribe((ev) => {
+        if (ev === null || ev.key === 'displayName') {
+          const ls = this.getLocalName();
+          if (ls) this.userDisplayName = ls;
+        }
+      });
+
+    // 3) Live-Updates im SELBEN Tab (wird von deiner UserDataComponent gefeuert)
+    this.subNameEvent = fromEvent<CustomEvent<string>>(window as any, 'displayNameChanged')
+      .subscribe((ev) => {
+        const name = (ev.detail ?? '').trim();
+        if (name) this.userDisplayName = name;
+      });
+
+    // 4) Sound/Vibration bei neuem Unread
     let last = 0;
     this.subCount = this.unreadCount$.subscribe((c) => {
       if (c > last) playSoundAndVibrate();
       last = c;
     });
 
-    // Dynamischer Titel aus Route.data.title
+    // 5) Dynamischer Titel aus Route.data.title oder URL-Segment
     this.subRoute = this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
       map(() => {
@@ -70,6 +90,30 @@ export class AppHeaderComponent {
         return urlSeg.charAt(0).toUpperCase() + urlSeg.slice(1);
       })
     ).subscribe(t => this.pageTitle = t);
+
+    // 6) Fallback: falls oben noch nichts gesetzt wurde, initial aus localStorage ziehen
+    if (!this.userDisplayName) this.userDisplayName = this.getLocalName() || 'User';
+  }
+
+  // Lokalen Anzeigenamen lesen
+  private getLocalName(): string {
+    try { return (localStorage.getItem('displayName') || '').trim(); }
+    catch { return ''; }
+  }
+
+  // Einheitliche Logik: localStorage bevorzugen, sonst Auth-Daten/Fallback
+  private applyLocalOrAuthName(authDisplayName?: string | null, email?: string | null) {
+    const local = this.getLocalName();
+    if (local) {
+      this.userDisplayName = local;
+      return;
+    }
+    if (authDisplayName && authDisplayName.trim()) {
+      this.userDisplayName = authDisplayName.trim();
+      return;
+    }
+    const mailName = (email ?? '').split('@')[0];
+    this.userDisplayName = mailName || 'User';
   }
 
   toggleSidebar(ev?: MouseEvent) {
@@ -94,14 +138,16 @@ export class AppHeaderComponent {
   }
 
   async logout() {
-  await signOut(this.auth);
-  this.router.navigateByUrl('/login');
-}
+    await signOut(this.auth);
+    this.router.navigateByUrl('/login');
+  }
 
   ngOnDestroy() {
     this.unsubNoti?.();
     this.subAuth?.unsubscribe();
     this.subCount?.unsubscribe();
     this.subRoute?.unsubscribe();
+    this.subStorage?.unsubscribe();
+    this.subNameEvent?.unsubscribe();
   }
 }
