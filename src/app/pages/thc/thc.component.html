@@ -1,0 +1,68 @@
+<div class="page">
+  <h2 class="title">THC Rechner</h2>
+
+  <div class="card">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="grid">
+        <label>Alter
+          <input type="number" formControlName="age" />
+        </label>
+
+        <label>Gewicht (kg)
+          <input type="number" step="0.1" formControlName="weight" />
+        </label>
+
+        <label>Körperfett (%)
+          <input type="number" step="0.1" formControlName="bodyFat" />
+        </label>
+
+        <label>Konsumhäufigkeit
+          <select formControlName="frequency">
+            <option value="rare">selten</option>
+            <option value="often">oft</option>
+            <option value="daily">täglich</option>
+          </select>
+        </label>
+
+        <label>Menge (g)
+          <input type="number" step="0.01" formControlName="amount" />
+        </label>
+
+        <label>THC-Gehalt (%)
+          <input type="number" step="1" formControlName="thcPercentage" />
+        </label>
+
+        <label>Letzter Konsum
+          <input type="datetime-local" formControlName="lastConsumption" />
+        </label>
+      </div>
+
+      <button class="btn" type="submit" [disabled]="form.invalid">Berechnen</button>
+    </form>
+  </div>
+
+  @if (result(); as r) {
+    <div class="card result" [class.error]="r.error" [class.red]="r.status==='red'" [class.orange]="r.status==='orange'">
+      @if (r.error) {
+        <p class="error-text">{{ r.error }}</p>
+      } @else {
+        <p class="value">
+          Aktuelle Schätzung: <strong>{{ r.value }} ng/ml</strong>
+        </p>
+        <p class="status">
+          Status:
+          <span class="pill" [class.green]="r.status==='green'"
+                            [class.orange]="r.status==='orange'"
+                            [class.red]="r.status==='red'">
+            {{ r.status }}
+          </span>
+        </p>
+        @if (r.waitTime) {
+          <p class="hint">Voraussichtliche Wartezeit bis &le; 3.5 ng/ml:
+            <strong>{{ r.waitTime }}</strong>
+          </p>
+        }
+      }
+    </div>
+  }
+</div>

@@ -58,8 +58,8 @@ export const routes: Routes = [
       },
 
       // Öffentlich, aber mit Header:
-      { path: 'privacy', loadComponent: comingSoon('Datenschutz'), data: { title: 'Datenschutz' } },
-      { path: 'terms', loadComponent: comingSoon('AGB'), data: { title: 'AGB' } },
+      { path: 'privacy', loadComponent: () => import('./pages/privacy/privacy.component').then(m => m.PrivacyComponent), data: { title: 'Datenschutz' } },
+      { path: 'terms',   loadComponent: () => import('./pages/terms/terms.component').then(m => m.TermsComponent),     data: { title: 'AGB' } },
     ],
   },
 

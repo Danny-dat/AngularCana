@@ -1,0 +1,75 @@
+<div class="legal-page">
+  <h2>Datenschutzerklärung</h2>
+  <p class="muted">Letzte Aktualisierung: {{ lastUpdated }}</p>
+
+  <nav class="toc card">
+    <strong>Inhalt</strong>
+    <ol>
+      <li><a href="#responsible">Verantwortliche Stelle</a></li>
+      <li><a href="#data">Verarbeitete Daten</a></li>
+      <li><a href="#purpose">Zwecke &amp; Rechtsgrundlagen</a></li>
+      <li><a href="#third">Drittanbieter</a></li>
+      <li><a href="#storage">Speicherdauer</a></li>
+      <li><a href="#rights">Betroffenenrechte</a></li>
+      <li><a href="#security">Sicherheit</a></li>
+      <li><a href="#contact">Kontakt</a></li>
+    </ol>
+  </nav>
+
+  <section class="card" id="responsible">
+    <h3>1. Verantwortliche Stelle</h3>
+    <p>{{ controller.name }} – {{ controller.address }} – {{ controller.email }}</p>
+  </section>
+
+  <section class="card" id="data">
+    <h3>2. Verarbeitete Daten</h3>
+    <ul>
+      <li>Accountdaten (E-Mail, Anzeigename, UID)</li>
+      <li>Nutzungsdaten (z. B. Logins, Interaktionen)</li>
+      <li>Geräte-/Technikdaten (z. B. Browser, IP – nur kurzzeitig)</li>
+      <li>Inhaltsdaten, die du aktiv eingibst (z. B. Profilangaben, Nachrichten)</li>
+    </ul>
+  </section>
+
+  <section class="card" id="purpose">
+    <h3>3. Zwecke &amp; Rechtsgrundlagen</h3>
+    <ul>
+      <li>Bereitstellung der Plattform (Art. 6 Abs. 1 lit. b DSGVO)</li>
+      <li>Sicherheit &amp; Missbrauchsverhinderung (Art. 6 Abs. 1 lit. f DSGVO)</li>
+      <li>Einwilligungsbasierte Funktionen (Art. 6 Abs. 1 lit. a DSGVO), z. B. Push-Benachrichtigungen</li>
+    </ul>
+  </section>
+
+  <section class="card" id="third">
+    <h3>4. Drittanbieter &amp; Übermittlungen</h3>
+    <p>Wir setzen ggf. Dienstleister (Auftragsverarbeiter) ein, z. B. Hosting, Analytik, Push. Mit diesen bestehen Verträge gem. Art. 28 DSGVO. Eine Übermittlung in Drittländer erfolgt nur mit geeigneten Garantien (Art. 46 DSGVO).</p>
+  </section>
+
+  <section class="card" id="storage">
+    <h3>5. Speicherdauer</h3>
+    <p>Wir verarbeiten personenbezogene Daten nur so lange, wie es für die jeweiligen Zwecke erforderlich ist oder rechtliche Pflichten bestehen. Anschließend werden Daten gelöscht oder anonymisiert.</p>
+  </section>
+
+  <section class="card" id="rights">
+    <h3>6. Deine Rechte</h3>
+    <ul>
+      <li>Auskunft, Berichtigung, Löschung, Einschränkung</li>
+      <li>Datenübertragbarkeit</li>
+      <li>Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen</li>
+      <li>Widerruf erteilter Einwilligungen</li>
+      <li>Beschwerde bei einer Aufsichtsbehörde</li>
+    </ul>
+  </section>
+
+  <section class="card" id="security">
+    <h3>7. Sicherheit</h3>
+    <p>Wir schützen Daten durch organisatorische und technische Maßnahmen (z. B. Verschlüsselung, Zugriffskontrolle, Backups). Dennoch kann keine Übertragung im Internet absolut sicher sein.</p>
+  </section>
+
+  <section class="card" id="contact">
+    <h3>8. Kontakt</h3>
+    <p>Fragen zum Datenschutz? Schreib uns an <a [href]="'mailto:' + controller.email">{{ controller.email }}</a>.</p>
+  </section>
+
+  <p class="foot muted">Bitte passe Inhalte an deine tatsächlichen Prozesse (z. B. Hosting, Analytics, Newsletter) an.</p>
+</div>
