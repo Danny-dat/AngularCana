@@ -53,3 +53,10 @@
   height: 0; border: 0; border-top: 1px solid var(--border-color);
   margin: 8px 0;
 }
+
+
+.sidebar-menu { background: var(--surface-color, #fff); }
+.sidebar-menu a { color: var(--text-color, #222); }
+.sidebar-menu a:hover { background: var(--background-color, #f5f5f7); }
+.sidebar-menu h3 { border-bottom: 1px solid var(--border-color, #e7e7e7); }
+.sidebar-menu hr { border-top: 1px solid var(--border-color, #e7e7e7); }
