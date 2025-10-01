@@ -1,3 +1,163 @@
-.dashboard-banner { margin-bottom:20px; }
-.dashboard-banner img { width:100%; border-radius:var(--border-radius); box-shadow:0 4px 15px var(--shadow-color); }
-.placeholder-card { text-align:center; padding:40px; color:var(--text-muted-color); }
+/* ===========================
+   DASHBOARD – Schwarzes Layout (Overrides)
+   =========================== */
+
+/* Karten (Tracker + Map): zentriert, rund, mit Schatten */
+.tracker-container.card,
+.map-container.card {
+  max-width: 680px;              /* Card-Breite wie im Referenzlayout */
+  margin: 18px auto;             /* zentriert, vertikal Luft */
+  padding: 16px 18px;            /* Innenabstand */
+  border-radius: 14px;           /* weiche Ecken */
+  background: var(--surface-color);
+  box-shadow: 0 10px 24px var(--shadow-color);
+  color: var(--text-color);
+}
+
+/* Überschriften: globalen Border/Abstände neutralisieren, eigenen Divider */
+.tracker-container h3,
+.map-container h3 {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin: 6px 0 12px !important;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.tracker-container h3::after {
+  content: "";                   /* feiner Divider unter dem Titel */
+  display: block;
+  height: 1px;
+  background: var(--border-color);
+  opacity: .6;
+  margin-top: 10px;
+}
+
+/* ========== Kachel-Grid – Basis ========== */
+/* Standard-Layout: Grid mit 3 Spalten, wie in Reihe 1 */
+.selection {
+  display: grid !important;      /* alte Flex-Regel sicher überstimmen */
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 72px;              /* horizontaler Abstand zwischen Spalten */
+  row-gap: 36px;                 /* vertikaler Abstand zwischen Zeilen */
+  padding: 6px 6px 20px;         /* Innenabstand zur Card-Kante */
+  justify-items: center;         /* Inhalte mittig in ihrer Spalte */
+  align-items: start;
+  max-width: 560px;              /* engerer Content → luftiger Look */
+  margin: 0 auto;                /* Grid selbst zentrieren */
+}
+
+/* frühere Breakpoints, die 4 Spalten setzen könnten, aushebeln */
+@media (min-width: 720px) {
+  .selection { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Sehr schmale Phones: auf 2 Spalten gehen */
+@media (max-width: 420px) {
+  .selection { grid-template-columns: repeat(2, 1fr); column-gap: 36px; }
+}
+
+/* Kachel-Item (clickbares Div) */
+.selection > div {
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;                  /* kleiner Außenpuffer, damit Auswahlrand Platz hat */
+  border: 2px solid transparent; /* wird bei .selected grün */
+  border-radius: 12px;
+  transition: transform .08s ease-in-out, border-color .2s, box-shadow .2s;
+}
+.selection > div:active { transform: scale(.98); }
+
+/* Weißes Thumbnail mit Schatten – das „Icon-Kärtchen“ */
+.selection img {
+  width: 64px;
+  height: 64px;
+  padding: 10px;                 /* „Luft“ um das Motiv im weißen Feld */
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+/* Label unter dem Thumbnail */
+.selection p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-color);
+}
+
+/* Auswahlzustand – dezent grün mit leichtem Inset-Glow */
+.selection .selected {
+  border-color: var(--primary-color);
+  box-shadow: inset 0 0 0 4px rgba(76,175,80,.10);
+  border-radius: 12px;
+  padding: 2px;                  /* gleichen Außenmaß trotz 2px Rand behalten */
+}
+
+/* ========== Reihen-spezifisches Grid ========== */
+/* Erste Reihe (Produkte): 3 Spalten, etwas schmaler Content */
+.tracker-container > .selection:first-of-type {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* Zweite Reihe (Devices): 4 Spalten, etwas breiterer Content */
+.tracker-container > .selection:nth-of-type(2) {
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: 48px;              /* enger als oben → wirkt ausgewogen */
+  row-gap: 36px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Fallback: sehr schmale Phones – beide Reihen auf 2 Spalten */
+@media (max-width: 480px) {
+  .tracker-container > .selection:first-of-type {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tracker-container > .selection:nth-of-type(2) {
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 28px;
+  }
+}
+
+/* ========== Primärer Action-Button ========== */
+.tracker-container button {
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primary-color);  /* grün */
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0,0,0,.20);
+}
+.tracker-container button:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ========== Map-Container ========== */
+.map-container #map-container {
+  height: 420px;                 /* feste Höhe, sonst minimiert Leaflet/Mapbox */
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;              /* Map-Ecken sauber runden */
+}
+
+/* (optional) Accessibility: sichtbarer Keyboard-Fokus für Kacheln */
+.selection > div:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
