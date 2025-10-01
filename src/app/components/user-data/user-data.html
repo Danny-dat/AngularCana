@@ -1,1 +1,57 @@
-<p>user-data works!</p>
+<div class="user-page">
+  <h2 class="page-title">Meine Daten</h2>
+
+  @if (loading()) {
+    <div class="card"><p>Lade…</p></div>
+  } @else {
+    @if (errorMsg()) {
+      <div class="card error">{{ errorMsg() }}</div>
+    }
+
+    <div class="card">
+      <h3>Profil</h3>
+
+      <div class="setting-item">
+        <label for="displayName">Anzeigename</label>
+        <input id="displayName" type="text" [formControl]="profileForm.controls.displayName" />
+      </div>
+
+      <div class="setting-item">
+        <label for="phoneNumber">Telefonnummer</label>
+        <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
+      </div>
+
+      <button class="btn btn-save" (click)="saveProfile()" [disabled]="savingProfile() || profileForm.invalid">
+        {{ savingProfile() ? 'Speichere…' : 'Profil speichern' }}
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>Darstellung</h3>
+      <div class="setting-item">
+        <label>Theme</label>
+        <div class="theme-selector">
+          <button type="button"
+                  [class.active]="settingsForm.value.theme === 'light'"
+                  (click)="onThemeSelect('light')">
+            <mat-icon fontSet="material-icons-outlined">light_mode</mat-icon> Hell
+          </button>
+          <button type="button"
+                  [class.active]="settingsForm.value.theme === 'dark'"
+                  (click)="onThemeSelect('dark')">
+            <mat-icon fontSet="material-icons-outlined">dark_mode</mat-icon> Dunkel
+          </button>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <label for="threshold">Tages-Limit (Beispiel)</label>
+        <input id="threshold" type="number" [formControl]="settingsForm.controls.consumptionThreshold" />
+      </div>
+
+      <button class="btn btn-save" (click)="saveSettings()" [disabled]="savingSettings() || settingsForm.invalid">
+        {{ savingSettings() ? 'Speichere…' : 'Einstellungen speichern' }}
+      </button>
+    </div>
+  }
+</div>

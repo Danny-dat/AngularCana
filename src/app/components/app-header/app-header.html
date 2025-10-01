@@ -4,35 +4,44 @@
     <mat-icon fontSet="material-icons-outlined">menu</mat-icon>
   </button>
 
-  <!-- Titel, optisch zentriert -->
   <h2 class="title">{{ pageTitle }}</h2>
 
-  <!-- Actions rechts -->
   <div class="header-actions" (click)="$event.stopPropagation()">
-    <!-- Online-Indicator (optional) -->
-    <button class="icon-btn icon-btn--lg" aria-label="Einstellungen" (click)="openSettings($event)">
+    <!-- Einstellungen -> Meine Daten -->
+    <button
+      class="icon-btn icon-btn--lg"
+      aria-label="Einstellungen"
+      (click)="$event.stopPropagation()"
+      [routerLink]="'/me'">
       <mat-icon class="material-icons-outlined">settings</mat-icon>
     </button>
 
-    <!-- Glocke + Badge + Dropdown -->
     <div class="bell-wrap">
       <button class="icon-btn" aria-label="Benachrichtigungen" (click)="toggleNotifications($event)">
         <mat-icon fontSet="material-icons-outlined">notifications_none</mat-icon>
-        <span class="badge" *ngIf="(unreadCount$ | async) as c" [class.show]="c>0">{{ c }}</span>
+        @if (unreadCount$ | async; as c) {
+          <span class="badge" [class.show]="c > 0">{{ c }}</span>
+        }
       </button>
 
-      <div class="dropdown" *ngIf="showNotifications">
-        <ng-container *ngIf="(notifications$ | async) as list">
-          <div class="item empty" *ngIf="!list?.length">Keine Benachrichtigungen.</div>
-          <div class="item" *ngFor="let n of list" [class.read]="n.read" (click)="markRead(n.id)">
-            <p>{{ n.message }}</p>
-            <small>{{ asDate(n.timestamp) | date:'EEE, dd.MM.yyyy, HH:mm' }}</small>
-          </div>
-        </ng-container>
-      </div>
+      @if (showNotifications) {
+        <div class="dropdown">
+          @if (notifications$ | async; as list) {
+            @if (!list?.length) {
+              <div class="item empty">Keine Benachrichtigungen.</div>
+            } @else {
+              @for (n of list; track n.id) {
+                <div class="item" [class.read]="n.read" (click)="markRead(n.id)">
+                  <p>{{ n.message }}</p>
+                  <small>{{ asDate(n.timestamp) | date:'EEE, dd.MM.yyyy, HH:mm' }}</small>
+                </div>
+              }
+            }
+          }
+        </div>
+      }
     </div>
 
-    <!-- Username -->
     <span class="user-name">{{ userDisplayName }}</span>
   </div>
 </header>
