@@ -3,33 +3,71 @@
 
   <div class="selection">
     @for (item of products; track item.name) {
-      <div (click)="selectProduct(item.name)" [class.selected]="selection.product === item.name">
-        <img [src]="item.img" [alt]="item.name" />
+      <div
+        (click)="selectProduct(item.name)"
+        [class.selected]="selection.product === item.name"
+        [attr.aria-pressed]="selection.product === item.name"
+        role="button" tabindex="0"
+        (keydown.enter)="selectProduct(item.name)"
+      >
+        <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'product')" />
         <p>{{ item.name }}</p>
       </div>
     }
   </div>
 
-<div class="selection">
-  @for (item of devices; track item.name) {
-    <div (click)="selectDevice(item.name)" [class.selected]="selection.device === item.name">
-      <img [src]="item.img" [alt]="item.name" />
-      <p>{{ item.name }}</p>
-    </div>
-  }
-</div>
-
-  <button (click)="logConsumption()" [disabled]="!selection.product || !selection.device">
-    Bestätigen & Standort loggen
-  </button>
-</div>
-
-  <div class="ad-container card">
-    <p>WERBUNG</p>
+  <div class="selection">
+    @for (item of devices; track item.name) {
+      <div
+        (click)="selectDevice(item.name)"
+        [class.selected]="selection.device === item.name"
+        [attr.aria-pressed]="selection.device === item.name"
+        role="button" tabindex="0"
+        (keydown.enter)="selectDevice(item.name)"
+      >
+        <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'device')" />
+        <p>{{ item.name }}</p>
+      </div>
+    }
   </div>
+
+  <div class="actions">
+    <button
+      (click)="logConsumption()"
+      [disabled]="isSaving || !selection.product || !selection.device"
+      [class.loading]="isSaving"
+      [class.success]="justSaved"
+      aria-live="polite"
+    >
+      @if (isSaving) {
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span>Speichere…</span>
+      } @else if (justSaved) {
+        <span class="btn-check" aria-hidden="true">✓</span>
+        <span>Gespeichert</span>
+      } @else {
+        <span>Bestätigen & (optional) Standort loggen</span>
+      }
+    </button>
+
+    @if (savedAt) {
+      <div class="saved-stamp">Zuletzt gespeichert: <strong>{{ savedAt | date:'shortTime' }}</strong></div>
+    }
+  </div>
+</div>
+
+<div class="ad-container card">
+  <p>WERBUNG</p>
+</div>
 
 <div class="map-container card">
   <h3>Event-Karte</h3>
-  <!-- feste Höhe ist Pflicht -->
   <div id="map-container" style="height:420px;width:100%"></div>
 </div>
+
+<!-- Toast oben rechts -->
+@if (toast) {
+  <div class="toast" [class.success]="toast.type==='success'" [class.error]="toast.type==='error'">
+    {{ toast.text }}
+  </div>
+}

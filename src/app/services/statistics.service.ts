@@ -1,8 +1,7 @@
-// src/app/services/statistics.service.ts
-import { Injectable } from '@angular/core';
-import { Firestore, collection, query, where, getDocs, Timestamp } from '@angular/fire/firestore';
+import { Injectable, EnvironmentInjector, inject, runInInjectionContext } from '@angular/core';
+import { Firestore, collection, collectionGroup, query, where, getDocs } from '@angular/fire/firestore';
 
-export type StatsRange = 'week' | 'month' | 'year';
+export type StatsRange = 'week' | 'month' | 'year' | 'custom';
 
 export interface RankingItem { name: string; count: number; }
 export interface AdvancedStatsResult {
@@ -17,112 +16,184 @@ export interface AdvancedStatsResult {
 
 @Injectable({ providedIn: 'root' })
 export class StatisticsService {
-  constructor(private firestore: Firestore) {}
+  private readonly firestore = inject(Firestore);
+  private readonly env = inject(EnvironmentInjector);
 
-  async loadAdvancedConsumptionStats(uid: string, range: StatsRange = 'week'): Promise<AdvancedStatsResult> {
-    try {
-      const today = new Date();
-      const startDate = this.getStartDate(today, range);
+  async loadAdvancedConsumptionStats(
+    uid: string,
+    range: StatsRange = 'week',
+    opts?: { start?: Date; end?: Date }
+  ): Promise<AdvancedStatsResult> {
+    const empty: AdvancedStatsResult = {
+      chartLabels: [],
+      chartValues: [],
+      rankings: { byProduct: [], byDevice: [], byPair: [] }
+    };
+    if (!uid) return empty;
 
-      const col = collection(this.firestore, 'consumptions');
-      const q = query(col, where('userId', '==', uid), where('timestamp', '>=', Timestamp.fromDate(startDate)));
-      const snap = await getDocs(q);
+    return await runInInjectionContext(this.env, async () => {
+      const today = this.trimDate(new Date());
 
-      const chartStats = new Map<string, number>();
-      const productCounts = new Map<string, number>();
-      const deviceCounts = new Map<string, number>();
-      const pairCounts = new Map<string, number>();
+      // --- Zeitraum bestimmen + Buckets vorbefüllen ---
+      let start: Date, end: Date, bucketKeys: string[], bucketLabels: string[], bucketBy: 'day' | 'month';
 
-      // Woche vorbefüllen (7 Tage)
       if (range === 'week') {
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const key = d.toLocaleDateString('de-DE');
-          chartStats.set(key, 0);
+        end = today;
+        start = this.addDays(end, -6);
+        ({ keys: bucketKeys, labels: bucketLabels } = this.makeDailyBuckets(start, end));
+        bucketBy = 'day';
+      } else if (range === 'month') {
+        const y = today.getFullYear(), m = today.getMonth();
+        start = new Date(y, m, 1);
+        end   = new Date(y, m + 1, 0);
+        ({ keys: bucketKeys, labels: bucketLabels } = this.makeDailyBuckets(start, end));
+        bucketBy = 'day';
+      } else if (range === 'year') {
+        const y = today.getFullYear();
+        start = new Date(y, 0, 1);
+        end   = new Date(y, 11, 31);
+        ({ keys: bucketKeys, labels: bucketLabels } = this.makeMonthlyBuckets(y));
+        bucketBy = 'month';
+      } else { // custom
+        start = this.trimDate(opts?.start ?? today);
+        end   = this.trimDate(opts?.end   ?? today);
+        if (start > end) [start, end] = [end, start];
+        // <= 62 Tage -> täglich, sonst monatlich
+        const diffDays = Math.round((+end - +start) / 86400000) + 1;
+        if (diffDays <= 62) {
+          ({ keys: bucketKeys, labels: bucketLabels } = this.makeDailyBuckets(start, end));
+          bucketBy = 'day';
+        } else {
+          ({ keys: bucketKeys, labels: bucketLabels } = this.makeMonthlyBuckets(start.getFullYear(), end.getFullYear()));
+          bucketBy = 'month';
         }
       }
 
-      snap.forEach(doc => {
-        const data: any = doc.data();
-        const ts: Date = (data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp));
+      // --- Daten laden (top-level + optional collectionGroup) ---
+      const docsTop = await this.tryLoadDocsFromTopLevel(uid);
+      const docsCg  = docsTop.length ? [] : await this.tryLoadDocsFromCollectionGroup(uid);
+      const docs    = docsTop.length ? docsTop : docsCg;
 
-        let label: string;
-        if (range === 'week') {
-          label = ts.toLocaleDateString('de-DE'); // z. B. 02.10.2025
-        } else if (range === 'month') {
-          label = `${ts.getDate()}.${ts.getMonth() + 1}.`; // 1.–31.
-        } else {
-          label = ts.toLocaleString('de-DE', { month: 'short', year: '2-digit' }); // „Okt. 25“
+      if (!docs.length) return empty;
+
+      const TS_FIELDS      = ['timestamp','createdAt','date','loggedAt'];
+      const PRODUCT_FIELDS = ['product','productName','type'];
+      const DEVICE_FIELDS  = ['device','deviceName'];
+
+      const toDate = (v: any): Date | null => {
+        if (!v) return null;
+        if (v instanceof Date) return this.trimDate(v);
+        if (typeof v?.toDate === 'function') { try { return this.trimDate(v.toDate()); } catch {} }
+        if (typeof v === 'number') {
+          const ms = v < 10_000_000_000 ? v * 1000 : v;
+          const d = new Date(ms); return isNaN(d.getTime()) ? null : this.trimDate(d);
         }
+        if (typeof v === 'string') {
+          const d = new Date(v); return isNaN(d.getTime()) ? null : this.trimDate(d);
+        }
+        return null;
+      };
 
-        chartStats.set(label, (chartStats.get(label) ?? 0) + 1);
+      // Maps vorbereiten (mit 0 vorbefüllt)
+      const counts = new Map<string, number>(bucketKeys.map(k => [k, 0]));
+      const productCounts = new Map<string, number>();
+      const deviceCounts  = new Map<string, number>();
+      const pairCounts    = new Map<string, number>();
 
-        const product = data.product as string | undefined;
-        const device = data.device as string | undefined;
+      // zählen
+      for (const data of docs) {
+        // Zeitstempel finden + in Range?
+        let rawTs: any;
+        for (const f of TS_FIELDS) { if (data?.[f] !== undefined) { rawTs = data[f]; break; } }
+        const ts = toDate(rawTs);
+        if (!ts) continue;
+        if (ts < start || ts > end) continue;
+
+        // Bucket-Key
+        const key = bucketBy === 'day'
+          ? this.keyDay(ts)     // YYYY-MM-DD
+          : this.keyMonth(ts);  // YYYY-MM
+
+        if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1);
+
+        // Rankings
+        let product: string | undefined;
+        for (const f of PRODUCT_FIELDS) { const v = data?.[f]; if (typeof v === 'string' && v.trim()) { product = v.trim(); break; } }
+        let device: string | undefined;
+        for (const f of DEVICE_FIELDS)  { const v = data?.[f]; if (typeof v === 'string' && v.trim()) { device  = v.trim(); break; } }
         if (product) productCounts.set(product, (productCounts.get(product) ?? 0) + 1);
-        if (device) deviceCounts.set(device, (deviceCounts.get(device) ?? 0) + 1);
+        if (device)  deviceCounts.set(device,  (deviceCounts.get(device)  ?? 0) + 1);
         if (product && device) {
           const pair = `${product} + ${device}`;
           pairCounts.set(pair, (pairCounts.get(pair) ?? 0) + 1);
         }
-      });
+      }
 
-      const labels = this.sortLabels(chartStats.keys(), range);
-      const values = labels.map(l => chartStats.get(l) ?? 0);
+      const values = bucketKeys.map(k => counts.get(k) ?? 0);
+      const sortMap = (m: Map<string, number>): RankingItem[] =>
+        [...m.entries()].map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
 
       return {
-        chartLabels: labels,
+        chartLabels: bucketLabels,
         chartValues: values,
         rankings: {
-          byProduct: this.sortMap(productCounts),
-          byDevice: this.sortMap(deviceCounts),
-          byPair: this.sortMap(pairCounts),
+          byProduct: sortMap(productCounts),
+          byDevice:  sortMap(deviceCounts),
+          byPair:    sortMap(pairCounts),
         }
       };
-    } catch {
-      // Fallback – garantiert ein Return-Wert
-      return {
-        chartLabels: [],
-        chartValues: [],
-        rankings: { byProduct: [], byDevice: [], byPair: [] }
-      };
-    }
+    });
   }
 
-  // --- Helpers ---
+  // -------- Datenquellen
 
-  private getStartDate(today: Date, range: StatsRange): Date {
-    switch (range) {
-      case 'month':
-        return new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      case 'year':
-        return new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-      case 'week':
-      default:
-        return new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
-    }
+  private async tryLoadDocsFromTopLevel(uid: string): Promise<any[]> {
+    try {
+      const col = collection(this.firestore, 'consumptions');
+      let snap = await getDocs(query(col, where('userId', '==', uid)));
+      if (snap.empty) snap = await getDocs(query(col, where('uid', '==', uid)));
+      return snap.docs.map(d => d.data());
+    } catch { return []; }
   }
 
-  private sortMap(m: Map<string, number>): RankingItem[] {
-    // explizites return verhindert 2355 bei manchen TS-Konfigurationen
-    return [...m.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
+  private async tryLoadDocsFromCollectionGroup(uid: string): Promise<any[]> {
+    try {
+      const cg  = collectionGroup(this.firestore, 'consumptions');
+      const [byUserId, byUid] = await Promise.all([
+        getDocs(query(cg, where('userId', '==', uid))),
+        getDocs(query(cg, where('uid', '==', uid))),
+      ]);
+      return [...byUserId.docs, ...byUid.docs].map(d => d.data());
+    } catch { return []; }
   }
 
-  private sortLabels(keys: Iterable<string>, range: StatsRange): string[] {
-    const labels = [...keys];
-    if (range === 'week') {
-      return labels.sort((a, b) => {
-        const [da, ma, ya] = a.split('.');
-        const [db, mb, yb] = b.split('.');
-        const A = new Date(Number(ya), Number(ma) - 1, Number(da));
-        const B = new Date(Number(yb), Number(mb) - 1, Number(db));
-        return A.getTime() - B.getTime();
-      });
+  // -------- Buckets & Date-Utils
+
+  private trimDate(d: Date): Date { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  private addDays(d: Date, delta: number): Date { const n = new Date(d); n.setDate(n.getDate()+delta); return this.trimDate(n); }
+  private keyDay(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  private keyMonth(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+  private makeDailyBuckets(start: Date, end: Date): { keys: string[]; labels: string[] } {
+    const keys: string[] = [], labels: string[] = [];
+    const fmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'numeric' });
+    for (let d = new Date(start); d <= end; d = this.addDays(d, 1)) {
+      keys.push(this.keyDay(d));
+      labels.push(fmt.format(d)); // z. B. 23.9.
     }
-    // Monat/Jahr belassen (einfaches, stabiles Sorting)
-    return labels;
+    return { keys, labels };
+  }
+
+  private makeMonthlyBuckets(startYear: number, endYear?: number): { keys: string[]; labels: string[] } {
+    const keys: string[] = [], labels: string[] = [];
+    const fmt = new Intl.DateTimeFormat('de-DE', { month: 'short' });
+    const yEnd = endYear ?? startYear;
+    for (let y = startYear; y <= yEnd; y++) {
+      for (let m = 0; m < 12; m++) {
+        keys.push(`${y}-${String(m+1).padStart(2,'0')}`);
+        labels.push(`${fmt.format(new Date(y, m, 1))}${yEnd > startYear ? ' ' + String(y).slice(2) : ''}`);
+      }
+    }
+    return { keys, labels };
   }
 }
