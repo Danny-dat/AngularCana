@@ -7,7 +7,8 @@ import { Auth, user, signOut } from '@angular/fire/auth';
 import { NotificationService } from '../../services/notification.service';
 import { AppNotification } from '../../models/notification-module';
 import { Observable, Subscription, fromEvent } from 'rxjs';
-import { playSoundAndVibrate } from '../../utils/notify';
+import { vibrate } from '../../utils/notify';
+import { NotificationSoundService } from '../../services/notification-sound.service';
 import { Timestamp } from 'firebase/firestore';
 import { AppSidenav } from '../app-sidenav/app-sidenav';
 
@@ -23,6 +24,9 @@ export class AppHeaderComponent {
   private noti = inject(NotificationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+
+  //Sound-Service injizieren
+  private sound = inject(NotificationSoundService);
 
   showNotifications = false;
   showSidebar = false;
@@ -49,24 +53,21 @@ export class AppHeaderComponent {
   constructor() {
     // 1) Auth-Änderungen -> Anzeigename und Noti-Stream
     this.subAuth = user(this.auth).subscribe((u) => {
-      // Abgemeldet? -> Namen neutral setzen und Listener schließen
       if (!u) {
-        this.userDisplayName = 'User'; // oder '' / 'Gast'
+        this.userDisplayName = 'User';
         this.unsubNoti?.();
         this.unsubNoti = undefined;
         return;
       }
-      // Angemeldet -> Namen aus Auth/Local anwenden und Notis verbinden
       this.applyLocalOrAuthName(u.displayName, u.email);
       this.unsubNoti?.();
       this.unsubNoti = this.noti.listen(u.uid);
     });
 
-    // 2) Live-Updates aus ANDEREN Tabs/Fenstern
+    // 2) Live-Updates aus anderen Tabs
     this.subStorage = fromEvent<StorageEvent>(window, 'storage')
-      .pipe(startWith(null as any)) // initial prüfen (liest localStorage einmal)
+      .pipe(startWith(null as any))
       .subscribe((ev) => {
-        // Nur reagieren, wenn ein User angemeldet ist
         if (ev === null || ev.key === 'displayName') {
           if (!this.auth.currentUser) return;
           const ls = this.getLocalName();
@@ -74,46 +75,58 @@ export class AppHeaderComponent {
         }
       });
 
-    // 3) Live-Updates im SELBEN Tab (wird von deiner UserDataComponent gefeuert)
-    this.subNameEvent = fromEvent<CustomEvent<string>>(window as any, 'displayNameChanged')
-      .subscribe((ev) => {
-        const name = (ev.detail ?? '').trim();
-        if (name) this.userDisplayName = name;
-      });
+    // 3) Live-Updates im selben Tab (von UserDataComponent gefeuert)
+    this.subNameEvent = fromEvent<CustomEvent<string>>(
+      window as any,
+      'displayNameChanged'
+    ).subscribe((ev) => {
+      const name = (ev.detail ?? '').trim();
+      if (name) this.userDisplayName = name;
+    });
 
-    // 4) Sound/Vibration bei neuem Unread
+    // 4) 🔔 Neuer Unread -> Asset-Sound + kurze Vibration
     let last = 0;
-    this.subCount = this.unreadCount$.subscribe((c) => {
-      if (c > last) playSoundAndVibrate();
+    this.subCount = this.unreadCount$.subscribe(async (c) => {
+      if (c > last) {
+        // Optionaler „Ton an/aus“-Schalter, falls du ihn in localStorage legst
+        const enabled = localStorage.getItem('notify:sound') !== 'off';
+        if (enabled) {
+          try {
+            await this.sound.play(0.9);
+          } catch {}
+        }
+        vibrate(100);
+      }
       last = c;
     });
 
-    // 5) Dynamischer Titel aus Route.data.title oder URL-Segment
-    this.subRoute = this.router.events.pipe(
-      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      map(() => {
-        let r = this.route.firstChild;
-        while (r?.firstChild) r = r.firstChild;
-        const dataTitle = r?.snapshot.data?.['title'] as string | undefined;
-        if (dataTitle) return dataTitle;
-        const urlSeg = r?.snapshot.url?.[0]?.path || 'Dashboard';
-        return urlSeg.charAt(0).toUpperCase() + urlSeg.slice(1);
-      })
-    ).subscribe(t => this.pageTitle = t);
+    // 5) Dynamischer Titel
+    this.subRoute = this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        map(() => {
+          let r = this.route.firstChild;
+          while (r?.firstChild) r = r.firstChild;
+          const dataTitle = r?.snapshot.data?.['title'] as string | undefined;
+          if (dataTitle) return dataTitle;
+          const urlSeg = r?.snapshot.url?.[0]?.path || 'Dashboard';
+          return urlSeg.charAt(0).toUpperCase() + urlSeg.slice(1);
+        })
+      )
+      .subscribe((t) => (this.pageTitle = t));
 
-    // 6) Fallback: falls oben noch nichts gesetzt wurde, initial aus localStorage ziehen
     if (!this.userDisplayName) this.userDisplayName = this.getLocalName() || 'User';
   }
 
-  // Lokalen Anzeigenamen lesen
   private getLocalName(): string {
-    try { return (localStorage.getItem('displayName') || '').trim(); }
-    catch { return ''; }
+    try {
+      return (localStorage.getItem('displayName') || '').trim();
+    } catch {
+      return '';
+    }
   }
 
-  // Auth priorisieren, LocalStorage nur als Fallback
   private applyLocalOrAuthName(authDisplayName?: string | null, email?: string | null) {
-    // 1) Auth-Daten zuerst (Quelle der Wahrheit)
     if (authDisplayName && authDisplayName.trim()) {
       this.userDisplayName = authDisplayName.trim();
       return;
@@ -122,7 +135,6 @@ export class AppHeaderComponent {
       this.userDisplayName = email.split('@')[0] || 'User';
       return;
     }
-    // 2) Falls Auth nichts liefert: optional LocalStorage
     const local = this.getLocalName();
     this.userDisplayName = local || 'User';
   }
@@ -131,28 +143,26 @@ export class AppHeaderComponent {
     ev?.stopPropagation();
     this.showSidebar = !this.showSidebar;
   }
-
   openSettings(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showSettings = !this.showSettings;
   }
-
   toggleNotifications(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showNotifications = !this.showNotifications;
   }
-
-  closeDropdown() { this.showNotifications = false; }
+  closeDropdown() {
+    this.showNotifications = false;
+  }
 
   async markRead(id: string) {
     await this.noti.markAsRead(id);
   }
 
   async logout() {
-    // Hartes Aufräumen + UI-Update im selben Tab
     try {
-      localStorage.removeItem('displayName'); // konsistenter Key
-      localStorage.removeItem('username');    // Legacy-Key falls vorhanden
+      localStorage.removeItem('displayName');
+      localStorage.removeItem('username'); // legacy
       window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
     } catch {}
     await signOut(this.auth);

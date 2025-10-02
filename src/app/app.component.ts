@@ -5,6 +5,7 @@ import { Auth, user } from '@angular/fire/auth';
 import { UserDataService } from './services/user-data.service';
 import { ThemeService } from './services/theme.service';
 import { AdService } from './services/ad.service';
+import { NotificationSoundService } from './services/notification-sound.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,11 @@ export class AppComponent implements OnInit {
   private userData = inject(UserDataService);
   private theme = inject(ThemeService);
   private ads = inject(AdService);
+  private notify = inject(NotificationSoundService);
+
+    constructor() {
+    this.notify.setSource('assets/sounds/notification_dingdong.mp3', '20251003');
+  }
 
   ngOnInit(): void {
     // Werbung initialisieren (lädt Defaults + prüft /ads-Overrides)
