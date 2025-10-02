@@ -43,7 +43,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private readonly mapService: MapService,
-    private readonly eventsSvc: EventsService, // Events stream
+    private readonly eventsSvc: EventsService,
     @Inject(PLATFORM_ID) private readonly pid: Object,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
@@ -87,33 +87,19 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.mapService.initializeMap('map-container');
     this.mapService.invalidateSizeSoon();
 
-    // TEMP: alle Events anzeigen, um Daten zu verifizieren (später auf false setzen)
-    const SHOW_ALL_EVENTS_TEMP = true;
+    const SHOW_ALL_EVENTS_TEMP = false;
 
-    // DIESEN KOMPLETTEN BLOCK EINSETZEN
     this.authUnsub = onAuthStateChanged(this.auth, (u) => {
       // alten Stream schließen
       this.eventsSub?.unsubscribe?.();
 
+      if (!u?.uid) {
+        this.mapService.clearEvents();
+        return; // <— hier gleich raus, kein Firestore-Stream ohne Login
+      }
+
       this.eventsSub = this.eventsSvc.listen().subscribe((events: EventItem[]) => {
-        console.log('[Dashboard] normalized events from service:', events);
-
-        if (SHOW_ALL_EVENTS_TEMP) {
-          // ALLE Events zeigen (Debug)
-          this.mapService.clearEvents();
-          let added = 0;
-          for (const e of events) {
-            if (this.mapService.addEventMarker(e, false)) added++;
-          }
-          console.log('[Dashboard] added markers (ALL):', added);
-          if (added > 0) this.mapService.fitToEvents(events);
-        } else if (u?.uid) {
-          // Produktiv: nur gelikte Events
-          this.mapService.showLikedEvents(events, u.uid);
-        } else {
-          this.mapService.clearEvents();
-        }
-
+        this.mapService.showLikedEvents(events, u.uid); // nur deine Likes
         this.mapService.invalidateSizeSoon(100);
       });
     });
