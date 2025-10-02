@@ -3,10 +3,22 @@
     <h3>Deine Statistik</h3>
 
     <!-- Segmented: Woche / Monat / Jahr -->
-    <div class="time-range-selector">
-      <button (click)="setRange('week')"  [class.active]="range() === 'week'">Woche</button>
-      <button (click)="setRange('month')" [class.active]="range() === 'month'">Monat</button>
-      <button (click)="setRange('year')"  [class.active]="range() === 'year'">Jahr</button>
+    <div class="segmented">
+      <button class="btn btn--seg"
+              (click)="setRange('week')"
+              [class.is-active]="range() === 'week'">
+        Woche
+      </button>
+      <button class="btn btn--seg"
+              (click)="setRange('month')"
+              [class.is-active]="range() === 'month'">
+        Monat
+      </button>
+      <button class="btn btn--seg"
+              (click)="setRange('year')"
+              [class.is-active]="range() === 'year'">
+        Jahr
+      </button>
     </div>
   </div>
 
@@ -32,7 +44,9 @@
       (ngModelChange)="endDate.set($event)"
     />
 
-    <button (click)="applyCustomRange()">Anwenden</button>
+    <button class="btn btn--primary btn--sm" (click)="applyCustomRange()">
+      Anwenden
+    </button>
   </div>
 
   <div class="chart-section">

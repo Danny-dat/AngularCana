@@ -82,3 +82,17 @@ body {
   color: var(--text-color);
   background-color: var(--surface-color);
 }
+
+/* Buttons global */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding: 0 16px; height: 44px; border-radius: 10px; border: 1px solid transparent;
+  font-weight: 700; font-size: 16px; cursor: pointer;
+}
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--accent, #4f79ff);
+  color: #fff;
+  border-color: var(--accent, #4f79ff);
+}
+.btn--primary:hover { filter: brightness(1.05); }

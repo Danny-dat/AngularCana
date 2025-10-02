@@ -1,9 +1,47 @@
-.time-range-selector button { margin-right: 6px; }
-.time-range-selector .active { font-weight: 700; text-decoration: underline; }
+/* --- Segmented: Woche / Monat / Jahr --- */
+.segmented {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.segmented .btn.btn--seg {
+  border: 0;
+  border-right: 1px solid var(--border-color);
+  height: 36px;
+  padding: 0 14px;
+  line-height: 36px;
+  border-radius: 0;
+  background: var(--surface-color);
+}
+.segmented .btn.btn--seg:last-child { border-right: 0; }
+/* aktiver Tab – nur Gewicht/Hintergrund, Farben kommen global */
+.segmented .btn.btn--seg.is-active {
+  font-weight: 700;
+  background: var(--background-color);
+}
+
+/* --- Kleiner Primärbutton (Anwenden) – Farbe global (.btn--primary) --- */
+.btn--sm {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+/* --- Bestehende Bereiche beibehalten --- */
 .chart-wrap { position: relative; height: 300px; }
 .custom-range { display:flex; gap:8px; align-items:center; margin:8px 0 16px; }
-.ranking-grids { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.ranking-grids { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 .ranking-list.full-width { grid-column: 1 / -1; }
-.count-badge { background:#eee; border-radius:999px; padding:2px 8px; }
-.empty-state-small { color:#888; font-size:12px; }
-.summary { margin-top: 6px; color:#666; }
+
+.count-badge {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.empty-state-small { color: var(--text-muted-color); font-size: 12px; }
+.summary { margin-top: 6px; color: var(--text-muted-color); }

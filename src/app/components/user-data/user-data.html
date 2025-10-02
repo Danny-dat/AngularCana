@@ -24,7 +24,7 @@
         <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
       </div>
 
-      <button class="btn btn-save"
+      <button class="btn--primary btn btn-save"
               (click)="saveProfile()"
               [disabled]="savingProfile() || profileForm.invalid">
         {{ savingProfile() ? 'Speichere…' : 'Profil speichern' }}
@@ -73,7 +73,7 @@
         </label>
       </div>
 
-      <button class="btn btn-save"
+      <button class="btn--primary btn btn-save"
               (click)="saveSettings()"
               [disabled]="savingSettings() || settingsForm.invalid">
         {{ savingSettings() ? 'Speichere…' : 'Einstellungen speichern' }}
