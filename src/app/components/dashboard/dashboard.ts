@@ -107,7 +107,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     // Events-Seite steuert die Karte
     document.addEventListener('events:showOnMap', (ev: any) => {
       const e: EventItem = ev.detail;
-      console.log('[Dashboard] events:showOnMap', e);
       this.mapService.clearEvents();
       this.mapService.addEventMarker(e, true);
       this.mapService.focus(e.lat, e.lng);
@@ -115,7 +114,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     document.addEventListener('events:routeTo', async (ev: any) => {
       const e: EventItem = ev.detail;
-      console.log('[Dashboard] events:routeTo', e);
       this.mapService.focus(e.lat, e.lng);
     });
   }
