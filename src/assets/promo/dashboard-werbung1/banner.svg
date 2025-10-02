@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1350" height="300" viewBox="0 0 1350 300">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1b1b"></stop>
+      <stop offset="1" stop-color="#242424"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1350" height="300" fill="url(#g)"></rect>
+  <g fill="#23c55e">
+    <circle cx="120" cy="150" r="56" fill-opacity="0.12"></circle>
+    <circle cx="200" cy="150" r="40" fill-opacity="0.10"></circle>
+  </g>
+  <text x="140" y="170" fill="#e5e7eb" font-family="Inter,ui-sans-serif,system-ui" font-weight="700" font-size="38">Dashboard Promo</text>
+  <text x="140" y="210" fill="#9ca3af" font-family="Inter,ui-sans-serif,system-ui" font-size="20">Tipps, Deals oder Features hier teasen</text>
+  <rect x="1060" y="110" rx="10" ry="10" width="170" height="48" fill="#22c55e"></rect>
+  <text x="1145" y="142" text-anchor="middle" fill="#0b1b12" font-family="Inter,ui-sans-serif,system-ui" font-weight="700" font-size="20">Jetzt ansehen</text>
+</svg>
