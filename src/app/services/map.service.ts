@@ -1,7 +1,7 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type * as L from 'leaflet';
-import type { EventItem } from '../services/events.service';
+import type { EventItem } from './events.service';
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
@@ -65,10 +65,20 @@ export class MapService {
   clearEvents() { this.eventsLayer?.clearLayers(); }
 
   addEventMarker(e: EventItem, highlight = false) {
-    if (!this.map || !this.eventsLayer || !this.L) return;
+    if (!this.map || !this.eventsLayer || !this.L) {
+      console.warn('[MapService] addEventMarker: map/layer/Leaflet not ready');
+      return;
+    }
+    const { lat, lng } = e as any;
+    const nLat = Number(lat), nLng = Number(lng);
+    if (!isFinite(nLat) || !isFinite(nLng)) {
+      console.warn('[MapService] invalid coords for event:', e);
+      return;
+    }
+
     const L = this.L;
     const m = L
-      .marker([e.lat, e.lng], {
+      .marker([nLat, nLng], {
         title: e.name,
         icon: highlight
           ? L.icon({
@@ -88,16 +98,29 @@ export class MapService {
 
   /** Nur gelikte Events des Users anzeigen und sinnvoll zoomen */
   showLikedEvents(events: EventItem[], uid: string) {
-    if (!this.map || !this.L) return;
+    if (!this.map || !this.L) { console.warn('[MapService] showLikedEvents: map/Leaflet missing'); return; }
+    const sUid = String(uid);
+    const liked = (events || []).filter(e => (e.upvotes || []).map(String).includes(sUid));
+    console.log('[MapService] liked for uid', sUid, '->', liked.length);
+
     this.clearEvents();
-    const liked = events.filter(e => e.upvotes?.includes(uid));
     liked.forEach(e => this.addEventMarker(e, true));
 
     if (liked.length) {
       const L = this.L;
-      const b = L.latLngBounds(liked.map(e => [e.lat, e.lng]) as L.LatLngTuple[]);
-      this.map.fitBounds(b, { padding: [20, 20] });
+      const b = L.latLngBounds(liked.map(e => [Number(e.lat), Number(e.lng)]) as L.LatLngTuple[]);
+      this.map!.fitBounds(b, { padding: [20, 20] });
     }
+  }
+
+  /** Hilfsfunktion: auf alle Events zoomen (wird im Debug-Pfad genutzt) */
+  fitToEvents(events: EventItem[]) {
+    if (!this.map || !this.L) return;
+    const valid = (events || []).filter(e => isFinite(Number(e.lat)) && isFinite(Number(e.lng)));
+    if (!valid.length) return;
+    const L = this.L;
+    const b = L.latLngBounds(valid.map(e => [Number(e.lat), Number(e.lng)]) as L.LatLngTuple[]);
+    this.map.fitBounds(b, { padding: [20, 20] });
   }
 
   focus(lat: number, lng: number, zoom = 15) { this.map?.setView([lat, lng], zoom); }

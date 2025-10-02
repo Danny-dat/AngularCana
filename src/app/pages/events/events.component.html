@@ -1,34 +1,68 @@
-<h3>Community Events</h3>
+<header class="ev-header">
+  <h2>Events</h2>
 
-<div class="events-toolbar">
-  <span>Meine Likes: {{ likedCount() }}</span>
-</div>
-
-<div *ngIf="(events$ | async) as events; else noEvents">
-  <div class="events-container">
-    <div *ngFor="let e of events" class="event-item">
-      <div class="event-details">
-        <p class="event-name">{{ e.name }}</p>
-        <p class="event-address">{{ e.address }}</p>
-        <div class="vote-counters">
-          <span><i class="fas fa-thumbs-up"></i> {{ e.upvotes?.length || 0 }}</span>
-          <span><i class="fas fa-thumbs-down"></i> {{ e.downvotes?.length || 0 }}</span>
-        </div>
-      </div>
-      <div class="event-actions">
-        <button (click)="vote(e, 'up')" [ngClass]="{voted: isUpvoted(e)}" title="Event positiv bewerten">
-          👍
-        </button>
-        <button (click)="vote(e, 'down')" [ngClass]="{voted: isDownvoted(e)}" title="Event negativ bewerten">
-          👎
-        </button>
-        <button (click)="showOnMap(e)" title="Auf Karte zeigen">📍</button>
-        <button (click)="routeTo(e)" title="Route">🧭</button>
-      </div>
+  <div class="ev-actions">
+    <div class="ev-search">
+      <input
+        type="search"
+        placeholder="Suchen nach Name oder Adresse…"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        aria-label="Events durchsuchen" />
     </div>
-  </div>
-</div>
 
-<ng-template #noEvents>
-  <div class="empty-state">Aktuell keine Events.</div>
-</ng-template>
+    <label class="ev-toggle">
+      <input
+        type="checkbox"
+        [checked]="onlyMine()"
+        (change)="onlyMine.set($any($event.target).checked)" />
+      <span>Nur meine Likes</span>
+    </label>
+
+    @if (uid()) {
+      <div class="ev-stats"><span class="badge">Meine Likes: {{ likedCount() }}</span></div>
+    }
+  </div>
+</header>
+
+@if (filtered().length) {
+  <ul class="ev-list">
+    @for (e of filtered(); track e.id) {
+      <li class="ev-card">
+        <div class="ev-main">
+          <div class="ev-title">{{ e.name }}</div>
+          <div class="ev-sub">{{ e.address }}</div>
+
+          <div class="ev-counters">
+            <span class="chip chip-up" [class.me]="isUpvoted(e)">👍 {{ e.upvotes?.length || 0 }}</span>
+            <span class="chip chip-down" [class.me]="isDownvoted(e)">👎 {{ e.downvotes?.length || 0 }}</span>
+          </div>
+        </div>
+
+        <div class="ev-cta">
+          <button
+            class="btn up"
+            [disabled]="pending()[e.id]"
+            [class.active]="isUpvoted(e)"
+            (click)="vote(e, 'up')"
+            title="Gefällt mir">👍</button>
+
+          <button
+            class="btn down"
+            [disabled]="pending()[e.id]"
+            [class.active]="isDownvoted(e)"
+            (click)="vote(e, 'down')"
+            title="Gefällt mir nicht">👎</button>
+
+          <button class="btn ghost" (click)="showOnMap(e)" title="Auf Karte zeigen">📍</button>
+          <button class="btn ghost" (click)="routeTo(e)" title="Route">🧭</button>
+        </div>
+      </li>
+    }
+  </ul>
+} @else {
+  <div class="ev-empty">
+    <div>Keine passenden Events gefunden.</div>
+    <small>Tipp: Filter deaktivieren oder Suchbegriff ändern.</small>
+  </div>
+}
