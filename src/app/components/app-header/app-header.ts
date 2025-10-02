@@ -92,7 +92,7 @@ export class AppHeaderComponent {
         const enabled = localStorage.getItem('notify:sound') !== 'off';
         if (enabled) {
           try {
-            await this.sound.play(0.9);
+            await this.sound.play();
           } catch {}
         }
         vibrate(100);

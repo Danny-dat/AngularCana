@@ -1,4 +1,4 @@
-// notification-sound.service.ts
+// src/app/services/notification-sound.service.ts
 import { Injectable } from '@angular/core';
 
 function assetUrl(path: string, v?: string) {
@@ -11,10 +11,25 @@ function assetUrl(path: string, v?: string) {
 export class NotificationSoundService {
   private audio = new Audio();
   private unlocked = false;
-  private src = 'assets/sounds/notification_dingdong.wav';
+
+  private defaultVolume = 0.30;
+
+  private ctx?: AudioContext;
+  private gain?: GainNode;
+  private srcNode?: MediaElementAudioSourceNode;
+
+  private src = 'assets/sounds/notification_dingdong.mp3';
 
   constructor() {
-    this.setSource(this.src); // init
+    const raw = localStorage.getItem('notify:volume');
+    const saved = raw === null ? NaN : Number(raw);
+    if (!Number.isNaN(saved) && saved >= 0 && saved <= 1) {
+      this.defaultVolume = saved;
+    }
+
+    this.setSource(this.src);
+
+    // Fallback-Listener: entsperren beim ersten beliebigen Klick/Touch
     window.addEventListener('click', this.unlockOnce, { once: true, passive: true });
     window.addEventListener('touchstart', this.unlockOnce, { once: true, passive: true });
   }
@@ -26,23 +41,39 @@ export class NotificationSoundService {
     this.audio.preload = 'auto';
     this.audio.currentTime = 0;
     this.audio.load();
-    // Debug:
-    console.debug('[notify] source set →', this.audio.src);
+    // Fallback-Lautstärke bis WebAudio verbunden ist
+    this.audio.volume = this.defaultVolume;
   }
 
-  getSource() {
-    return this.src;
+  getSource() { return this.src; }
+  getVolume() { return this.defaultVolume; }
+
+  setVolume(v: number) {
+    const clamped = Math.min(1, Math.max(0, v));
+    this.defaultVolume = clamped;
+    try { localStorage.setItem('notify:volume', String(clamped)); } catch {}
+
+    if (this.gain) {
+      this.gain.gain.value = clamped;
+    } else {
+      this.audio.volume = clamped;
+    }
   }
 
-  async preview(volume = 0.9) {
-    try {
-      await this.play(volume);
-    } catch {}
-  }
+  preview(vol?: number) { return this.play(vol); }
 
-  play(volume = 0.9) {
+  play(vol?: number) {
+    const volToUse = typeof vol === 'number'
+      ? Math.min(1, Math.max(0, vol))
+      : this.defaultVolume;
+
+    if (this.gain) {
+      this.gain.gain.value = volToUse;
+    } else {
+      this.audio.volume = volToUse;
+    }
+
     this.audio.currentTime = 0;
-    this.audio.volume = volume;
     return this.audio.play();
   }
 
@@ -51,17 +82,55 @@ export class NotificationSoundService {
     this.audio.currentTime = 0;
   }
 
+  /** ---- NEU: robustes Entsperren und Abspielen in derselben User-Geste ---- */
+
+  /** Public Helper: aus einer echten User-Geste heraus sicher entsperren */
+  public ensureUnlockedFromGesture() {
+    this.ensureContextUnlockedSync();
+  }
+
+  /** Public: in einer User-Geste entsperren + abspielen (ohne Timeout) */
+  public playFromGesture(vol?: number) {
+    this.ensureContextUnlockedSync();
+    const v = typeof vol === 'number' ? Math.min(1, Math.max(0, vol)) : this.defaultVolume;
+    if (this.gain) this.gain.gain.value = v; else this.audio.volume = v;
+    this.audio.currentTime = 0;
+    return this.audio.play();
+  }
+
+  /** Kontext synchron bereitstellen/entsperren (muss in der User-Geste laufen) */
+  private ensureContextUnlockedSync() {
+    const CtxCtor: typeof AudioContext | undefined =
+      (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!CtxCtor) { this.unlocked = true; return; }
+
+    if (!this.ctx) {
+      // Erstelle Routing einmalig
+      const ctx = new CtxCtor();
+      const gain = ctx.createGain();
+      gain.gain.value = this.defaultVolume;
+      const srcNode = ctx.createMediaElementSource(this.audio);
+      srcNode.connect(gain).connect(ctx.destination);
+      this.ctx = ctx;
+      this.gain = gain;
+      this.srcNode = srcNode;
+    }
+
+    // Wichtig: resume() synchron innerhalb der Geste
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume?.();
+    }
+    this.unlocked = true;
+  }
+
+  /** Fallback: erstes User-Event (global) -> WebAudio initialisieren */
   private unlockOnce = () => {
     if (this.unlocked) return;
-    this.audio.volume = 0;
-    this.audio
-      .play()
-      .then(() => {
-        this.audio.pause();
-        this.audio.currentTime = 0;
-        this.unlocked = true;
-        console.debug('[notify] audio unlocked');
-      })
-      .catch(() => {});
+    try {
+      this.ensureContextUnlockedSync();
+    } catch {
+      // Ignorieren, wir bleiben im <audio>-Fallback
+      this.unlocked = true;
+    }
   };
 }

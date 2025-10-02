@@ -8,10 +8,12 @@ export interface UserDataModel {
   theme: 'light' | 'dark';
 }
 
-/** Settings auf /users/{uid}/meta/settings */
+/** Settings werden unter /users/{uid} im Feld "settings" gespeichert */
 export interface UserSettingsModel {
   consumptionThreshold: number;
   notificationSound: boolean;
+  /** Lautstärke 0..1 (optional für Rückwärtskompatibilität) */
+  notificationVolume?: number;
 }
 
 /** Defaults für Settings (für Migrations-/Fallback-Fälle) */
@@ -19,6 +21,7 @@ function getDefaultSettings(): UserSettingsModel {
   return {
     consumptionThreshold: 3,
     notificationSound: true,
+    notificationVolume: 0.3, // 30 %
   };
 }
 
@@ -31,7 +34,9 @@ export class UserDataService {
     return doc(this.db, `users/${uid}`);
   }
 
-  /** /users/{uid}/meta/settings (Sub-Dokument) */
+  // Hinweis: In dieser Implementierung speichern/lesen wir Settings aus dem Root-Dokument
+  // unter "settings". Falls du später wirklich ein Subdokument nutzen willst, kannst du
+  // diese Methode verwenden und load/save entsprechend umbauen.
   private userSettingsDoc(uid: string) {
     return doc(this.db, `users/${uid}/meta/settings`);
   }
@@ -66,42 +71,59 @@ export class UserDataService {
     await setDoc(this.userDoc(uid), body, { merge: true });
   }
 
-  // ---------------- UserSettings (Sub-Dokument) ----------------
+  // ---------------- UserSettings (im Root-Dokument unter "settings") ----------------
 
   /**
-   * Lädt Settings aus /users/{uid}/meta/settings und merged robust mit Defaults,
+   * Lädt Settings aus /users/{uid} (Feld "settings") und merged robust mit Defaults,
    * damit alte Dokumente (ohne neue Felder) weiterhin funktionieren.
    */
-    async loadUserSettings(uid: string): Promise<UserSettingsModel> {
-      const defaults = getDefaultSettings();
-      const snap = await getDoc(this.userDoc(uid));
-      const raw = snap.exists() ? (snap.data() as any) : {};
+  async loadUserSettings(uid: string): Promise<UserSettingsModel> {
+    const defaults = getDefaultSettings();
+    const snap = await getDoc(this.userDoc(uid));
+    const raw = snap.exists() ? (snap.data() as any) : {};
 
-      const s = (raw.settings ?? {}) as Partial<UserSettingsModel>;
+    const s = (raw.settings ?? {}) as Partial<UserSettingsModel>;
 
-      return {
-        consumptionThreshold:
-          typeof s.consumptionThreshold === 'number'
-            ? s.consumptionThreshold
-            : defaults.consumptionThreshold,
-        notificationSound:
-          typeof s.notificationSound === 'boolean'
-            ? s.notificationSound
-            : defaults.notificationSound,
-      };
-    }
+    return {
+      consumptionThreshold:
+        typeof s.consumptionThreshold === 'number'
+          ? s.consumptionThreshold
+          : defaults.consumptionThreshold,
+      notificationSound:
+        typeof s.notificationSound === 'boolean'
+          ? s.notificationSound
+          : defaults.notificationSound,
+      notificationVolume:
+        typeof s.notificationVolume === 'number'
+          ? s.notificationVolume
+          : defaults.notificationVolume,
+    };
+  }
+
   /**
    * Speichert Settings (merge:true, um andere Felder nicht zu verlieren).
+   * Akzeptiert Partial, damit du auch nur einzelne Felder (z. B. notificationVolume) schreiben kannst.
    */
-  async saveUserSettings(uid: string, settings: UserSettingsModel): Promise<void> {
+  async saveUserSettings(uid: string, settings: Partial<UserSettingsModel>): Promise<void> {
+    const body: any = {};
+
+    if (settings.consumptionThreshold !== undefined) {
+      body.consumptionThreshold = settings.consumptionThreshold;
+    }
+    if (settings.notificationSound !== undefined) {
+      body.notificationSound = !!settings.notificationSound;
+    }
+    if (settings.notificationVolume !== undefined) {
+      const clamped = Math.min(1, Math.max(0, Number(settings.notificationVolume)));
+      body.notificationVolume = clamped;
+    }
+
+    // Nichts zu schreiben? Dann noop.
+    if (Object.keys(body).length === 0) return;
+
     await setDoc(
       this.userDoc(uid),
-      {
-        settings: {
-          consumptionThreshold: settings.consumptionThreshold,
-          notificationSound: !!settings.notificationSound,
-        },
-      },
+      { settings: body },
       { merge: true }
     );
   }

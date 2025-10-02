@@ -91,3 +91,76 @@ input:focus, select:focus {
   .page-title, .user-page .card { max-width: 92%; }
   .btn { min-width: 0; width: 100%; }
 }
+
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.volume-row.is-disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+.vol-ico, .play-ico {
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Slider Grundlayout */
+#notifVol {
+  flex: 1 1 280px;
+  min-width: 200px;
+  height: 2px;
+  appearance: none;
+  background: linear-gradient(to right, currentColor 0 0) no-repeat,
+              var(--track-bg, #e6e8eb);
+  border-radius: 999px;
+}
+
+/* Färbe den „gefüllten“ Teil dynamisch per CSS-Variable */
+#notifVol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: currentColor;
+  border: none;
+  margin-top: -8px; /* zentriert den Thumb zur 2px-Höhe */
+  cursor: pointer;
+}
+#notifVol::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: currentColor; border: none; cursor: pointer;
+}
+
+/* Prozent-Badge */
+.volume-badge {
+  min-width: 3.2rem;
+  text-align: right;
+  padding: .25rem .5rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Button „Testen“ als dezente Outline */
+.btn.btn-outline.play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border: 1px solid #dadde1;
+  background: #fff;
+  padding: .4rem .75rem;
+  border-radius: .625rem;
+  font-weight: 600;
+}
+.btn.btn-outline.play-btn:hover { background: #fafbfc; }
+.btn.btn-outline.play-btn:disabled { opacity: .6; cursor: not-allowed; }

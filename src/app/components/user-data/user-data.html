@@ -73,6 +73,38 @@
         </label>
       </div>
 
+      <!-- Lautstärke -->
+      <div class="setting-item">
+        <label for="notifVol">Lautstärke</label>
+
+        <div class="volume-row" [class.is-disabled]="settingsForm.value.notificationSound === false">
+          <mat-icon class="vol-ico" fontSet="material-icons-outlined">volume_down</mat-icon>
+
+          <input id="notifVol" type="range" min="0" max="100" step="1"
+                [formControl]="settingsForm.controls.notificationVolumePct"
+                (change)="$event.stopPropagation()" />
+
+          <span class="volume-badge">
+            {{ settingsForm.value.notificationVolumePct ?? 0 }}%
+          </span>
+
+          <button type="button"
+                  class="btn btn-outline play-btn"
+                  (mousedown)="unlockAudio()"
+                  (touchstart)="unlockAudio()"
+                  (click)="previewVolume()"
+                  [disabled]="settingsForm.value.notificationSound === false">
+            <mat-icon class="play-ico" fontSet="material-icons-outlined">play_arrow</mat-icon>
+            Testen
+          </button>
+        </div>
+
+        <div class="setting-hint">
+          Tipp: Falls dein Browser Audio beim ersten Mal blockiert, einmal irgendwo klicken
+          (z. B. auf die Glocke) und dann „Testen“ drücken.
+        </div>
+      </div>
+
       <button class="btn--primary btn btn-save"
               (click)="saveSettings()"
               [disabled]="savingSettings() || settingsForm.invalid">
