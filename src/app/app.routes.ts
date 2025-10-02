@@ -32,6 +32,7 @@ export const routes: Routes = [
     path: '',
     component: PublicLayoutComponent,
     children: [
+      { path: '', redirectTo: 'login', pathMatch: 'full' },
       { path: 'login', component: LoginComponent, data: { title: 'Login', hideHeader: true } },
       {
         path: 'register',
@@ -115,7 +116,6 @@ export const routes: Routes = [
     ],
   },
 
-  // Redirects
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-  { path: '**', redirectTo: 'dashboard' },
+  // Fallbacks (404)
+  { path: '**', redirectTo: 'login' },
 ];
