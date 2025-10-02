@@ -54,7 +54,8 @@
             (click)="vote(e, 'down')"
             title="Gefällt mir nicht">👎</button>
 
-          <button class="btn ghost" (click)="routeTo(e)" title="Route">🧭</button>
+          <button class="btn ghost" (click)="showOnMap(e)" title="Auf Karte zeigen">📍</button>
+          <button class="btn ghost" (click)="openRoute(e)" title="Route öffnen">🧭</button>
         </div>
       </li>
     }
@@ -63,5 +64,39 @@
   <div class="ev-empty">
     <div>Keine passenden Events gefunden.</div>
     <small>Tipp: Filter deaktivieren oder Suchbegriff ändern.</small>
+  </div>
+}
+
+<!-- === Bestätigungs-Modal === -->
+@if (confirmOpen()) {
+  <div class="modal-backdrop" (click)="confirmCancel()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">Externe Karte öffnen</div>
+      </div>
+
+      <div class="modal-body">
+        <p>Du verlässt jetzt die App. <strong>Google&nbsp;Maps</strong> wird in einem neuen Tab geöffnet.</p>
+
+        @if (confirmEvent(); as ce) {
+          <div class="modal-dest">
+            <div class="dest-name">Ziel: {{ ce.name }}</div>
+            <div class="dest-addr">{{ ce.address }}</div>
+          </div>
+        }
+
+        <label class="noask">
+          <input type="checkbox"
+                 [checked]="dontAskAgain()"
+                 (change)="dontAskAgain.set($any($event.target).checked)" />
+          <span>In Zukunft nicht mehr fragen</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn outline" (click)="confirmCancel()">Abbrechen</button>
+        <button class="btn primary" (click)="confirmProceed()">Öffnen</button>
+      </div>
+    </div>
   </div>
 }
