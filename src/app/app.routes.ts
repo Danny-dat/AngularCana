@@ -66,8 +66,8 @@ export const routes: Routes = [
       },
       {
         path: 'events',
-        loadComponent: comingSoon('Events'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/events/events').then((m) => m.Events),
         data: { title: 'Events' },
       },
       {
