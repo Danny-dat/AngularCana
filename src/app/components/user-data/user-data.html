@@ -24,9 +24,10 @@
         <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
       </div>
 
+      <!-- Profil speichern -->
       <button class="btn--primary btn btn-save"
               (click)="saveProfile()"
-              [disabled]="savingProfile() || profileForm.invalid">
+              [disabled]="savingProfile() || profileForm.invalid || profileForm.pristine">
         {{ savingProfile() ? 'Speichere…' : 'Profil speichern' }}
       </button>
     </div>
@@ -51,11 +52,17 @@
         </div>
       </div>
 
-      <div class="setting-item">
-        <label for="threshold">Tages-Limit (Beispiel)</label>
-        <input id="threshold" type="number"
-               [formControl]="settingsForm.controls.consumptionThreshold" />
-      </div>
+    <div class="setting-item">
+      <label for="threshold">Tages-Limit (Beispiel)</label>
+      <input
+        id="threshold"
+        type="number"
+        min="0"
+        max="20"
+        step="1"
+        [formControl]="settingsForm.controls.consumptionThreshold"
+      />
+    </div>
 
       <!-- Benachrichtigungssound -->
       <div class="setting-item setting-row">
@@ -90,8 +97,6 @@
 
           <button type="button"
                   class="btn btn-outline play-btn"
-                  (mousedown)="unlockAudio()"
-                  (touchstart)="unlockAudio()"
                   (click)="previewVolume()"
                   [disabled]="settingsForm.value.notificationSound === false">
             <mat-icon class="play-ico" fontSet="material-icons-outlined">play_arrow</mat-icon>
@@ -105,9 +110,10 @@
         </div>
       </div>
 
+      <!-- Einstellungen speichern -->
       <button class="btn--primary btn btn-save"
               (click)="saveSettings()"
-              [disabled]="savingSettings() || settingsForm.invalid">
+              [disabled]="savingSettings() || settingsForm.invalid || !isSettingsChanged()">
         {{ savingSettings() ? 'Speichere…' : 'Einstellungen speichern' }}
       </button>
     </div>
