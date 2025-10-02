@@ -1,0 +1,184 @@
+<div class="card social-page">
+  <h3>Freunde & Soziales</h3>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button [class.active]="activeTab() === 'code'" (click)="activeTab.set('code')">Mein Code</button>
+    <button [class.active]="activeTab() === 'add'" (click)="activeTab.set('add')">Freund hinzufügen</button>
+    <button [class.active]="activeTab() === 'requests'" (click)="activeTab.set('requests')">Anfragen</button>
+    <button [class.active]="activeTab() === 'blocked'" (click)="activeTab.set('blocked')">Blockierte</button>
+  </nav>
+
+  <!-- TAB: Mein Code -->
+  @if (activeTab() === 'code') {
+    <section class="tab-content">
+      <h4>Dein Freundschaftscode</h4>
+
+      <div class="code-card">
+        <div class="code-line">
+          <code class="mono">{{ myCode }}</code>
+          <div class="code-actions">
+            <button class="btn sm" (click)="shareCopy()">📋 Kopieren</button>
+            <button class="btn sm" (click)="shareNative()">📤 Teilen</button>
+            <button class="btn sm" (click)="shareQR()">🔳 QR</button>
+            <button class="btn sm ghost" (click)="toggleShareHelp()">❓</button>
+          </div>
+        </div>
+
+        @if (shareHelpOpen()) {
+          <div class="code-help">
+            Teile deinen Code mit Freund:innen.
+            <b>Kopieren</b> legt ihn in die Zwischenablage,
+            <b>Teilen</b> nutzt die Web-Share API (falls vorhanden),
+            <b>QR</b> zeigt ihn als QR-Code an.
+          </div>
+        }
+      </div>
+
+      <h4 class="mt-lg">Deine Freunde</h4>
+      <div class="legend muted" style="font-size:12px; display:flex; gap:12px; align-items:center; margin:4px 0 6px;">
+        <span style="display:inline-flex; gap:6px; align-items:center;">
+          <span class="status-dot online" style="position:static;"></span> online
+        </span>
+        <span style="display:inline-flex; gap:6px; align-items:center;">
+          <span class="status-dot" style="position:static;"></span> offline
+        </span>
+      </div>
+
+      @if (!list().length) {
+        <div class="empty">Noch keine Freunde.</div>
+      } @else {
+        <div class="friends-list">
+          @for (f of list(); track f.id) {
+            <div class="friend-row">
+              <div class="left" (click)="openChat(f)">
+                <div class="avatar">
+                  @if (f.photoURL) {
+                    <img [src]="f.photoURL" alt="" />
+                  } @else {
+                    <div class="avatar-fallback">
+                      {{ (f.username || f.displayName || f.label || f.id).slice(0,1) }}
+                    </div>
+                  }
+                  <span class="status-dot" [class.online]="isOnline(f.id)"></span>
+                </div>
+                <div class="names">
+                  <div class="name">{{ f.username || f.displayName || f.label || f.id }}</div>
+                  <div class="sub muted">ID: {{ f.id }}</div>
+                </div>
+              </div>
+
+              <div class="right">
+                <button class="btn" (click)="openChat(f)">Chat</button>
+                <select class="select" [(ngModel)]="f._action" (change)="handleAction(f)">
+                  <option value="">Aktion…</option>
+                  <option value="remove">Entfernen</option>
+                  <option value="block">Blockieren</option>
+                  <option value="unblock" *ngIf="isBlocked(f.id)">Entblocken</option>
+                </select>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB: Freund hinzufügen -->
+  @if (activeTab() === 'add') {
+    <section class="tab-content">
+      <h4>Freund hinzufügen</h4>
+      <div class="input-group">
+        <span class="input-icon" aria-hidden="true">👤</span>
+        <input
+          [(ngModel)]="friendCodeInput"
+          (keyup.enter)="sendRequest()"
+          class="input"
+          placeholder="Freundschaftscode eingeben"
+          autocomplete="off"
+          inputmode="text"
+          aria-label="Freundschaftscode"
+        />
+        <button class="btn btn-primary" (click)="sendRequest()" [disabled]="!friendCodeInput().trim()">
+          Senden
+        </button>
+      </div>
+      <p class="hint">
+        Tipp: Deinen eigenen Code findest du im Tab <strong>„Mein Code“</strong>. Du kannst ihn auch teilen oder kopieren.
+      </p>
+    </section>
+  }
+
+  <!-- TAB: Offene Anfragen -->
+  @if (activeTab() === 'requests') {
+    <section class="tab-content">
+      <h4>Offene Anfragen</h4>
+      @if (!incoming().length) {
+        <div class="empty">Keine offenen Anfragen.</div>
+      }
+      @for (r of incoming(); track r.fromUid) {
+        <div class="request">
+          <div>{{ r.fromDisplayName || r.fromEmail || r.fromUid }}</div>
+          <div class="actions">
+            <button class="btn success" (click)="accept(r)">Annehmen</button>
+            <button class="btn danger" (click)="decline(r)">Ablehnen</button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB: Blockierte -->
+  @if (activeTab() === 'blocked') {
+    <section class="tab-content">
+      <h4>Blockierte Freunde</h4>
+      @if (!blocked().length) {
+        <div class="empty">Noch keine blockierten Freunde.</div>
+      }
+      @for (b of blocked(); track b.id) {
+        <div class="friend blocked">
+          <div class="main">
+            @if (b.photoURL) {
+              <img [src]="b.photoURL" alt="" />
+            } @else {
+              <div class="avatar-fallback">
+                {{ (b.username || b.displayName || b.label || b.id).slice(0,1) }}
+              </div>
+            }
+            <div class="names">
+              <strong>{{ b.username || b.displayName || b.label || b.id }}</strong>
+            </div>
+          </div>
+          <button class="btn danger" (click)="unblockDirect(b)">Entblocken</button>
+        </div>
+      }
+    </section>
+  }
+</div>
+
+<!-- QR-Overlay -->
+@if (qrOpen()) {
+  <div class="qr-overlay" (click)="closeQR()">
+    <div class="qr-modal" (click)="$event.stopPropagation()">
+      <h4>Freundschaftscode als QR</h4>
+      @if (qrDataUrl()) {
+        <img [src]="qrDataUrl()!" alt="QR-Code" class="qr-img" />
+      }
+      <div class="qr-actions">
+        <button class="btn" (click)="downloadQR()">Download</button>
+        <button class="btn" (click)="closeQR()">Schließen</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Chat Overlay -->
+@if (showChat()) {
+  <app-chat-overlay
+    [partner]="partner()"
+    [messages]="messages()"
+    [(text)]="chatInput"
+    (close)="closeChat()"
+    (send)="sendMsg()"
+  ></app-chat-overlay>
+}

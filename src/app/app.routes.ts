@@ -60,8 +60,8 @@ export const routes: Routes = [
       },
       {
         path: 'social',
-        loadComponent: comingSoon('Freunde & Soziales'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/social/social.page/social.page').then((m) => m.SocialPage),
         data: { title: 'Freunde & Soziales' },
       },
       {
