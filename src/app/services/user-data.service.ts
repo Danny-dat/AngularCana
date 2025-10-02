@@ -72,32 +72,35 @@ export class UserDataService {
    * Lädt Settings aus /users/{uid}/meta/settings und merged robust mit Defaults,
    * damit alte Dokumente (ohne neue Felder) weiterhin funktionieren.
    */
-  async loadUserSettings(uid: string): Promise<UserSettingsModel> {
-    const defaults = getDefaultSettings();
-    const snap = await getDoc(this.userSettingsDoc(uid));
-    const raw = snap.exists() ? (snap.data() as Partial<UserSettingsModel>) : {};
+    async loadUserSettings(uid: string): Promise<UserSettingsModel> {
+      const defaults = getDefaultSettings();
+      const snap = await getDoc(this.userDoc(uid));
+      const raw = snap.exists() ? (snap.data() as any) : {};
 
-    return {
-      consumptionThreshold:
-        typeof raw.consumptionThreshold === 'number'
-          ? raw.consumptionThreshold
-          : defaults.consumptionThreshold,
-      notificationSound:
-        typeof raw.notificationSound === 'boolean'
-          ? raw.notificationSound
-          : defaults.notificationSound,
-    };
-  }
+      const s = (raw.settings ?? {}) as Partial<UserSettingsModel>;
 
+      return {
+        consumptionThreshold:
+          typeof s.consumptionThreshold === 'number'
+            ? s.consumptionThreshold
+            : defaults.consumptionThreshold,
+        notificationSound:
+          typeof s.notificationSound === 'boolean'
+            ? s.notificationSound
+            : defaults.notificationSound,
+      };
+    }
   /**
    * Speichert Settings (merge:true, um andere Felder nicht zu verlieren).
    */
   async saveUserSettings(uid: string, settings: UserSettingsModel): Promise<void> {
     await setDoc(
-      this.userSettingsDoc(uid),
+      this.userDoc(uid),
       {
-        consumptionThreshold: settings.consumptionThreshold,
-        notificationSound: !!settings.notificationSound,
+        settings: {
+          consumptionThreshold: settings.consumptionThreshold,
+          notificationSound: !!settings.notificationSound,
+        },
       },
       { merge: true }
     );
