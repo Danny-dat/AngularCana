@@ -36,10 +36,11 @@ export class UserDataComponent implements OnInit, OnDestroy {
     phoneNumber: [''],
   });
 
-  // Startet mit aktuell gesetztem Theme (kein Rückfall auf "light")
+  // Settings inkl. 🔔 notificationSound
   settingsForm = this.fb.group({
     theme: [this.theme.getTheme() as Theme, Validators.required],
     consumptionThreshold: [3, [Validators.min(0), Validators.max(20)]],
+    notificationSound: [true], // ✅ neu, Standard: EIN
   });
 
   private subAuth?: Subscription;
@@ -48,17 +49,17 @@ export class UserDataComponent implements OnInit, OnDestroy {
   private saveNameTimer?: any;
 
   ngOnInit() {
-    // Theme-Livewechsel: nur Theme speichern, nicht Profilfelder überschreiben
+    // Theme-Livewechsel: nur Theme direkt speichern
     this.subThemeChanges = this.settingsForm.get('theme')!.valueChanges.subscribe(async t => {
       if (!this.uid) return;
       const mode = (t as Theme) ?? this.theme.getTheme();
       this.applyTheme(mode);
       await this.svc.saveUserData(this.uid, {
         personalization: { theme: mode },
-      } as any); // saveUserData sollte { merge:true } verwenden
+      } as any);
     });
 
-    // Live: Anzeigename -> localStorage + CustomEvent + verzögert (15s) persistieren
+    // Live: Anzeigename -> localStorage + Event + verzögert persistieren
     this.subLiveName = this.profileForm.controls.displayName.valueChanges.pipe(
       map(v => (v ?? '').trim()),
       debounceTime(300),
@@ -66,14 +67,13 @@ export class UserDataComponent implements OnInit, OnDestroy {
       filter(() => !!this.uid)
     ).subscribe(name => {
       try { localStorage.setItem('displayName', name); } catch {}
-      // NEU: Live-Event für denselben Tab (Header zieht sofort mit)
       try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
 
       clearTimeout(this.saveNameTimer);
       this.saveNameTimer = setTimeout(() => this.persistDisplayName(name), 15000);
     });
 
-    // User laden + Daten ziehen
+    // User + Daten laden
     this.subAuth = user(this.auth).subscribe(async (u) => {
       this.uid = u?.uid ?? null;
       if (!this.uid) {
@@ -90,24 +90,22 @@ export class UserDataComponent implements OnInit, OnDestroy {
         const phoneNumber = data.phoneNumber ?? '';
         this.profileForm.reset({ displayName, phoneNumber });
 
-        // initial auch in localStorage spiegeln (damit Header stimmt)
         try { localStorage.setItem('displayName', displayName); } catch {}
-        // NEU: Initialen Wert sofort an den Header funken
         try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: displayName })); } catch {}
 
-        // DB-Theme lesen: personalization.theme bevorzugen
+        // Theme aus DB
         const dbTheme = ((data as any)?.personalization?.theme ?? (data as any)?.theme) as Theme | undefined;
 
-        // Werte in Settings-Form setzen, aber Events NICHT feuern
+        // Settings initial setzen (ohne Events)
         this.settingsForm.patchValue(
           {
             theme: dbTheme ?? this.theme.getTheme(),
             consumptionThreshold: settings.consumptionThreshold ?? 3,
+            notificationSound: settings.notificationSound ?? true, // ✅ neu
           },
           { emitEvent: false }
         );
 
-        // Nur wirklich umschalten, wenn DB einen Wert hat und er abweicht
         if (dbTheme && dbTheme !== this.theme.getTheme()) {
           this.applyTheme(dbTheme);
         }
@@ -126,36 +124,30 @@ export class UserDataComponent implements OnInit, OnDestroy {
     this.subThemeChanges?.unsubscribe();
     this.subLiveName?.unsubscribe();
 
-    // Optional: bei ungespeichertem Namen noch flushen
     const name = (this.profileForm.value.displayName ?? '').trim();
     if (this.uid && name) void this.persistDisplayName(name);
   }
 
   // THEME
   applyTheme(theme: Theme) {
-    this.theme.setTheme(theme); // setzt Body-Klasse + localStorage
+    this.theme.setTheme(theme);
   }
   onThemeSelect(theme: Theme) {
     this.settingsForm.get('theme')!.setValue(theme);
   }
 
-  // Sofort-Speichern des Anzeigenamens (DB + öffentlich + Auth)
+  // Anzeigename sofort speichern
   async persistDisplayName(name: string) {
     if (!this.uid) return;
     try {
       await this.svc.saveUserData(this.uid, { displayName: name } as UserDataModel);
       await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
-      if (this.auth.currentUser) {
-        await updateProfile(this.auth.currentUser, { displayName: name });
-      }
-      // NEU: Nach erfolgreichem Persistieren Event erneut schicken (synchronisiert andere Tabs/Listener)
+      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
       try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
-    } catch (e) {
-      // optional: Fehlerfeedback
-    }
+    } catch {}
   }
 
-  // SAVE
+  // SPEICHERN
   async saveProfile() {
     if (!this.uid || this.profileForm.invalid) return;
     this.savingProfile.set(true);
@@ -165,7 +157,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
     const phoneNumber = this.profileForm.value.phoneNumber ?? '';
 
     try {
-      clearTimeout(this.saveNameTimer); // vermeidet Doppelspeichern kurz danach
+      clearTimeout(this.saveNameTimer);
       await this.svc.saveUserData(this.uid, {
         displayName: name,
         phoneNumber: phoneNumber,
@@ -174,7 +166,6 @@ export class UserDataComponent implements OnInit, OnDestroy {
       if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
 
       try { localStorage.setItem('displayName', name); } catch {}
-      // NEU: Auch beim Button-Speichern Event feuern
       try { window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name })); } catch {}
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Profil konnte nicht gespeichert werden.');
@@ -190,11 +181,12 @@ export class UserDataComponent implements OnInit, OnDestroy {
 
     const settings: UserSettingsModel = {
       consumptionThreshold: this.settingsForm.value.consumptionThreshold ?? 3,
+      notificationSound: this.settingsForm.value.notificationSound ?? true,
     };
 
     try {
       await this.svc.saveUserSettings(this.uid, settings);
-      // Theme wurde bereits via valueChanges gespeichert
+      // Theme wurde über valueChanges schon gespeichert
     } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Einstellungen konnten nicht gespeichert werden.');
     } finally {

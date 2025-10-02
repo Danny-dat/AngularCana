@@ -8,12 +8,15 @@
       <div class="card error">{{ errorMsg() }}</div>
     }
 
+    <!-- PROFIL -->
     <div class="card">
       <h3>Profil</h3>
 
       <div class="setting-item">
         <label for="displayName">Anzeigename</label>
-        <input id="displayName" type="text" [formControl]="profileForm.controls.displayName" (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
+        <input id="displayName" type="text"
+               [formControl]="profileForm.controls.displayName"
+               (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
       </div>
 
       <div class="setting-item">
@@ -21,13 +24,17 @@
         <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
       </div>
 
-      <button class="btn btn-save" (click)="saveProfile()" [disabled]="savingProfile() || profileForm.invalid">
+      <button class="btn btn-save"
+              (click)="saveProfile()"
+              [disabled]="savingProfile() || profileForm.invalid">
         {{ savingProfile() ? 'Speichere…' : 'Profil speichern' }}
       </button>
     </div>
 
+    <!-- DARSTELLUNG / EINSTELLUNGEN -->
     <div class="card">
-      <h3>Darstellung</h3>
+      <h3>Darstellung & Einstellungen</h3>
+
       <div class="setting-item">
         <label>Theme</label>
         <div class="theme-selector">
@@ -46,10 +53,29 @@
 
       <div class="setting-item">
         <label for="threshold">Tages-Limit (Beispiel)</label>
-        <input id="threshold" type="number" [formControl]="settingsForm.controls.consumptionThreshold" />
+        <input id="threshold" type="number"
+               [formControl]="settingsForm.controls.consumptionThreshold" />
       </div>
 
-      <button class="btn btn-save" (click)="saveSettings()" [disabled]="savingSettings() || settingsForm.invalid">
+      <!-- Benachrichtigungssound -->
+      <div class="setting-item setting-row">
+        <div class="setting-text">
+          <div class="setting-title">Benachrichtigungssound</div>
+          <div class="setting-sub">Ton bei neuen Nachrichten abspielen</div>
+        </div>
+
+        <label class="switch">
+          <input id="notifSound"
+                 type="checkbox"
+                 [formControl]="settingsForm.controls.notificationSound"
+                 aria-label="Benachrichtigungssound ein- oder ausschalten" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn btn-save"
+              (click)="saveSettings()"
+              [disabled]="savingSettings() || settingsForm.invalid">
         {{ savingSettings() ? 'Speichere…' : 'Einstellungen speichern' }}
       </button>
     </div>
