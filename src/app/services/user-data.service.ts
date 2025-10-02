@@ -8,17 +8,20 @@ export interface UserDataModel {
   theme: 'light' | 'dark';
 }
 
-/** Settings auf /users/{uid}/meta/settings */
+/** Settings im Root-Dokument unter "settings" */
 export interface UserSettingsModel {
   consumptionThreshold: number;
   notificationSound: boolean;
+  /** Lautstärke 0..1 (optional für Rückwärtskompatibilität) */
+  notificationVolume?: number;
 }
 
-/** Defaults für Settings (für Migrations-/Fallback-Fälle) */
+/** Defaults (Fallback/Migration) */
 function getDefaultSettings(): UserSettingsModel {
   return {
     consumptionThreshold: 3,
     notificationSound: true,
+    notificationVolume: 0.3,
   };
 }
 
@@ -31,21 +34,12 @@ export class UserDataService {
     return doc(this.db, `users/${uid}`);
   }
 
-  /** /users/{uid}/meta/settings (Sub-Dokument) */
-  private userSettingsDoc(uid: string) {
-    return doc(this.db, `users/${uid}/meta/settings`);
-  }
-
   // ---------------- UserData (Profil / Theme) ----------------
 
-  /**
-   * Lädt das User-Root-Dokument und mapped Theme aus personalization.theme.
-   * Fallback für Theme ist 'light', falls (noch) nicht vorhanden.
-   */
+  /** Lädt Root-Dokument und mapped Theme aus personalization.theme. */
   async loadUserData(uid: string): Promise<UserDataModel> {
     const snap = await getDoc(this.userDoc(uid));
     const data: any = snap.exists() ? snap.data() : {};
-
     return {
       displayName: data.displayName ?? '',
       phoneNumber: data.phoneNumber ?? '',
@@ -53,56 +47,86 @@ export class UserDataService {
     };
   }
 
-  /**
-   * Speichert nur die übergebenen Felder. Theme wird intern nach personalization.theme gemapped.
-   * Nutz dafür Partial<UserDataModel>, damit du z. B. nur { theme } oder nur { displayName } speichern kannst.
-   */
+  /** Speichert nur die Felder, die übergeben werden (merge:true). */
   async saveUserData(uid: string, payload: Partial<UserDataModel>): Promise<void> {
     const body: any = {};
-    if (payload.displayName !== undefined) body.displayName = payload.displayName;
-    if (payload.phoneNumber !== undefined) body.phoneNumber = payload.phoneNumber;
-    if (payload.theme !== undefined) body.personalization = { theme: payload.theme };
-    // No-Op ist ok: merge:true schreibt nur, was gesetzt ist
-    await setDoc(this.userDoc(uid), body, { merge: true });
+    if (typeof payload.displayName === 'string') body.displayName = payload.displayName;
+    if (typeof payload.phoneNumber === 'string') body.phoneNumber = payload.phoneNumber;
+    if (payload.theme === 'light' || payload.theme === 'dark') {
+      body.personalization = { theme: payload.theme };
+    }
+    if (Object.keys(body).length === 0) return;
+
+    try {
+      await setDoc(this.userDoc(uid), body, { merge: true });
+    } catch (e: any) {
+      console.error('saveUserData body ->', body);
+      console.error('saveUserData Firestore error:', e?.code, e?.message, e);
+      throw e;
+    }
   }
 
-  // ---------------- UserSettings (Sub-Dokument) ----------------
+  // ---------------- Settings (im Root unter "settings") ----------------
+
+  /** Lädt /users/{uid} und merged robust mit Defaults. */
+  async loadUserSettings(uid: string): Promise<UserSettingsModel> {
+    const defaults = getDefaultSettings();
+    const snap = await getDoc(this.userDoc(uid));
+    const raw = snap.exists() ? (snap.data() as any) : {};
+    const s = (raw.settings ?? {}) as Partial<UserSettingsModel>;
+
+    return {
+      consumptionThreshold:
+        typeof s.consumptionThreshold === 'number'
+          ? s.consumptionThreshold
+          : defaults.consumptionThreshold,
+      notificationSound:
+        typeof s.notificationSound === 'boolean'
+          ? s.notificationSound
+          : defaults.notificationSound,
+      notificationVolume:
+        typeof s.notificationVolume === 'number'
+          ? s.notificationVolume
+          : defaults.notificationVolume,
+    };
+  }
 
   /**
-   * Lädt Settings aus /users/{uid}/meta/settings und merged robust mit Defaults,
-   * damit alte Dokumente (ohne neue Felder) weiterhin funktionieren.
+   * Speichert Settings mit dot-paths (merge:true), schreibt niemals undefined/NaN.
+   * So vermeiden wir 400 Bad Request.
    */
-    async loadUserSettings(uid: string): Promise<UserSettingsModel> {
-      const defaults = getDefaultSettings();
-      const snap = await getDoc(this.userDoc(uid));
-      const raw = snap.exists() ? (snap.data() as any) : {};
+  async saveUserSettings(uid: string, settings: Partial<UserSettingsModel>): Promise<void> {
+    const payload: Record<string, any> = {};
 
-      const s = (raw.settings ?? {}) as Partial<UserSettingsModel>;
-
-      return {
-        consumptionThreshold:
-          typeof s.consumptionThreshold === 'number'
-            ? s.consumptionThreshold
-            : defaults.consumptionThreshold,
-        notificationSound:
-          typeof s.notificationSound === 'boolean'
-            ? s.notificationSound
-            : defaults.notificationSound,
-      };
+    // consumptionThreshold: Zahl 0..20 (passe Range ggf. an)
+    if (settings.consumptionThreshold !== undefined && settings.consumptionThreshold !== null) {
+      const raw = Number(settings.consumptionThreshold);
+      if (Number.isFinite(raw)) {
+        payload['settings.consumptionThreshold'] = Math.max(0, Math.min(20, Math.trunc(raw)));
+      }
     }
-  /**
-   * Speichert Settings (merge:true, um andere Felder nicht zu verlieren).
-   */
-  async saveUserSettings(uid: string, settings: UserSettingsModel): Promise<void> {
-    await setDoc(
-      this.userDoc(uid),
-      {
-        settings: {
-          consumptionThreshold: settings.consumptionThreshold,
-          notificationSound: !!settings.notificationSound,
-        },
-      },
-      { merge: true }
-    );
+
+    // notificationSound: bool
+    if (settings.notificationSound !== undefined && settings.notificationSound !== null) {
+      payload['settings.notificationSound'] = !!settings.notificationSound;
+    }
+
+    // notificationVolume: Zahl 0..1
+    if (settings.notificationVolume !== undefined && settings.notificationVolume !== null) {
+      const raw = Number(settings.notificationVolume);
+      if (Number.isFinite(raw)) {
+        payload['settings.notificationVolume'] = Math.max(0, Math.min(1, raw));
+      }
+    }
+
+    if (Object.keys(payload).length === 0) return;
+
+    try {
+      await setDoc(this.userDoc(uid), payload, { merge: true });
+    } catch (e: any) {
+      console.error('saveUserSettings payload ->', payload);
+      console.error('saveUserSettings Firestore error:', e?.code, e?.message, e);
+      throw e;
+    }
   }
 }
