@@ -1,0 +1,34 @@
+<h3>Community Events</h3>
+
+<div class="events-toolbar">
+  <span>Meine Likes: {{ likedCount() }}</span>
+</div>
+
+<div *ngIf="(events$ | async) as events; else noEvents">
+  <div class="events-container">
+    <div *ngFor="let e of events" class="event-item">
+      <div class="event-details">
+        <p class="event-name">{{ e.name }}</p>
+        <p class="event-address">{{ e.address }}</p>
+        <div class="vote-counters">
+          <span><i class="fas fa-thumbs-up"></i> {{ e.upvotes?.length || 0 }}</span>
+          <span><i class="fas fa-thumbs-down"></i> {{ e.downvotes?.length || 0 }}</span>
+        </div>
+      </div>
+      <div class="event-actions">
+        <button (click)="vote(e, 'up')" [ngClass]="{voted: isUpvoted(e)}" title="Event positiv bewerten">
+          👍
+        </button>
+        <button (click)="vote(e, 'down')" [ngClass]="{voted: isDownvoted(e)}" title="Event negativ bewerten">
+          👎
+        </button>
+        <button (click)="showOnMap(e)" title="Auf Karte zeigen">📍</button>
+        <button (click)="routeTo(e)" title="Route">🧭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #noEvents>
+  <div class="empty-state">Aktuell keine Events.</div>
+</ng-template>

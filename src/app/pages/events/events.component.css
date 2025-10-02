@@ -1,0 +1,6 @@
+.events-container{display:grid; gap:10px}
+.event-item{display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color,#ddd); padding:10px; border-radius:10px}
+.event-name{font-weight:600}
+.event-actions button{margin-left:6px}
+.voted{filter: saturate(1.5)}
+.vote-counters{display:flex; gap:12px; color:var(--text-muted,#666)}
