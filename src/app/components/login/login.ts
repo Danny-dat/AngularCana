@@ -6,11 +6,12 @@ import { AuthService } from '../../services/auth.service';
 import { Auth } from '@angular/fire/auth';
 import { UserDataService } from '../../services/user-data.service';
 import { ThemeService } from '../../services/theme.service';
+import { AdSlotComponent } from '../promo-slot/ad-slot.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, AdSlotComponent],
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
 })
@@ -26,7 +27,7 @@ export class LoginComponent implements OnInit {
     private readonly cdr: ChangeDetectorRef,
     private readonly auth: Auth,
     private readonly userData: UserDataService,
-    private readonly theme: ThemeService,
+    private readonly theme: ThemeService
   ) {}
 
   // Beim Anzeigen des Login-Views: alten Username sofort ausblenden
@@ -39,14 +40,22 @@ export class LoginComponent implements OnInit {
 
   private mapAuthError(code?: string): string {
     switch (code) {
-      case 'auth/invalid-email': return 'Bitte eine gültige E-Mail-Adresse eingeben.';
-      case 'auth/missing-password': return 'Bitte ein Passwort eingeben.';
-      case 'auth/wrong-password': return 'Falsches Passwort.';
-      case 'auth/user-not-found': return 'Kein Benutzer mit dieser E-Mail gefunden.';
-      case 'auth/too-many-requests': return 'Zu viele Versuche. Bitte später erneut versuchen.';
-      case 'auth/network-request-failed': return 'Netzwerkfehler. Prüfe deine Internetverbindung.';
-      case 'auth/invalid-credential': return 'Anmeldedaten ungültig.';
-      default: return 'Login fehlgeschlagen. Bitte erneut versuchen.';
+      case 'auth/invalid-email':
+        return 'Bitte eine gültige E-Mail-Adresse eingeben.';
+      case 'auth/missing-password':
+        return 'Bitte ein Passwort eingeben.';
+      case 'auth/wrong-password':
+        return 'Falsches Passwort.';
+      case 'auth/user-not-found':
+        return 'Kein Benutzer mit dieser E-Mail gefunden.';
+      case 'auth/too-many-requests':
+        return 'Zu viele Versuche. Bitte später erneut versuchen.';
+      case 'auth/network-request-failed':
+        return 'Netzwerkfehler. Prüfe deine Internetverbindung.';
+      case 'auth/invalid-credential':
+        return 'Anmeldedaten ungültig.';
+      default:
+        return 'Login fehlgeschlagen. Bitte erneut versuchen.';
     }
   }
 
@@ -66,17 +75,16 @@ export class LoginComponent implements OnInit {
     }
 
     // Vor dem Versuch sicherstellen, dass nichts “durchblitzt”
-    try { localStorage.removeItem('username'); } catch {}
+    try {
+      localStorage.removeItem('username');
+    } catch {}
 
     try {
       const cred = await this.authService.login(email, password);
 
       // 💡 Frischen Namen für Header/Nav setzen (falls du ihn nutzt)
       try {
-        const display =
-          cred.user.displayName ??
-          cred.user.email ??
-          'User';
+        const display = cred.user.displayName ?? cred.user.email ?? 'User';
         localStorage.setItem('username', display);
       } catch {}
 
@@ -100,12 +108,18 @@ export class LoginComponent implements OnInit {
     } catch (err: unknown) {
       console.error('Login-Fehler:', err);
       // typ-sicherer Zugriff
-      const anyErr = err as { code?: string; message?: string; error?: { error?: { message?: string } } };
+      const anyErr = err as {
+        code?: string;
+        message?: string;
+        error?: { error?: { message?: string } };
+      };
       const code = anyErr?.code || anyErr?.error?.error?.message;
       const msg = this.mapAuthError(code);
       this.errorMessage = msg;
       // 🧹 bei Fehler sicherstellen, dass kein alter Name bleibt
-      try { localStorage.removeItem('username'); } catch {}
+      try {
+        localStorage.removeItem('username');
+      } catch {}
       this.cdr.markForCheck();
     } finally {
       this.isLoading = false;

@@ -1,0 +1,73 @@
+/* Host-Element (promo-slot / ad-slot) */
+:host {
+  /* Stellschrauben */
+  --w: 280px;        /* max. Breite (kleiner) */
+  --ratio: 2.6/1;    /* flacher als 3:1 */
+  --pad: 8px;
+  --radius: 12px;
+  --bg: #fff;
+  --shadow: 0 8px 20px rgba(16,24,40,.08);
+
+  display: block;
+  width: 100%;
+}
+
+/* Card-Wrapper inside template: <div class="promo-slot"> */
+.promo-slot {
+  width: 100%;
+  max-width: var(--w);
+  margin: 12px auto 0;
+  padding: var(--pad);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+/* Bildfläche */
+.ad-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--ratio);
+  object-fit: cover;
+  border-radius: calc(var(--radius) - 3px);
+  background: linear-gradient(180deg,#f6f7f8, #eceff1);
+}
+
+/* Dezentes Hover */
+.promo-slot:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(16,24,40,.10);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :host { --bg: #1e1e1e; --shadow: 0 8px 20px rgba(0,0,0,.35); }
+}
+
+/* ===== Varianten über Host-Attribut ===== */
+/* etwas breiter, deutlich flacher (Dashboard) */
+:host([data-variant="wide"])    { --w: 360px; --ratio: 9/2; }
+:host([data-variant="wide"]) .ad-img {
+  object-fit: contain;       /* statt cover */
+  padding: 6px;              /* kleiner Rand, damit nichts „klebt“ */
+  background: linear-gradient(180deg,#171717,#1f1f1f); /* dezente Fläche */
+  border-radius: calc(var(--radius) - 3px);
+}
+/* kompakt: etwa halb so hoch wie vorher */
+:host([data-variant="compact"]) { --w: 240px; --ratio: 24/5; }
+
+/* NEU: schlankes Pill-Banner, etwas breiter, ~3.8:1 */
+:host([data-variant="slim"]) {
+  --w: 300px;     /* Breite – gern auf 320/340 erhöhen, wenn Platz da ist */
+  --ratio: 3.8/1; /* flach, passend zu deinem Screenshot */
+}
+
+/* Für slim kein Beschnitt & dezenter Rand */
+:host([data-variant="slim"]) .ad-img,
+:host([data-variant="compact"]) .ad-img {
+  object-fit: contain;
+  padding: 4px;
+  background: linear-gradient(180deg,#efefef,#e7e7e7);
+  border-radius: calc(var(--radius) - 3px);
+}

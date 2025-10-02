@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { RegisterComponent } from './components/register/register';
 import { DashboardComponent } from './components/dashboard/dashboard';
-import { authGuard } from './guards/auth-guard'; 
+import { authGuard } from './guards/auth-guard';
 
 import { AppLayoutComponent } from './layouts/app-layout';
 import { PublicLayoutComponent } from './layouts/public-layout';
@@ -66,14 +66,15 @@ export const routes: Routes = [
       },
       {
         path: 'events',
-        loadComponent: comingSoon('Events'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/events/events.component').then((m) => m.EventsComponent),
         data: { title: 'Events' },
       },
       {
         path: 'stats',
         canActivate: [authGuard],
-        loadComponent: () => import('./pages/statistics/statistics.component').then((m) => m.StatisticsComponent),
+        loadComponent: () =>
+          import('./pages/statistics/statistics.component').then((m) => m.StatisticsComponent),
         data: { title: 'Statistik' },
       },
       {
