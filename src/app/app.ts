@@ -48,23 +48,27 @@ export class AppComponent implements OnInit {
     // console.log('[AppComponent] ctor (browser=', this.isBrowser, ')');
   }
 
-  ngOnInit(): void {
-    if (this.isBrowser) {
-      this.ads.init();
-    }
-
-    user(this.auth).subscribe(async (u) => {
-      if (!u?.uid) return;
-      try {
-        const data = await this.userData.loadUserData(u.uid);
-
-        const pref: 'light' | 'dark' | undefined =
-          (data as any)?.personalization?.theme ?? (data as any)?.theme;
-          
-        this.theme.setTheme(pref ?? this.theme.getTheme());
-      } catch {
-        this.theme.setTheme(this.theme.getTheme());
-      }
-    });
+ngOnInit(): void {
+  if (!this.isBrowser) {
+    // Auf dem Server nichts mit Firebase/Window/AdService machen
+    return;
   }
+
+  // Nur im Browser initialisieren
+  this.ads.init();
+
+  // Nur im Browser auf Auth-Stream gehen
+  user(this.auth).subscribe(async (u) => {
+    if (!u?.uid) return;
+    try {
+      const data = await this.userData.loadUserData(u.uid);
+      const pref: 'light' | 'dark' | undefined =
+        (data as any)?.personalization?.theme ?? (data as any)?.theme;
+      this.theme.setTheme(pref ?? this.theme.getTheme());
+    } catch {
+      this.theme.setTheme(this.theme.getTheme());
+    }
+  });
+}
+
 }
