@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -25,7 +25,7 @@ export class AppHeaderComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  //Sound-Service injizieren
+  // Sound-Service injizieren
   private sound = inject(NotificationSoundService);
 
   showNotifications = false;
@@ -45,6 +45,10 @@ export class AppHeaderComponent {
   private subRoute?: Subscription;
   private subStorage?: Subscription;
   private subNameEvent?: Subscription;
+
+  // NEU: Ref auf Glocken-/Dropdown-Wrapper + Doc-Click-Subscription
+  @ViewChild('bellWrap', { static: true }) bellWrap!: ElementRef<HTMLElement>;
+  private docClickSub?: Subscription;
 
   asDate(x: Date | Timestamp): Date {
     return x instanceof Date ? x : x.toDate();
@@ -88,7 +92,6 @@ export class AppHeaderComponent {
     let last = 0;
     this.subCount = this.unreadCount$.subscribe(async (c) => {
       if (c > last) {
-        // Optionaler „Ton an/aus“-Schalter, falls du ihn in localStorage legst
         const enabled = localStorage.getItem('notify:sound') !== 'off';
         if (enabled) {
           try {
@@ -143,16 +146,51 @@ export class AppHeaderComponent {
     ev?.stopPropagation();
     this.showSidebar = !this.showSidebar;
   }
+
   openSettings(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showSettings = !this.showSettings;
   }
+
+  // GEÄNDERT: Öffnen/Schließen inkl. „Klick außerhalb schließt“
   toggleNotifications(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showNotifications = !this.showNotifications;
+
+    if (this.showNotifications) {
+      // bestehenden Listener sicher entfernen
+      this.docClickSub?.unsubscribe();
+
+      this.docClickSub = fromEvent<MouseEvent>(document, 'click').subscribe((evt) => {
+        const anyEvt = evt as any;
+        const path: EventTarget[] =
+          (typeof anyEvt.composedPath === 'function' && anyEvt.composedPath()) ||
+          anyEvt.path ||
+          [];
+
+        const hostEl = this.bellWrap?.nativeElement;
+        const clickedInside =
+          (Array.isArray(path) && hostEl ? path.includes(hostEl) : false) ||
+          (hostEl ? hostEl.contains(evt.target as Node) : false);
+
+        if (!clickedInside) {
+          this.showNotifications = false;
+          this.docClickSub?.unsubscribe();
+          this.docClickSub = undefined;
+        }
+      });
+    } else {
+      // Dropdown zu -> Listener aufräumen
+      this.docClickSub?.unsubscribe();
+      this.docClickSub = undefined;
+    }
   }
+
   closeDropdown() {
     this.showNotifications = false;
+    // optional: sicherheitshalber auch hier aufräumen
+    this.docClickSub?.unsubscribe();
+    this.docClickSub = undefined;
   }
 
   async markRead(id: string) {
@@ -176,5 +214,7 @@ export class AppHeaderComponent {
     this.subRoute?.unsubscribe();
     this.subStorage?.unsubscribe();
     this.subNameEvent?.unsubscribe();
+    // NEU: globalen Klick-Listener sauber entfernen
+    this.docClickSub?.unsubscribe();
   }
 }

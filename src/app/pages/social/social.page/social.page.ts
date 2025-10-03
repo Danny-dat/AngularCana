@@ -6,6 +6,7 @@ import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
 import { FriendRequest, FriendPublicProfile } from '../../../models/social.models';
 import { ChatService, chatIdFor } from '../../../services/chat.services';
 import { FriendsService } from '../../../services/friends.services';
+import { PresenceService } from '../../../services/presence.service';
 import { ChatOverlayComponent } from '../chat-overlay.component/chat-overlay.component';
 import QRCode from 'qrcode';
 
@@ -21,37 +22,36 @@ export class SocialPage implements OnDestroy {
   private friends = inject(FriendsService);
   private chat = inject(ChatService);
   private auth = inject(Auth);
+  private presence = inject(PresenceService); // nur zum Lesen (listen), Heartbeat läuft global
 
-  // Subscriptions/Listener zum Aufräumen
+  // Subscriptions/Listener
   private subs: Array<() => void> = [];
   private unlisten: (() => void) | null = null;
 
-  // Aktueller Benutzer
+  // User
   user = signal<{ uid: string; email?: string; displayName?: string | null }>({ uid: '' });
 
   // Tabs
   activeTab = signal<'code' | 'add' | 'requests' | 'blocked'>('code');
 
-  // Zustände
+  // State
   friendCodeInput = signal('');
   incoming = signal<FriendRequest[]>([]);
   list = signal<FriendPublicProfile[]>([]);
-  blocked = signal<FriendPublicProfile[]>([]);
+  blockedProfiles = signal<FriendPublicProfile[]>([]);
 
-  // Teilen/Hilfe
+  // Share/QR
   shareMenuOpen = signal(false);
   shareHelpOpen = signal(false);
   toggleShareMenu = () => this.shareMenuOpen.set(!this.shareMenuOpen());
   toggleShareHelp = () => this.shareHelpOpen.set(!this.shareHelpOpen());
-  copied = signal(false); // optionales UI-Feedback
-  // QR-Overlay
+  copied = signal(false);
   qrOpen = signal(false);
   qrDataUrl = signal<string | null>(null);
 
-  // Online-Status
+  // Presence (nur Anzeige)
   onlineIds = signal<Set<string>>(new Set());
   isOnline = (id: string) => this.onlineIds().has(id);
-  isBlocked = (id: string) => this.blocked().some((b) => b.id === id);
 
   // Chat
   showChat = signal(false);
@@ -60,20 +60,19 @@ export class SocialPage implements OnDestroy {
   chatInput = signal('');
 
   constructor() {
-    // Auf Login/Logout reagieren und Streams (re)initialisieren
     onAuthStateChanged(this.auth, (u: User | null) => {
-      // alte Listener beenden
+      // bestehende Listener sauber beenden
       this.subs.forEach((fn) => fn?.());
       this.subs = [];
       this.unlisten?.();
       this.unlisten = null;
 
       if (!u) {
-        // ausgeloggt → State leeren
+        // ausgeloggt → State zurücksetzen
         this.user.set({ uid: '' });
         this.incoming.set([]);
         this.list.set([]);
-        this.blocked.set([]);
+        this.blockedProfiles.set([]);
         this.onlineIds.set(new Set());
         this.showChat.set(false);
         this.partner.set(null);
@@ -81,7 +80,7 @@ export class SocialPage implements OnDestroy {
         return;
       }
 
-      // eingeloggter User
+      // eingeloggter Nutzer
       this.user.set({
         uid: u.uid,
         email: u.email ?? undefined,
@@ -94,53 +93,31 @@ export class SocialPage implements OnDestroy {
       const offIncoming = this.friends.listenIncoming(myUid, (reqs) => this.incoming.set(reqs));
       this.subs.push(offIncoming);
 
-      // 2) Freundeliste (+ Presence falls vorhanden)
-      const offFriends = this.friends.listenFriends(myUid, (fr) => {
-        this.list.set(fr);
+      // 2) Freunde + Presence (nur lesen)
+      const offFriends = this.friends.listenFriends(myUid, (friends) => {
+        this.list.set(friends);
 
-        // Presence (nur wenn Service sie anbietet)
-        const ids = fr.map((x) => x.id);
-        const anyFriends = this.friends as any;
-        if (typeof anyFriends.listenPresence === 'function') {
-          const offPresence = anyFriends.listenPresence(ids, (online: string[]) => {
-            this.onlineIds.set(new Set(online));
-          });
-          this.subs.push(offPresence);
-        } else {
-          this.onlineIds.set(new Set());
-        }
+        const ids = friends.map((x) => x.id);
+        const offPresence = this.presence.listen(ids, (online: string[]) => {
+          this.onlineIds.set(new Set(online));
+        });
+        this.subs.push(offPresence);
       });
       this.subs.push(offFriends);
 
-      // 3) Blockierte (Service liefert aktuell string[] → zu minimalen Profilen mappen)
-      const offBlocked = this.friends.listenBlocked(myUid, (ids: string[]) => {
-        const blockedProfiles: FriendPublicProfile[] = ids.map((id) => ({
-          id,
-          label: id.slice(0, 6) + '…',
-          displayName: null,
-          username: null,
-          photoURL: null,
-          lastLocation: null,
-          _action: 'unblock',
-        }));
-        this.blocked.set(blockedProfiles);
+      // 3) Blockierte (mit Profilen)
+      const offBlocked = this.friends.listenBlockedProfiles(myUid, (profiles) => {
+        this.blockedProfiles.set(profiles);
       });
       this.subs.push(offBlocked);
     });
   }
 
-  // Anzeige-Code (UID)
-  get myCode() {
-    return this.user().uid || '…';
-  }
+  // Anzeige-Code
+  get myCode() { return this.user().uid || '…'; }
+  get myCodeGrouped() { return this.myCode.replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim(); }
 
-  // hübscher gruppiert (z. B. ABCD-EFGH-…); wird nur für die Anzeige verwendet
-  get myCodeGrouped() {
-    const raw = this.myCode.replace(/\s+/g, '');
-    return raw.replace(/(.{4})/g, '$1 ').trim();
-  }
-
-  // -------- Teilen / Code --------
+  // Teilen
   async shareCopy(evt?: Event) {
     evt?.stopPropagation();
     try {
@@ -155,10 +132,7 @@ export class SocialPage implements OnDestroy {
 
   async shareNative() {
     try {
-      await navigator.share?.({
-        title: 'CannaTrack',
-        text: `Mein CannaTrack Freundschaftscode: ${this.myCode}`,
-      });
+      await navigator.share?.({ title: 'CannaTrack', text: `Mein CannaTrack Freundschaftscode: ${this.myCode}` });
     } catch {
       await this.shareCopy();
     }
@@ -166,17 +140,15 @@ export class SocialPage implements OnDestroy {
   }
 
   async shareQR() {
-    const text = this.myCode;
     try {
-      const url = await QRCode.toDataURL(text, {
+      const url = await QRCode.toDataURL(this.myCode, {
         width: 256,
         margin: 1,
-        color: { dark: '#000000', light: '#00000000' }, // transparenter Hintergrund
+        color: { dark: '#000000', light: '#00000000' },
       });
       this.qrDataUrl.set(url);
       this.qrOpen.set(true);
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert('QR-Code konnte nicht erzeugt werden.');
     }
     this.shareMenuOpen.set(false);
@@ -196,7 +168,7 @@ export class SocialPage implements OnDestroy {
     a.click();
   }
 
-  // -------- Freunde / Requests --------
+  // Requests/Friends Actions
   sendRequest() {
     const toUid = this.friendCodeInput().trim();
     if (!toUid || !this.user().uid) return;
@@ -212,6 +184,7 @@ export class SocialPage implements OnDestroy {
   accept(req: FriendRequest) {
     if (this.user().uid) this.friends.accept(this.user().uid, req);
   }
+
   decline(req: FriendRequest) {
     if (this.user().uid) this.friends.decline(this.user().uid, req);
   }
@@ -232,11 +205,16 @@ export class SocialPage implements OnDestroy {
     friend._action = '';
   }
 
-  unblockDirect(friend: FriendPublicProfile) {
-    if (this.user().uid) this.friends.unblock(this.user().uid, friend.id);
+  // Blockierte-Tab Buttons
+  unblockDirectProfile(p: FriendPublicProfile) {
+    if (this.user().uid) this.friends.unblock(this.user().uid, p.id);
   }
 
-  // -------- Chat --------
+  deleteBlockedProfile(p: FriendPublicProfile) {
+    if (this.user().uid) this.friends.deleteBlocked(this.user().uid, p.id);
+  }
+
+  // Chat
   openChat(friend: FriendPublicProfile) {
     if (!this.user().uid) return;
     this.partner.set(friend);
@@ -246,7 +224,6 @@ export class SocialPage implements OnDestroy {
     this.unlisten?.();
     this.unlisten = this.chat.listenMessages(cid, (msgs) => {
       this.messages.set(msgs);
-      // auto-scroll
       setTimeout(() => {
         const box = document.getElementById('chatMessages');
         if (box) box.scrollTop = box.scrollHeight;
@@ -272,10 +249,11 @@ export class SocialPage implements OnDestroy {
     this.messages.set([]);
   }
 
-  // -------- Lifecycle --------
+  // Cleanup
   ngOnDestroy() {
     this.unlisten?.();
     this.subs.forEach((fn) => fn?.());
     this.subs = [];
+    // KEIN presence.stop() mehr hier – Heartbeat wird global verwaltet
   }
 }

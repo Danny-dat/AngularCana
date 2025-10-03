@@ -184,21 +184,40 @@
 }
 
 /* Status-Badge (mit Ring) */
-.status-dot {
+.avatar.online{
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.05) inset,
+    0 0 0 2px var(--surface-color),       /* äußere Trennung zur Karte */
+    0 0 0 3px #22c55e,                    /* grüner Ring */
+    0 0 12px rgba(34,197,94,.45);         /* Glow */
+}
+
+/* Statuspunkt unten rechts */
+.status-dot{
   position: absolute;
-  right: -2px;
-  bottom: -2px;
+  right: -4px;
+  bottom: -4px;
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: #8b8f93;
-  box-shadow:
-    0 0 0 2px var(--surface-color, #1f1f1f),
-    0 1px 2px rgba(0,0,0,.25);
+  background: #8b8f93;                       /* offline */
+  border: 2px solid var(--surface-color);    /* sauberer Ring zur Karte */
 }
-.status-dot.online {
-  background: var(--success, #22c55e);
+
+/* ✅ Online: satt grün + pulsierender Halo */
+.status-dot.online{
+  background: #22c55e;       /* ONLINE = GRÜN */
+  border-color: var(--surface-color);
+  box-shadow: 0 0 8px rgba(34,197,94,.55); 
+  animation: pulse-dot 2.2s ease-in-out infinite;
 }
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);   }
+  50%      { transform: scale(1.08); }
+}
+
+.status-dot.online { animation: pulse-dot 2.2s ease-in-out infinite; }
 
 /* Optional: dezenter Graufilter für offline-Avatare */
 .friend-row:not(:hover) .avatar:not(:has(+ .status-dot.online)) {
@@ -208,12 +227,6 @@
 /* Kompaktere Zeilenhöhe für Namen/ID, wenn du willst */
 .friend-row .names .name { line-height: 1.1; }
 .friend-row .names .sub  { line-height: 1.1; }
-
-.status-dot {
-  position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 999px;
-  background: #7a7a7a; border: 2px solid var(--surface-color);
-}
-.status-dot.online { background: var(--success); }
 
 /* Blockiert-EintrÃ¤ge */
 .friend.blocked {
