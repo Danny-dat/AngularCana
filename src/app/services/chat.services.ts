@@ -32,7 +32,7 @@ const shouldNotify = (fromUid: UID, toUid: UID) => {
 const TS = () => serverTimestamp();
 export const chatIdFor = (a: UID, b: UID) => [a, b].sort().join('_');
 
-// ⚠️ erweitert um 'channel'
+// erweitert um 'channel'
 type ChatKind = 'direct' | 'group' | 'channel';
 
 @Injectable({ providedIn: 'root' })
@@ -48,10 +48,8 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // 📌 DIRECT-CHAT (bestehend, rückwärtskompatibel)
+  // 📌 DIRECT-CHAT
   // ─────────────────────────────
-
-  /** Bestehende Methode – bleibt erhalten. */
   async ensureChatExists(a: UID, b: UID) {
     const id = chatIdFor(a, b);
     await setDoc(
@@ -62,19 +60,13 @@ export class ChatService {
     return id;
   }
 
-  /** Convenience: gibt dir direkt die Chat-ID (sortiert). */
   getDirectChatId(a: UID, b: UID) {
     return chatIdFor(a, b);
   }
 
   // ─────────────────────────────
-  // 👥 GRUPPEN-CHAT (neu, vorbereitet)
+  // 👥 GRUPPE
   // ─────────────────────────────
-
-  /**
-   * Gruppe anlegen. Wenn groupId übergeben wird, wird diese verwendet;
-   * sonst wird eine neue ID erzeugt (return value).
-   */
   async createGroup(params: {
     name: string;
     members: UID[];
@@ -84,7 +76,6 @@ export class ChatService {
     const { name, members, groupId, avatarUrl } = params;
     if (!name || !members?.length) throw new Error('Group name and members required');
 
-    // Neue ID oder vorgegebene ID verwenden
     if (groupId) {
       const chatRef = doc(this.chatsCol, groupId);
       await setDoc(
@@ -113,32 +104,24 @@ export class ChatService {
     }
   }
 
-  /** Mitglied hinzufügen (idempotent). */
   async addMember(groupId: string, uid: UID) {
     const chatRef = doc(this.chatsCol, groupId);
     await setDoc(chatRef as any, { participants: arrayUnion(uid), updatedAt: TS() }, { merge: true } as any);
   }
 
-  /** Mitglied entfernen. */
   async removeMember(groupId: string, uid: UID) {
     const chatRef = doc(this.chatsCol, groupId);
     await setDoc(chatRef as any, { participants: arrayRemove(uid), updatedAt: TS() }, { merge: true } as any);
   }
 
-  /** Gruppe umbenennen. */
   async renameGroup(groupId: string, name: string) {
     const chatRef = doc(this.chatsCol, groupId);
     await setDoc(chatRef as any, { name, updatedAt: TS() }, { merge: true } as any);
   }
 
   // ─────────────────────────────
-  // 🌍 CHANNEL (global o. ä.)
+  // 🌍 CHANNEL (z. B. global)
   // ─────────────────────────────
-
-  /**
-   * Stellt einen Channel mit fixer ID sicher (z. B. 'global').
-   * Falls das Dokument bereits existiert, wird es per merge aktualisiert.
-   */
   async ensureChannel(channelId: string, name = 'Globaler Chat') {
     const chatRef = doc(this.chatsCol, channelId);
     await setDoc(
@@ -146,7 +129,7 @@ export class ChatService {
       {
         type: 'channel' as ChatKind,
         name,
-        participants: [], // öffentlich, keine feste Mitgliederliste nötig
+        participants: [], // öffentlich; tatsächliche Teilnahme erzwingen wir in sendGroup()
         createdAt: TS(),
         updatedAt: TS(),
       },
@@ -158,8 +141,6 @@ export class ChatService {
   // ─────────────────────────────
   // 🔔 Lesen / Abonnieren
   // ─────────────────────────────
-
-  /** Nachrichten-Stream für direct / group / channel. */
   listenMessages(chatId: string, cb: (msgs: ChatMessage[]) => void, max = 200) {
     const msgsCol = collection(doc(this.chatsCol, chatId), 'messages');
     const q = query(msgsCol, orderBy('createdAt', 'asc'), limit(max));
@@ -177,7 +158,6 @@ export class ChatService {
     });
   }
 
-  /** Optional: Chat-Metadaten (Titel, Teilnehmer, lastMessage) abonnieren. */
   listenChatMeta(chatId: string, cb: (meta: any) => void) {
     const chatRef = doc(this.chatsCol, chatId);
     return onSnapshot(chatRef, (snap) => cb({ id: chatId, ...snap.data() }));
@@ -187,13 +167,14 @@ export class ChatService {
   // ✉️ Senden (vereinheitlicht)
   // ─────────────────────────────
 
-  /** Alte Signatur – bleibt für Kompatibilität und ruft sendDirect auf. */
+  /** Kompatibel zur alten Signatur */
   async send({ fromUid, toUid, text }: { fromUid: UID; toUid: UID; text: string }) {
     return this.sendDirect({ fromUid, toUid, text });
   }
 
-  /** Direct-Message senden (a↔b). */
-  async sendDirect({ fromUid, toUid, text }: { fromUid: UID; toUid: UID; text: string }) {
+  /** Direct-Message; optional mit senderName */
+  async sendDirect(params: { fromUid: UID; toUid: UID; text: string; senderName?: string }) {
+    const { fromUid, toUid, text, senderName } = params;
     const body = (text || '').trim();
     if (!fromUid || !toUid || !body) return;
 
@@ -206,9 +187,9 @@ export class ChatService {
       senderId: fromUid,
       recipientId: toUid,
       kind: 'direct',
+      extra: senderName ? { senderName } : undefined,
     });
 
-    // einfache Notification nur bei Direct-Chat
     if (shouldNotify(fromUid, toUid)) {
       await addDoc(this.notiCol, {
         type: 'chat_message',
@@ -221,18 +202,20 @@ export class ChatService {
     }
   }
 
-  /** Gruppen-/Channel-Nachricht senden (erfordert bestehende chatId). */
-  async sendGroup({ fromUid, chatId, text }: { fromUid: UID; chatId: string; text: string }) {
+  /** Gruppen-/Channel-Nachricht; optional mit senderName (für Global/Channels) */
+  async sendGroup(params: { fromUid: UID; chatId: string; text: string; senderName?: string }) {
+    const { fromUid, chatId, text, senderName } = params;
     const body = (text || '').trim();
     if (!fromUid || !chatId || !body) return;
 
-    // ← NEU: mich als Teilnehmer sicherstellen (erfüllt gängige Firestore-Regeln)
-    await setDoc(doc(this.chatsCol, chatId) as any, {
-      participants: arrayUnion(fromUid),
-      updatedAt: TS(),
-    }, { merge: true } as any);
+    // Teilnehmer sicherstellen (erfüllt gängige Rules)
+    await setDoc(
+      doc(this.chatsCol, chatId) as any,
+      { participants: arrayUnion(fromUid), updatedAt: TS() },
+      { merge: true } as any
+    );
 
-    await this.touchChat(chatId); // optional, setzt updatedAt
+    await this.touchChat(chatId);
 
     await this.writeMessage({
       chatId,
@@ -240,32 +223,36 @@ export class ChatService {
       senderId: fromUid,
       recipientId: null,
       kind: 'group', // Channel nutzt denselben Message-Typ
+      extra: senderName ? { senderName } : undefined,
     });
   }
 
   // ─────────────────────────────
   // 🧩 Intern
   // ─────────────────────────────
-
   private async writeMessage(args: {
     chatId: string;
     body: string;
     senderId: UID;
     recipientId: UID | null;
     kind: ChatKind;
+    extra?: Record<string, any>;
   }) {
-    const { chatId, body, senderId, recipientId, kind } = args;
+    const { chatId, body, senderId, recipientId, kind, extra } = args;
     const chatRef = doc(this.chatsCol, chatId);
     const msgsCol = collection(chatRef, 'messages');
 
-    await addDoc(msgsCol, {
+    const payload: any = {
       text: body,
       senderId,
       recipientId: recipientId ?? null,
       createdAt: TS(),
       readBy: [senderId],
       type: kind,
-    });
+      ...(extra ?? {}),
+    };
+
+    await addDoc(msgsCol, payload);
 
     await setDoc(
       chatRef as any,
