@@ -1,1 +1,48 @@
-<p>admin works!</p>
+<mat-sidenav-container class="shell">
+  <mat-sidenav mode="side" [opened]="true" class="side" [class.collapsed]="collapsed">
+    <div class="brand">
+      <mat-icon>admin_panel_settings</mat-icon>
+      @if (!collapsed) { <span>Admin</span> }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <nav class="menu">
+      @for (item of nav; track item.label) {
+        <a mat-list-item [routerLink]="item.link" routerLinkActive="active">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          @if (!collapsed) { <div matListItemTitle>{{ item.label }}</div> }
+        </a>
+      }
+    </nav>
+
+    <div class="grow"></div>
+
+    <button mat-stroked-button class="collapse-btn" (click)="collapsed = !collapsed">
+      <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      @if (!collapsed) { <span>Menü einklappen</span> }
+    </button>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="topbar">
+      <button mat-icon-button (click)="collapsed = !collapsed" class="hide-desktop">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="title">Admin Dashboard</span>
+      <span class="spacer"></span>
+      <button mat-icon-button matBadge="3" matBadgeColor="accent" aria-label="Notifications">
+        <mat-icon>notifications</mat-icon>
+      </button>
+      <button mat-button>
+        <mat-icon>account_circle</mat-icon>
+        <span class="hide-sm">Admin</span>
+      </button>
+    </mat-toolbar>
+
+    <main class="content">
+      <!-- HIER wird die jeweilige Unterseite gerendert -->
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

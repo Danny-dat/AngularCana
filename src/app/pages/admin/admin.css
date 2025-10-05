@@ -1,0 +1,42 @@
+:host { display:block; height:100%; }
+.shell { height:100vh; }
+
+/* kompaktere Sidebar */
+.side { width: 180px; padding: 6px; }       /* vorher 260px */
+.side.collapsed { width: 60px; }            /* vorher 76px */
+
+.brand {
+  display:flex; align-items:center; gap:8px; padding:8px 6px;
+  font-weight:600; font-size:13px;
+}
+
+/* Menü dichter + kleinere Icons/Text */
+.menu a { border-radius:8px; height:36px; padding:0 6px; line-height:36px; }
+.menu a.active { background: rgba(0,0,0,0.06); }
+.menu mat-icon { font-size:18px; height:18px; width:18px; }
+[matListItemTitle] { font-size:13px; }
+
+.grow { flex:1 1 auto; }
+
+/* Collapse-Button kompakt */
+.collapse-btn { width:100%; margin-top:10px; height:36px; font-size:12px; border-radius:18px; }
+
+/* Topbar/Content etwas dichter */
+.topbar .title { font-weight:600; font-size:18px; }
+.spacer { flex:1 1 auto; }
+.content { padding:12px; max-width:1200px; margin:0 auto; }
+
+.hide-desktop { display:none; }
+.hide-sm { display:inline; }
+
+@media (max-width: 900px) {
+  .hide-desktop { display:inline-flex; }
+}
+@media (max-width: 640px) {
+  .hide-sm { display:none; }
+}
+
+/* Optional: Material-List noch kompakter erzwingen */
+:host ::ng-deep .mat-mdc-list-item.mdc-list-item { min-height:36px; padding:0 6px; }
+:host ::ng-deep .mat-mdc-list-item .mdc-list-item__start { margin-right:8px; }
+:host ::ng-deep .mat-mdc-list-item .mdc-list-item__primary-text { font-size:13px; }

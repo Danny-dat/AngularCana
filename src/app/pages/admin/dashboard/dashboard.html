@@ -1,0 +1,25 @@
+<div class="grid">
+  @for (k of kpis; track k.label) {
+    <mat-card class="kpi" [routerLink]="k.link">
+      <div class="kpi-row">
+        <mat-icon>{{ k.icon }}</mat-icon>
+        <div class="kpi-values">
+          <div class="val">{{ k.value }}</div>
+          <div class="lbl">{{ k.label }}</div>
+        </div>
+      </div>
+    </mat-card>
+  }
+</div>
+
+<mat-card class="actions">
+  <h3>Schnellaktionen</h3>
+  <div class="quick">
+    @for (q of quick; track q.text) {
+      <a mat-stroked-button [routerLink]="q.link">
+        <mat-icon>{{ q.icon }}</mat-icon>
+        {{ q.text }}
+      </a>
+    }
+  </div>
+</mat-card>
