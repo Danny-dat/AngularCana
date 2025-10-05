@@ -1,11 +1,12 @@
-import type { Timestamp } from 'firebase/firestore';
+// Ergänze/angleiche die Typen
+export type NotificationType = 'chat_message' | 'friend_request' | 'default';
 
 export interface AppNotification {
   id: string;
+  type?: NotificationType; // <-- jetzt inkl. 'friend_request'
+  message: string;
   recipientId: string;
   senderId?: string;
-  message: string;
-  type?: 'default' | 'chat_message';
-  timestamp: Timestamp | Date;
   read?: boolean;
+  timestamp: any; // Timestamp | Date (so wie du es bisher nutzt)
 }

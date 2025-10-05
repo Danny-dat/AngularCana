@@ -46,7 +46,7 @@ export class AppHeaderComponent {
   private subStorage?: Subscription;
   private subNameEvent?: Subscription;
 
-  // NEU: Ref auf Glocken-/Dropdown-Wrapper + Doc-Click-Subscription
+  // Ref auf Glocken-/Dropdown-Wrapper + Doc-Click-Subscription
   @ViewChild('bellWrap', { static: true }) bellWrap!: ElementRef<HTMLElement>;
   private docClickSub?: Subscription;
 
@@ -152,7 +152,7 @@ export class AppHeaderComponent {
     this.showSettings = !this.showSettings;
   }
 
-  // GEÄNDERT: Öffnen/Schließen inkl. „Klick außerhalb schließt“
+  // Öffnen/Schließen inkl. „Klick außerhalb schließt“
   toggleNotifications(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showNotifications = !this.showNotifications;
@@ -193,6 +193,59 @@ export class AppHeaderComponent {
     this.docClickSub = undefined;
   }
 
+  /**
+   * NEU: Öffnet je nach Notification-Typ das richtige Ziel.
+   * - chat_message  -> /social?openChatWith=<senderId>
+   * - friend_request -> /social?tab=requests
+   * Markiert dabei die Notification als gelesen und schließt das Dropdown.
+   */
+  async openNotification(n: AppNotification) {
+    try {
+      await this.noti.markAsRead(n.id);
+    } catch {}
+
+    // Dropdown schließen + Listener aufräumen
+    this.showNotifications = false;
+    this.docClickSub?.unsubscribe();
+    this.docClickSub = undefined;
+
+    switch (n.type) {
+      case 'chat_message':
+        if (n.senderId) {
+          this.router.navigate(['/social'], {
+            queryParams: { openChatWith: n.senderId }
+          });
+        } else {
+          // Fallback, falls senderId fehlt
+          this.router.navigate(['/social']);
+        }
+        break;
+
+      case 'friend_request':
+        this.router.navigate(['/social'], {
+          queryParams: { tab: 'requests' }
+        });
+        break;
+
+      default:
+        this.router.navigate(['/social']);
+    }
+  }
+
+  /**
+   * NEU: Löscht eine Benachrichtigung (ohne sie zu "öffnen").
+   * stopPropagation verhindert, dass der Klick den Eintrag ebenfalls öffnet.
+   */
+  async deleteNotification(id: string, ev?: MouseEvent) {
+    ev?.stopPropagation();
+    try {
+      await this.noti.delete(id);
+    } catch (e) {
+      console.error('delete notification failed', e);
+    }
+  }
+
+  // (Optional weiter nutzbar) Einzelnes Lesen-Markieren
   async markRead(id: string) {
     await this.noti.markAsRead(id);
   }
@@ -214,7 +267,7 @@ export class AppHeaderComponent {
     this.subRoute?.unsubscribe();
     this.subStorage?.unsubscribe();
     this.subNameEvent?.unsubscribe();
-    // NEU: globalen Klick-Listener sauber entfernen
+    // globalen Klick-Listener sauber entfernen
     this.docClickSub?.unsubscribe();
   }
 }
