@@ -15,34 +15,39 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+
+            "outputMode": "static",
+            "index": { "input": "src/index.html", "output": "index.html" },
+
             "assets": [
               "src/favicon.ico",
               { "glob": "**/*", "input": "src/assets", "output": "assets" },
               { "glob": "**/*", "input": "public" },
-              { "glob": "**/*", "input": "node_modules/leaflet/dist/images", "output": "assets" }
+              { "glob": "**/*", "input": "node_modules/leaflet/dist/images", "output": "assets/leaflet" }
             ],
-            "styles": ["src/custom-theme.scss", "src/styles.css", "leaflet/dist/leaflet.css"],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+
+            "styles": [
+              "src/custom-theme.scss",
+              "src/styles.css",
+              "leaflet/dist/leaflet.css"
+            ],
+
+            "allowedCommonJsDependencies": [
+              "leaflet",
+              "qrcode",
+              "dijkstrajs",
+              "pngjs",
+              "@grpc/grpc-js",
+              "@grpc/proto-loader"
+            ]
           },
           "configurations": {
             "production": {
+              "outputHashing": "all",
               "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "1.20mb",
-                  "maximumError":   "1.50mb"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "6kb",
-                  "maximumError":   "8kb"
-                }
-              ],
-              "outputHashing": "all"
+                { "type": "initial", "maximumWarning": "1.20mb", "maximumError": "1.50mb" },
+                { "type": "anyComponentStyle", "maximumWarning": "6kb", "maximumError": "8kb" }
+              ]
             },
             "development": {
               "optimization": false,
@@ -52,21 +57,20 @@
           },
           "defaultConfiguration": "production"
         },
+
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
-            "production": {
-              "buildTarget": "cannatrack-angular:build:production"
-            },
-            "development": {
-              "buildTarget": "cannatrack-angular:build:development"
-            }
+            "production": { "buildTarget": "cannatrack-angular:build:production" },
+            "development": { "buildTarget": "cannatrack-angular:build:development" }
           },
           "defaultConfiguration": "development"
         },
+
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
         },
+
         "test": {
           "builder": "@angular/build:karma",
           "options": {
@@ -85,6 +89,6 @@
     }
   },
   "cli": {
-    "analytics": "5945558a-8a79-45ce-afc9-2d9278da3743"
+    "analytics": false
   }
 }
