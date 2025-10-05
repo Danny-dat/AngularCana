@@ -80,21 +80,29 @@ export class GlobalChatPage implements AfterViewInit, OnDestroy {
 
   // ---- Senden --------------------------------------------------------------
 
-  async onSend(text: string) {
-    const body = (text || '').trim();
-    const me = this.uid();
-    if (!body || !me) return;
+async onSend(text: string) {
+  const body = (text || '').trim();
+  const me = this.uid();
+  if (!body || !me) return;
 
+  try {
     await this.chat.sendGroup({
       fromUid: me,
       chatId: this.channelId,
       text: body,
-      // WICHTIG: Namen mitschreiben → neue Messages zeigen sofort Namen
       senderName: this.displayName(),
     });
-
-    this.text.set('');
+    this.text.set(''); // Eingabefeld leeren
+  } catch (e: any) {
+    if (e?.code === 'permission-denied') {
+      // Spam-Limit o.ä.
+      alert('Du schreibst zu schnell. Bitte warte kurz.');
+    } else {
+      console.error('Senden fehlgeschlagen:', e);
+      alert('Senden fehlgeschlagen. Bitte später erneut versuchen.');
+    }
   }
+}
 
   // ---- Overlay-Aktionen ----------------------------------------------------
 

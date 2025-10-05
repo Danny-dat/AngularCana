@@ -13,7 +13,7 @@ import {
   CollectionReference,
   DocumentData,
 } from '@angular/fire/firestore';
-import { arrayUnion, arrayRemove } from 'firebase/firestore';
+import { arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { ChatMessage, UID } from '../models/social.models';
 
 const NOTIFY_COOLDOWN_MS = 8000;
@@ -32,7 +32,6 @@ const shouldNotify = (fromUid: UID, toUid: UID) => {
 const TS = () => serverTimestamp();
 export const chatIdFor = (a: UID, b: UID) => [a, b].sort().join('_');
 
-// erweitert um 'channel'
 type ChatKind = 'direct' | 'group' | 'channel';
 
 @Injectable({ providedIn: 'root' })
@@ -48,7 +47,7 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // 📌 DIRECT-CHAT
+  // DIRECT
   // ─────────────────────────────
   async ensureChatExists(a: UID, b: UID) {
     const id = chatIdFor(a, b);
@@ -65,7 +64,7 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // 👥 GRUPPE
+  // GROUP
   // ─────────────────────────────
   async createGroup(params: {
     name: string;
@@ -120,7 +119,7 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // 🌍 CHANNEL (z. B. global)
+  // CHANNEL
   // ─────────────────────────────
   async ensureChannel(channelId: string, name = 'Globaler Chat') {
     const chatRef = doc(this.chatsCol, channelId);
@@ -129,7 +128,7 @@ export class ChatService {
       {
         type: 'channel' as ChatKind,
         name,
-        participants: [], // öffentlich; tatsächliche Teilnahme erzwingen wir in sendGroup()
+        participants: [],
         createdAt: TS(),
         updatedAt: TS(),
       },
@@ -139,7 +138,7 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // 🔔 Lesen / Abonnieren
+  // READ
   // ─────────────────────────────
   listenMessages(chatId: string, cb: (msgs: ChatMessage[]) => void, max = 200) {
     const msgsCol = collection(doc(this.chatsCol, chatId), 'messages');
@@ -164,15 +163,12 @@ export class ChatService {
   }
 
   // ─────────────────────────────
-  // ✉️ Senden (vereinheitlicht)
+  // SEND (Batch + Throttle)
   // ─────────────────────────────
-
-  /** Kompatibel zur alten Signatur */
-  async send({ fromUid, toUid, text }: { fromUid: UID; toUid: UID; text: string }) {
-    return this.sendDirect({ fromUid, toUid, text });
+  async send(params: { fromUid: UID; toUid: UID; text: string }) {
+    return this.sendDirect({ fromUid: params.fromUid, toUid: params.toUid, text: params.text });
   }
 
-  /** Direct-Message; optional mit senderName */
   async sendDirect(params: { fromUid: UID; toUid: UID; text: string; senderName?: string }) {
     const { fromUid, toUid, text, senderName } = params;
     const body = (text || '').trim();
@@ -181,14 +177,29 @@ export class ChatService {
     const chatId = chatIdFor(fromUid, toUid);
     await this.ensureChatExists(fromUid, toUid);
 
-    await this.writeMessage({
-      chatId,
-      body,
+    const chatRef = doc(this.chatsCol, chatId);
+    const msgRef = doc(collection(chatRef, 'messages'));
+    const throttleRef = doc(collection(chatRef, 'throttle'), fromUid);
+
+    const payload: any = {
+      text: body,
       senderId: fromUid,
       recipientId: toUid,
-      kind: 'direct',
-      extra: senderName ? { senderName } : undefined,
-    });
+      createdAt: TS(),
+      readBy: [fromUid],
+      type: 'direct',
+      ...(senderName ? { senderName } : {}),
+    };
+
+    const batch = writeBatch(this.afs as any);
+    batch.set(throttleRef as any, { lastSentAt: TS() }, { merge: true } as any);
+    batch.set(msgRef as any, payload);
+    batch.set(
+      chatRef as any,
+      { lastMessage: body, lastSenderId: fromUid, updatedAt: TS() },
+      { merge: true } as any
+    );
+    await batch.commit();
 
     if (shouldNotify(fromUid, toUid)) {
       await addDoc(this.notiCol, {
@@ -202,33 +213,38 @@ export class ChatService {
     }
   }
 
-  /** Gruppen-/Channel-Nachricht; optional mit senderName (für Global/Channels) */
   async sendGroup(params: { fromUid: UID; chatId: string; text: string; senderName?: string }) {
     const { fromUid, chatId, text, senderName } = params;
     const body = (text || '').trim();
     if (!fromUid || !chatId || !body) return;
 
-    // Teilnehmer sicherstellen (erfüllt gängige Rules)
-    await setDoc(
-      doc(this.chatsCol, chatId) as any,
-      { participants: arrayUnion(fromUid), updatedAt: TS() },
-      { merge: true } as any
-    );
+    const chatRef = doc(this.chatsCol, chatId);
+    const msgRef = doc(collection(chatRef, 'messages'));
+    const throttleRef = doc(collection(chatRef, 'throttle'), fromUid);
 
-    await this.touchChat(chatId);
-
-    await this.writeMessage({
-      chatId,
-      body,
+    const payload: any = {
+      text: body,
       senderId: fromUid,
       recipientId: null,
-      kind: 'group', // Channel nutzt denselben Message-Typ
-      extra: senderName ? { senderName } : undefined,
-    });
+      createdAt: TS(),
+      readBy: [fromUid],
+      type: 'group', // Channel nutzt denselben Typ
+      ...(senderName ? { senderName } : {}),
+    };
+
+    const batch = writeBatch(this.afs as any);
+    batch.set(
+      chatRef as any,
+      { participants: arrayUnion(fromUid), lastMessage: body, lastSenderId: fromUid, updatedAt: TS() },
+      { merge: true } as any
+    );
+    batch.set(throttleRef as any, { lastSentAt: TS() }, { merge: true } as any);
+    batch.set(msgRef as any, payload);
+    await batch.commit();
   }
 
   // ─────────────────────────────
-  // 🧩 Intern
+  // MISC
   // ─────────────────────────────
   private async writeMessage(args: {
     chatId: string;
@@ -238,6 +254,7 @@ export class ChatService {
     kind: ChatKind;
     extra?: Record<string, any>;
   }) {
+    // aktuell ungenutzt – bleibt für spätere Nutzung
     const { chatId, body, senderId, recipientId, kind, extra } = args;
     const chatRef = doc(this.chatsCol, chatId);
     const msgsCol = collection(chatRef, 'messages');
@@ -253,12 +270,7 @@ export class ChatService {
     };
 
     await addDoc(msgsCol, payload);
-
-    await setDoc(
-      chatRef as any,
-      { lastMessage: body, lastSenderId: senderId, updatedAt: TS() },
-      { merge: true } as any
-    );
+    await setDoc(chatRef as any, { lastMessage: body, lastSenderId: senderId, updatedAt: TS() }, { merge: true } as any);
   }
 
   private async touchChat(chatId: string) {
