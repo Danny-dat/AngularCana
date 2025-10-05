@@ -96,9 +96,9 @@ export const routes: Routes = [
       // --- Admin-Bereich: nur mit Auth + Admin-UID ---
       {
         path: 'admin',
-        loadComponent: comingSoon('Admin Bereich'),
         canMatch: [adminMatchGuard], // verhindert schon das Matching
         canActivate: [authGuard, adminGuard], // doppelt sicher
+        loadComponent: () => import('./pages/admin/admin').then((m) => m.AdminPage),
         data: { title: 'Admin Bereich' },
       },
 
