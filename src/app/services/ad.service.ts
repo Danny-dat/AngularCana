@@ -1,46 +1,65 @@
 // src/app/services/ad.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
-import { BehaviorSubject, firstValueFrom, map } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, map, tap } from 'rxjs';
 import type { AdSlotConfig } from '../models/ad.types';
 
 @Injectable({ providedIn: 'root' })
 export class AdService {
   private http = inject(HttpClient);
 
-  /** Welche Slots existieren (IDs müssen zu deinen <promo-slot slotId="…"> passen) */
-  private readonly slotIds = ['dashboard-werbung1', 'login-werbung1', 'thc-werbung1'];
+  /** Debug-Schalter */
+  private readonly DEBUG = false;
 
-  /** Laufzeit-Overrides liegen hier (per FTP/SCP etc.), z. B. /media/<slotId>/banner.svg */
+  /** Schutz gegen Doppel-Init */
+  private initialized = false;
+
+  /** Bekannte Slots */
+  private readonly slotIds = ['dashboard-werbung1', 'login-werbung1', 'thc-werbung1'] as const;
+
+  /** Override-Basis (z. B. vom Server gemountet) */
   private readonly OVERRIDE_BASE = '/media';
 
-  /** Reihenfolge, in der wir Formate testen */
+  /** Format-Reihenfolge für Overrides */
   private readonly EXT_ORDER = ['svg', 'webp', 'png', 'jpg'] as const;
 
-  /** App-weiter State der Slots */
+  /** State aller Slots */
   private slots$ = new BehaviorSubject<Record<string, AdSlotConfig>>({});
 
-  /** Beim App-Start aufrufen (z. B. in AppComponent.ngOnInit()) */
+  /** Ein Default für einen Slot (immer absoluter Pfad) */
+  private defaultFor(id: (typeof this.slotIds)[number]): AdSlotConfig {
+    return { id, imgUrl: `/assets/promo/${id}/banner.svg`, alt: id };
+  }
+
+  /** Öffentliche Initialisierung (idempotent) */
   init(): void {
-    // 1) Defaults aus assets (du kannst hier jederzeit auf .svg wechseln)
-    const defaults: AdSlotConfig[] = [
-      { id: 'dashboard-werbung1', imgUrl: 'assets/promo/dashboard-werbung1/banner.svg', alt: 'dashboard-werbung1' },
-      { id: 'thc-werbung1',       imgUrl: 'assets/promo/thc-werbung1/banner.svg',       alt: 'thc-werbung1' },
-      { id: 'login-werbung1',     imgUrl: 'assets/promo/login-werbung1/banner.svg',     alt: 'login-werbung1' },
-    ];
+    if (this.initialized) {
+      if (this.DEBUG) console.debug('[AdService] init() skipped (already initialized)');
+      return;
+    }
+    this.initialized = true;
+
+    // 1) Defaults setzen
+    const defaults: AdSlotConfig[] = this.slotIds.map(id => this.defaultFor(id));
     const base = Object.fromEntries(defaults.map(d => [d.id, d]));
     this.slots$.next(base);
+    if (this.DEBUG) console.debug('[AdService] init → defaults', base);
 
-    // 2) Laufzeit-Overrides asynchron mergen
-    this.loadOverrides(base);
+    // 2) Overrides laden und mergen
+    this.loadOverrides(base).then(() => {
+      if (this.DEBUG) console.debug('[AdService] overrides merged', this.slots$.value);
+    });
   }
 
-  /** Observable für eine Slot-ID */
+  /** Observable für einen Slot – liefert immer *mindestens* den Default */
   slot$(id: string) {
-    return this.slots$.pipe(map(all => all[id]));
+    return this.slots$.pipe(
+      map(all => all[id] ?? (this.slotIds.includes(id as any) ? this.defaultFor(id as any) : undefined)),
+      tap(cfg => { if (this.DEBUG) console.debug('[AdService] slot update:', id, cfg); })
+    );
   }
 
-  /** Lädt für alle Slots das beste verfügbare Override (svg→webp→png→jpg) und merged */
+  /** Lädt für alle Slots das beste verfügbare Override und merged */
   private async loadOverrides(base: Record<string, AdSlotConfig>) {
     const results = await Promise.all(this.slotIds.map(id => this.fetchOverride(id)));
     const merged = { ...base };
@@ -48,35 +67,31 @@ export class AdService {
     this.slots$.next(merged);
   }
 
-  /** Prüft Formate in EXT_ORDER, nutzt ETag/Last-Modified als Versionsstring für Cache-Bust */
-  private async fetchOverride(id: string): Promise<AdSlotConfig | null> {
+  /** Prüft EXT_ORDER via HEAD und baut eine Version (ETag/Last-Modified) für Cache-Bust */
+  private async fetchOverride(id: (typeof this.slotIds)[number]): Promise<AdSlotConfig | null> {
     for (const ext of this.EXT_ORDER) {
-      const url = `${this.OVERRIDE_BASE}/${id}/banner.${ext}`;
+      const url = `${this.OFFLINE_SAFE(this.OVERRIDE_BASE)}/${id}/banner.${ext}`;
       const head = await this.headResponse(url);
       if (!head?.ok) continue;
 
-      // Version ableiten
       const etag = head.headers.get('ETag') ?? head.headers.get('Etag');
       const lastMod = head.headers.get('Last-Modified') ?? head.headers.get('Last-modified');
       const version = etag ?? lastMod ?? new Date().toISOString();
 
-      return {
-        id,
-        imgUrl: `${url}?v=${encodeURIComponent(version)}`, // Cache-Bust
-        alt: id,
-        updatedAt: version
-      };
+      if (this.DEBUG) console.debug('[AdService] override found', { id, url, version });
+      return { id, imgUrl: `${url}?v=${encodeURIComponent(version)}`, alt: id, updatedAt: version };
     }
-    return null; // kein Override vorhanden
+    if (this.DEBUG) console.debug('[AdService] no override for', id);
+    return null;
   }
 
-  /** HEAD-Request: gibt ok + Header-Wrapper zurück (oder null bei Fehler) */
+  /** HEAD-Request: ok + Header-Wrapper zurückgeben (oder null bei Fehler) */
   private async headResponse(url: string): Promise<{ ok: boolean; headers: Headers } | null> {
     try {
       const res = await firstValueFrom(this.http.head(url, { observe: 'response' })) as HttpResponse<unknown>;
       const ok = res.status >= 200 && res.status < 300;
 
-      // HttpHeaders → Headers-Wrapper für bequemen get()
+      // HttpHeaders → Headers-Wrapper
       const headers = new Headers();
       res.headers.keys().forEach(k => {
         const val = res.headers.get(k);
@@ -87,5 +102,10 @@ export class AdService {
     } catch {
       return null;
     }
+  }
+
+  /** Sicherheitsnetz gegen doppelte Slashes in Offline/Dev-Setups */
+  private OFFLINE_SAFE(p: string): string {
+    return p.replace(/\/{2,}/g, '/');
   }
 }

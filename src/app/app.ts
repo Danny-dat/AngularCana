@@ -5,7 +5,6 @@ import { RouterModule } from '@angular/router';
 import { Auth, user } from '@angular/fire/auth';
 import { UserDataService } from './services/user-data.service';
 import { ThemeService } from './services/theme.service';
-import { AdService } from './services/ad.service';
 import { NotificationSoundService } from './services/notification-sound.service';
 import { SessionService } from './services/session.service';
 
@@ -28,7 +27,6 @@ export class AppComponent implements OnInit {
   private _session = inject(SessionService);
 
   private notify = inject(NotificationSoundService);
-  private ads = inject(AdService);
 
   constructor() {
     // "Benutzen", damit Tree-Shaking es nicht entfernt
@@ -53,9 +51,6 @@ ngOnInit(): void {
     // Auf dem Server nichts mit Firebase/Window/AdService machen
     return;
   }
-
-  // Nur im Browser initialisieren
-  this.ads.init();
 
   // Nur im Browser auf Auth-Stream gehen
   user(this.auth).subscribe(async (u) => {

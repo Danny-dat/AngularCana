@@ -1,14 +1,14 @@
-<div class="ad-slot">
+<div class="promo-slot">
+  <span class="ad-label">Anzeige</span>
   <img
+    [src]="imgSrc"
+    [alt]="_slotId"
     class="ad-img"
-    [src]="currentSrc"
-    [alt]="alt"
+    (error)="onImgError()"
+    (load)="onImgLoad($event)"
     loading="eager"
     decoding="async"
-    (error)="onImgError()"
-    (load)="onImgLoad()"
-    draggable="false"
+    width="1200"
+    height="115"
   />
-  <!-- Debug ein/aus: -->
-  <!-- <small class="ad-debug">{{ currentSrc }}</small> -->
 </div>

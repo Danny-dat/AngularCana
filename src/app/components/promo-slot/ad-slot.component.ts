@@ -1,6 +1,8 @@
-import { Component, Input, OnDestroy, inject } from '@angular/core';
+// src/app/components/promo-slot/ad-slot.component.ts
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { distinctUntilChanged, filter, tap } from 'rxjs/operators';
 import { AdService } from '../../services/ad.service';
 import type { AdSlotConfig } from '../../models/ad.types';
 
@@ -11,105 +13,83 @@ import type { AdSlotConfig } from '../../models/ad.types';
   templateUrl: './ad-slot.component.html',
   styleUrls: ['./ad-slot.component.css'],
 })
-export class AdSlotComponent implements OnDestroy {
+export class AdSlotComponent {
   private ads = inject(AdService);
-  private sub?: Subscription;
 
-  private _slotId = '';
-  cfg?: AdSlotConfig;
+  private readonly DEBUG = false;
 
-  /** aktuell verwendete Bildquelle */
-  currentSrc = '';
+  _slotId = '';
+  vm$: Observable<AdSlotConfig | undefined> = of(undefined);
 
-  /** Fallback-Flags (um Schleifen zu verhindern) */
-  private triedSvg = false;
-  private triedPng = false;
-  private loadedOnce = false;
+  /** Aktuelle Bildquelle, an die das <img> gebunden ist */
+  imgSrc = '';
+
+  /** URLs, die bereits fehlgeschlagen sind – nie wieder setzen */
+  private badUrls = new Set<string>();
+
+  /** Fallbackfortschritt */
+  private tried = { slotSvg: false, slotPng: false, genSvg: false, genPng: false };
 
   @Input() set slotId(value: string) {
-    const v = (value || '').trim();
-    if (v === this._slotId) return;          // nicht neu laden, wenn gleich
-    this._slotId = v;
-    this.reload();
-  }
-  get slotId() { return this._slotId; }
+    this._slotId = value;
 
-  /** ALT-Text */
-  get alt(): string {
-    return this.cfg?.alt || this._slotId || 'advertising';
-  }
+    // 1) Sofort sichtbarer Default
+    this.resetFallbacks();
+    this.setImgSrc(this.slotSvgPath(), 'init(slotSvg)');
 
-  // --- Pfade immer ABSOLUT (vermeidet Route/SSR-Probleme) ---
-  private svgPath(): string     { return `/assets/promo/${this._slotId}/banner.svg`; }
-  private pngPath(): string     { return `/assets/promo/${this._slotId}/banner.png`; }
-  private genericPath(): string { return `/assets/promo/generic/banner.svg`; }
-
-  private toAbsoluteAssets(url: string): string {
-    if (!url) return url;
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/assets/')) return url;
-    if (url.startsWith('assets/')) return '/' + url;
-    return url; // sonst so lassen
+    // 2) Auf Service hören – nur *valide* (nicht-bad) URLs übernehmen
+    this.vm$ = this.ads.slot$(value).pipe(
+      filter((vm): vm is AdSlotConfig => !!vm), // undefined überspringen
+      distinctUntilChanged((a, b) => (a?.imgUrl ?? '') === (b?.imgUrl ?? '')),
+      tap(vm => {
+        this.resetFallbacks(); // neue Quelle → Kaskade neu
+        if (vm.imgUrl && !this.badUrls.has(vm.imgUrl)) {
+          this.setImgSrc(vm.imgUrl, 'vm.imgUrl');
+        } else {
+          // Wenn vm-URL bereits als "bad" markiert ist, bleib auf aktuellem/fallback
+          if (this.DEBUG) console.warn('[promo-slot] skip bad vm url', vm.imgUrl);
+        }
+      })
+    );
   }
 
-  private setSrcOnce(src: string) {
-    if (!src) return;
-    if (this.currentSrc === src) return;
-    this.currentSrc = src;
-    // console.log('[ad-slot] set src:', src);
-  }
+  /** Absolute Pfade */
+  private slotSvgPath() { return `/assets/promo/${this._slotId}/banner.svg`; }
+  private slotPngPath() { return `/assets/promo/${this._slotId}/banner.png`; }
+  private genSvgPath()  { return `/assets/promo/generic/banner.svg`; }
+  private genPngPath()  { return `/assets/promo/generic/banner.png`; }
 
-  private reload(): void {
-    // reset
-    this.sub?.unsubscribe();
-    this.cfg = undefined;
-    this.loadedOnce = false;
-    this.triedSvg = false;
-    this.triedPng = false;
-
-    if (!this._slotId) {
-      this.setSrcOnce(this.genericPath());
-      return;
-    }
-
-    // sofort mit SVG beginnen (sichtbar ab Erst-Render)
-    this.setSrcOnce(this.svgPath());
-    this.triedSvg = true;
-
-    // Config abonnieren (kann imgUrl liefern)
-    this.sub = this.ads.slot$(this._slotId).subscribe((c) => {
-      this.cfg = c;
-      const candidate = (c?.imgUrl && this.toAbsoluteAssets(c.imgUrl)) || this.svgPath();
-      // Nur umstellen, wenn wir noch nichts erfolgreich geladen haben
-      if (!this.loadedOnce) {
-        this.setSrcOnce(candidate);
-        this.triedSvg = candidate.endsWith('.svg');
-        this.triedPng = candidate.endsWith('.png');
-      }
-    });
-  }
-
-  onImgLoad() {
-    this.loadedOnce = true;
-    // console.log('[ad-slot] loaded:', this.currentSrc);
-  }
-
-  /** Fehlerkaskade: svg → png → generic (einmalig) */
+  /** Bei Fehler: aktuelle URL merken und zur nächsten sinnvollen Quelle wechseln */
   onImgError() {
-    // console.warn('[ad-slot] error for', this.currentSrc);
-    if (this.triedSvg && !this.triedPng) {
-      this.triedPng = true;
-      this.setSrcOnce(this.pngPath());
-      return;
+    if (this.imgSrc) this.badUrls.add(this.imgSrc);
+
+    const next =
+      !this.tried.slotSvg ? (this.tried.slotSvg = true, this.slotSvgPath()) :
+      !this.tried.slotPng ? (this.tried.slotPng = true, this.slotPngPath()) :
+      !this.tried.genSvg  ? (this.tried.genSvg  = true, this.genSvgPath())  :
+      !this.tried.genPng  ? (this.tried.genPng  = true, this.genPngPath())  :
+      null;
+
+    if (next && !this.badUrls.has(next)) {
+      if (this.DEBUG) console.warn('[promo-slot] ERROR → fallback', this._slotId, '→', next);
+      this.setImgSrc(next, 'onImgError');
+    } else {
+      console.warn('[promo-slot] all fallbacks failed for', this._slotId);
     }
-    if (this.currentSrc !== this.genericPath()) {
-      this.setSrcOnce(this.genericPath());
-      return;
-    }
-    // Ab hier nicht weiter umschalten
   }
 
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
+  onImgLoad(ev: Event) {
+    if (!this.DEBUG) return;
+    const el = ev.target as HTMLImageElement | null;
+    console.debug('[promo-slot] LOAD', this._slotId, '←', el?.currentSrc || this.imgSrc);
+  }
+
+  private setImgSrc(src: string, reason?: string) {
+    this.imgSrc = src;
+    if (this.DEBUG && reason) console.debug('[promo-slot] SRC', this._slotId, '←', src, `(${reason})`);
+  }
+
+  private resetFallbacks() {
+    this.tried = { slotSvg: false, slotPng: false, genSvg: false, genPng: false };
   }
 }
