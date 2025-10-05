@@ -189,4 +189,6 @@ body.theme-dark .item{ border-bottom: 1px solid rgba(255,255,255,.08); }
   white-space: nowrap;
 }
 
-
+.dropdown .item .row { display:flex; align-items:flex-start; gap:8px; }
+.dropdown .item .row .col { flex:1 1 auto; }
+.dropdown .item .icon-btn.sm { padding:4px; }

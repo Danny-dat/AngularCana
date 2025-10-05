@@ -1,6 +1,10 @@
 <header class="app-header" (click)="closeDropdown()">
   <!-- Burger (Sidebar) -->
-  <button class="icon-btn burger" aria-label="Menü" (click)="toggleSidebar($event)">
+  <button
+    class="icon-btn burger"
+    type="button"
+    aria-label="Menü"
+    (click)="toggleSidebar($event)">
     <mat-icon fontSet="material-icons-outlined">menu</mat-icon>
   </button>
 
@@ -10,6 +14,7 @@
     <!-- Einstellungen -> Meine Daten -->
     <button
       class="icon-btn icon-btn--lg"
+      type="button"
       aria-label="Einstellungen"
       (click)="$event.stopPropagation()"
       [routerLink]="'/me'">
@@ -17,7 +22,13 @@
     </button>
 
     <div class="bell-wrap" #bellWrap>
-      <button class="icon-btn" aria-label="Benachrichtigungen" (click)="toggleNotifications($event)">
+      <button
+        class="icon-btn"
+        type="button"
+        aria-label="Benachrichtigungen"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="showNotifications"
+        (click)="toggleNotifications($event)">
         <mat-icon fontSet="material-icons-outlined">notifications_none</mat-icon>
         @if (unreadCount$ | async; as c) {
           <span class="badge" [class.show]="c > 0">{{ c }}</span>
@@ -25,15 +36,34 @@
       </button>
 
       @if (showNotifications) {
-        <div class="dropdown">
+        <div class="dropdown" role="menu">
           @if (notifications$ | async; as list) {
             @if (!list?.length) {
-              <div class="item empty">Keine Benachrichtigungen.</div>
+              <div class="item empty" role="none">Keine Benachrichtigungen.</div>
             } @else {
               @for (n of list; track n.id) {
-                <div class="item" [class.read]="n.read" (click)="markRead(n.id)">
-                  <p>{{ n.message }}</p>
-                  <small>{{ asDate(n.timestamp) | date:'EEE, dd.MM.yyyy, HH:mm' }}</small>
+                <div
+                  class="item"
+                  role="menuitem"
+                  [class.read]="n.read"
+                  [attr.tabindex]="0"
+                  (click)="openNotification(n)"
+                  (keydown.enter)="openNotification(n)"
+                  (keydown.space)="$event.preventDefault(); openNotification(n)">
+                  <div class="row">
+                    <div class="col">
+                      <p class="item-title">{{ n.message }}</p>
+                      <small class="item-meta">{{ asDate(n.timestamp) | date:'EEE, dd.MM.yyyy, HH:mm' }}</small>
+                    </div>
+
+                    <button
+                      class="icon-btn sm"
+                      type="button"
+                      aria-label="Benachrichtigung löschen"
+                      (click)="deleteNotification(n.id, $event)">
+                      <mat-icon fontSet="material-icons-outlined">delete</mat-icon>
+                    </button>
+                  </div>
                 </div>
               }
             }

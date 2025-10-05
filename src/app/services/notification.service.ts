@@ -19,6 +19,7 @@ import {
   doc,
   setDoc,
 } from '@angular/fire/firestore';
+import { deleteDoc } from '@angular/fire/firestore';
 import { BehaviorSubject } from 'rxjs';
 import { AppNotification } from '../models/notification-module';
 
@@ -71,5 +72,11 @@ export class NotificationService {
   async markAsRead(id: string) {
     const ref = doc(this.fs, 'notifications', id);
     await setDoc(ref, { read: true }, { merge: true });
+  }
+
+  // endgültig löschen
+  async delete(id: string) {
+    const ref = doc(this.fs, 'notifications', id);
+    await deleteDoc(ref);
   }
 }
