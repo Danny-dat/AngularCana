@@ -2,10 +2,11 @@
   [partner]="null"
   [title]="'Globaler Chat'"
   [messages]="messages()"
-  [text]="text()"
-  (textChange)="text.set($event)"
+  [text]="text()" (textChange)="text.set($event)"
   [myUid]="uid()"
   [showSender]="true"
   (send)="onSend($event)"
-  (close)="close()"
-></app-chat-overlay>
+  (addFriend)="onAddFriend($event)"
+  (report)="onReport($event)"
+  (close)="close()">
+</app-chat-overlay>

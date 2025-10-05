@@ -11,16 +11,9 @@ import { FriendPublicProfile, ChatMessage } from '../../models/social.models';
   styleUrls: ['./chat-overlay.component.css'],
 })
 export class ChatOverlayComponent {
-  /** Direktchat-Partner (optional im Global/Channel-Modus) */
   @Input() partner: FriendPublicProfile | null = null;
-
-  /** Optionaler Titel (z. B. "Globaler Chat"); überschreibt Partner/Fallback */
   @Input() title: string | null = null;
-
-  /** Eigene UID, damit die Bubble-Ausrichtung im Global/Channel stimmt */
   @Input() myUid: string | null = null;
-
-  /** Absender oberhalb der Bubble anzeigen (für Global/Channel empfehlenswert) */
   @Input() showSender = false;
 
   @Input() messages: ChatMessage[] = [];
@@ -30,6 +23,10 @@ export class ChatOverlayComponent {
   @Output() send = new EventEmitter<string>();
   @Output() close = new EventEmitter<void>();
 
+  // neue Aktionen:
+  @Output() addFriend = new EventEmitter<string>(); // userId
+  @Output() report = new EventEmitter<{ userId: string; messageId?: string; text: string }>();
+
   onSend() {
     const trimmed = this.text?.trim();
     if (!trimmed) return;
@@ -38,21 +35,27 @@ export class ChatOverlayComponent {
     this.textChange.emit(this.text);
   }
 
-  /** Bestimmt, ob eine Bubble als "sent" (rechts) gerendert wird */
   isSent(m: ChatMessage): boolean {
-    // Direktchat: "sent", wenn Nachricht NICHT vom Partner kommt (also von mir)
     if (this.partner && !this.showSender) {
       return m.senderId !== this.partner.id;
     }
-    // Global/Channel: "sent", wenn Nachricht von mir kommt
     if (this.myUid) {
       return m.senderId === this.myUid;
     }
     return false;
   }
 
-  /** Anzeige-Name für Sender (fällt zurück auf senderId) */
   displayNameFor(m: ChatMessage): string {
     return (m as any).senderName || m.senderId;
+  }
+
+  onAddFriend(m: ChatMessage) {
+    if (!this.myUid || m.senderId === this.myUid) return;
+    this.addFriend.emit(m.senderId);
+  }
+
+  onReport(m: ChatMessage) {
+    if (!this.myUid || m.senderId === this.myUid) return;
+    this.report.emit({ userId: m.senderId, messageId: (m as any).id, text: m.text });
   }
 }

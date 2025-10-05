@@ -1,31 +1,52 @@
 <div class="overlay" (click)="close.emit()">
   <div class="window" (click)="$event.stopPropagation()">
     <header>
-      <!-- Priorität: expliziter Titel > Partner > Fallback -->
-      <h3 *ngIf="title as t">{{ t }}</h3>
-      <h3 *ngIf="!title && partner">
-        Chat mit {{ partner.username || partner.displayName || partner.label || partner.id }}
-      </h3>
-      <h3 *ngIf="!title && !partner">Chat</h3>
+      @if (title) {
+        <h3>{{ title }}</h3>
+      } @else if (partner) {
+        <h3>
+          Chat mit {{ partner.username || partner.displayName || partner.label || partner.id }}
+        </h3>
+      } @else {
+        <h3>Chat</h3>
+      }
 
       <button class="x" (click)="close.emit()">&times;</button>
     </header>
 
     <div id="chatMessages" class="messages">
-      <div
-        class="bubble"
-        *ngFor="let m of messages"
-        [class.sent]="isSent(m)"
-      >
-        <!-- Optional: Absender anzeigen (für Global/Channel sinnvoll) -->
-        <ng-container *ngIf="showSender">
-          <small class="from" [class.me]="myUid && m.senderId === myUid">
-            {{ displayNameFor(m) }}
-          </small>
-        </ng-container>
+      @for (m of messages; track m.id ?? $index) {
+        <div class="bubble" [class.sent]="isSent(m)">
+          @if (showSender) {
+            <div class="meta-row">
+              <small class="from" [class.me]="myUid && m.senderId === myUid">
+                {{ displayNameFor(m) }}
+                <span class="time"> · {{ m.createdAt | date:'dd.MM.yyyy, HH:mm' }}</span>
+              </small>
 
-        <p>{{ m.text }}</p>
-      </div>
+              @if (myUid && m.senderId !== myUid) {
+                <div class="actions">
+                  <button type="button" class="icon" title="Als Freund hinzufügen" (click)="onAddFriend(m)">
+                    <!-- user-plus -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M15 14a5 5 0 1 0-6 0 8 8 0 0 0-6 7h2a6 6 0 0 1 12 0h2a8 8 0 0 0-6-7zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                      <path d="M19 8v-2h-2v-2h2V2h2v2h2v2h-2v2h-2z"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="icon danger" title="Nachricht melden" (click)="onReport(m)">
+                    <!-- flag -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 3v18M6 4h10l-1 3h3l-1 3h3l-1 3H6"/>
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <p>{{ m.text }}</p>
+        </div>
+      }
     </div>
 
     <div class="input">
@@ -38,14 +59,9 @@
       <button [disabled]="!text?.trim()" (click)="onSend()">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"
         >
           <path d="M22 2L11 13"></path>
           <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
