@@ -2,12 +2,11 @@ import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
-
-import { FriendRequest, FriendPublicProfile } from '../../../models/social.models';
-import { ChatService, chatIdFor } from '../../../services/chat.services';
-import { FriendsService } from '../../../services/friends.services';
-import { PresenceService } from '../../../services/presence.service';
-import { ChatOverlayComponent } from '../chat-overlay.component/chat-overlay.component';
+import { FriendRequest, FriendPublicProfile } from '../../models/social.models';
+import { ChatService } from '../../services/chat.services';
+import { FriendsService } from '../../services/friends.services';
+import { PresenceService } from '../../services/presence.service';
+import { ChatOverlayComponent } from '../../components/chat-overlay/chat-overlay.component';
 import QRCode from 'qrcode';
 
 @Component({
@@ -114,8 +113,15 @@ export class SocialPage implements OnDestroy {
   }
 
   // Anzeige-Code
-  get myCode() { return this.user().uid || '…'; }
-  get myCodeGrouped() { return this.myCode.replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim(); }
+  get myCode() {
+    return this.user().uid || '…';
+  }
+  get myCodeGrouped() {
+    return this.myCode
+      .replace(/\s+/g, '')
+      .replace(/(.{4})/g, '$1 ')
+      .trim();
+  }
 
   // Teilen
   async shareCopy(evt?: Event) {
@@ -132,7 +138,10 @@ export class SocialPage implements OnDestroy {
 
   async shareNative() {
     try {
-      await navigator.share?.({ title: 'CannaTrack', text: `Mein CannaTrack Freundschaftscode: ${this.myCode}` });
+      await navigator.share?.({
+        title: 'CannaTrack',
+        text: `Mein CannaTrack Freundschaftscode: ${this.myCode}`,
+      });
     } catch {
       await this.shareCopy();
     }
@@ -146,12 +155,10 @@ export class SocialPage implements OnDestroy {
         margin: 1,
         color: { dark: '#000000', light: '#00000000' },
       });
-      this.qrDataUrl.set(url);
-      this.qrOpen.set(true);
     } catch {
       alert('QR-Code konnte nicht erzeugt werden.');
+      return;
     }
-    this.shareMenuOpen.set(false);
   }
 
   closeQR() {
@@ -214,30 +221,51 @@ export class SocialPage implements OnDestroy {
     if (this.user().uid) this.friends.deleteBlocked(this.user().uid, p.id);
   }
 
+  // ─────────────────────────────────────────────
   // Chat
+  // ─────────────────────────────────────────────
+
   openChat(friend: FriendPublicProfile) {
     if (!this.user().uid) return;
+
     this.partner.set(friend);
-    const cid = chatIdFor(this.user().uid, friend.id);
+
+    // NEU: Chat-ID über den Service berechnen
+    const cid = this.chat.getDirectChatId(this.user().uid, friend.id);
+
+    // sicherstellen, dass der Chat existiert
     this.chat.ensureChatExists(this.user().uid, friend.id);
 
+    // alten Listener beenden und neuen setzen
     this.unlisten?.();
     this.unlisten = this.chat.listenMessages(cid, (msgs) => {
       this.messages.set(msgs);
+
+      // Autoscroll ans Ende
       setTimeout(() => {
         const box = document.getElementById('chatMessages');
         if (box) box.scrollTop = box.scrollHeight;
       });
+
+      // optional: als gelesen markieren (wenn du willst)
+      // this.chat.markRead(cid, this.user().uid);
     });
 
     this.showChat.set(true);
   }
 
-  async sendMsg() {
-    const txt = this.chatInput().trim();
+  async sendMsg(text: string) {
+    const txt = (text || '').trim();
     const p = this.partner();
     if (!txt || !p || !this.user().uid) return;
-    await this.chat.send({ fromUid: this.user().uid, toUid: p.id, text: txt });
+
+    // ✅ NEU: vereinheitlicht über Service (Direct)
+    await this.chat.sendDirect({
+      fromUid: this.user().uid,
+      toUid: p.id,
+      text: txt,
+    });
+
     this.chatInput.set('');
   }
 

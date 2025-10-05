@@ -22,10 +22,10 @@
       <input
         type="text"
         [(ngModel)]="text"
-        (keyup.enter)="send.emit()"
+        (keyup.enter)="onSend()"
         placeholder="Nachricht…"
       />
-      <button [disabled]="!text?.trim()" (click)="send.emit()">
+      <button [disabled]="!text?.trim()" (click)="onSend()">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"

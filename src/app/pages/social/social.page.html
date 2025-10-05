@@ -196,8 +196,8 @@
   <app-chat-overlay
     [partner]="partner()"
     [messages]="messages()"
-    [(text)]="chatInput"
+    [text]="chatInput()" (textChange)="chatInput.set($event)"
     (close)="closeChat()"
-    (send)="sendMsg()"
+    (send)="sendMsg($event)"
   ></app-chat-overlay>
 }

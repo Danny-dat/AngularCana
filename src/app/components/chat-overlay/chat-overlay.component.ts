@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FriendPublicProfile, ChatMessage } from '../../../models/social.models';
+import { FriendPublicProfile, ChatMessage } from '../../models/social.models';
 
 @Component({
   standalone: true,
@@ -16,6 +16,14 @@ export class ChatOverlayComponent {
   @Input() text: string | null = null;
 
   @Output() textChange = new EventEmitter<string>();
-  @Output() send = new EventEmitter<void>();
+  @Output() send = new EventEmitter<string>();
   @Output() close = new EventEmitter<void>();
+
+  onSend() {
+    const trimmed = this.text?.trim();
+    if (!trimmed) return;
+    this.send.emit(trimmed);
+    this.text = '';
+    this.textChange.emit(this.text);
+  }
 }
