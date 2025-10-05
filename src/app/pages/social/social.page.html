@@ -3,13 +3,26 @@
 
   <!-- Tabs -->
   <nav class="tabs">
-    <button [class.active]="activeTab() === 'code'" (click)="activeTab.set('code')">Mein Code</button>
-    <button [class.active]="activeTab() === 'add'" (click)="activeTab.set('add')">Freund hinzufügen</button>
-    <button [class.active]="activeTab() === 'requests'" (click)="activeTab.set('requests')">Anfragen</button>
-    <button [class.active]="activeTab() === 'blocked'" (click)="activeTab.set('blocked')">Blockierte</button>
+    <button [class.active]="activeTab() === 'code'" (click)="activeTab.set('code')">
+      Mein Freunde
+    </button>
+
+    <button [class.active]="activeTab() === 'add'" (click)="activeTab.set('add')">
+      Freund hinzufügen
+    </button>
+
+    <button [class.active]="activeTab() === 'requests'" (click)="activeTab.set('requests')">
+      Anfragen
+      @if (incoming().length) { <span class="badge">{{ incoming().length }}</span> }
+    </button>
+
+    <button [class.active]="activeTab() === 'blocked'" (click)="activeTab.set('blocked')">
+      Blockierte
+      @if (blockedProfiles().length) { <span class="badge">{{ blockedProfiles().length }}</span> }
+    </button>
   </nav>
 
-  <!-- TAB: Mein Code -->
+  <!-- TAB: Mein Freunde -->
   @if (activeTab() === 'code') {
     <section class="tab-content">
       <h4>Dein Freundschaftscode</h4>
@@ -29,7 +42,7 @@
           <div class="code-help">
             Teile deinen Code mit Freund:innen.
             <b>Kopieren</b> legt ihn in die Zwischenablage,
-            <b>Teilen</b> nutzt die Web-Share API (falls vorhanden),
+            <b>Teilen</b> nutzt die Web-Share API,
             <b>QR</b> zeigt ihn als QR-Code an.
           </div>
         }
@@ -74,7 +87,6 @@
                   <option value="">Aktion…</option>
                   <option value="remove">Entfernen</option>
                   <option value="block">Blockieren</option>
-                  <option value="unblock" *ngIf="isBlocked(f.id)">Entblocken</option>
                 </select>
               </div>
             </div>
@@ -104,7 +116,7 @@
         </button>
       </div>
       <p class="hint">
-        Tipp: Deinen eigenen Code findest du im Tab <strong>„Mein Code“</strong>. Du kannst ihn auch teilen oder kopieren.
+        Tipp: Deinen eigenen Code findest du im Tab <strong>„Mein Freunde</strong>. Du kannst ihn auch teilen oder kopieren.
       </p>
     </section>
   }
@@ -116,7 +128,7 @@
       @if (!incoming().length) {
         <div class="empty">Keine offenen Anfragen.</div>
       }
-      @for (r of incoming(); track r.fromUid) {
+      @for (r of incoming(); track r.id) {  <!-- ⬅️ track by Doc-ID -->
         <div class="request">
           <div>{{ r.fromDisplayName || r.fromEmail || r.fromUid }}</div>
           <div class="actions">
@@ -132,24 +144,31 @@
   @if (activeTab() === 'blocked') {
     <section class="tab-content">
       <h4>Blockierte Freunde</h4>
-      @if (!blocked().length) {
+
+      @if (!blockedProfiles().length) {
         <div class="empty">Noch keine blockierten Freunde.</div>
       }
-      @for (b of blocked(); track b.id) {
+
+      @for (p of blockedProfiles(); track p.id) {
         <div class="friend blocked">
           <div class="main">
-            @if (b.photoURL) {
-              <img [src]="b.photoURL" alt="" />
+            @if (p.photoURL) {
+              <img [src]="p.photoURL" alt="" />
             } @else {
               <div class="avatar-fallback">
-                {{ (b.username || b.displayName || b.label || b.id).slice(0,1) }}
+                {{ (p.username || p.displayName || p.label || p.id).slice(0,1) }}
               </div>
             }
             <div class="names">
-              <strong>{{ b.username || b.displayName || b.label || b.id }}</strong>
+              <strong>{{ p.username || p.displayName || p.label || p.id }}</strong>
+              <div class="sub muted">ID: {{ p.id }}</div>
             </div>
           </div>
-          <button class="btn danger" (click)="unblockDirect(b)">Entblocken</button>
+
+          <div class="actions">
+            <button class="btn success" (click)="unblockDirectProfile(p)">Entblocken</button>
+            <button class="btn danger"  (click)="deleteBlockedProfile(p)">Löschen</button>
+          </div>
         </div>
       }
     </section>
@@ -177,8 +196,8 @@
   <app-chat-overlay
     [partner]="partner()"
     [messages]="messages()"
-    [(text)]="chatInput"
+    [text]="chatInput()" (textChange)="chatInput.set($event)"
     (close)="closeChat()"
-    (send)="sendMsg()"
+    (send)="sendMsg($event)"
   ></app-chat-overlay>
 }

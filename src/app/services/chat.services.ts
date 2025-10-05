@@ -11,8 +11,9 @@ import {
   serverTimestamp,
   limit,
   CollectionReference,
-  DocumentData
+  DocumentData,
 } from '@angular/fire/firestore';
+import { arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ChatMessage, UID } from '../models/social.models';
 
 const NOTIFY_COOLDOWN_MS = 8000;
@@ -31,6 +32,9 @@ const shouldNotify = (fromUid: UID, toUid: UID) => {
 const TS = () => serverTimestamp();
 export const chatIdFor = (a: UID, b: UID) => [a, b].sort().join('_');
 
+// ⚠️ erweitert um 'channel'
+type ChatKind = 'direct' | 'group' | 'channel';
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private afs = inject(Firestore);
@@ -43,16 +47,119 @@ export class ChatService {
     this.notiCol = collection(this.afs, 'notifications');
   }
 
+  // ─────────────────────────────
+  // 📌 DIRECT-CHAT (bestehend, rückwärtskompatibel)
+  // ─────────────────────────────
+
+  /** Bestehende Methode – bleibt erhalten. */
   async ensureChatExists(a: UID, b: UID) {
     const id = chatIdFor(a, b);
     await setDoc(
       doc(this.chatsCol, id),
-      { participants: [a, b], createdAt: TS(), updatedAt: TS() },
+      { type: 'direct', participants: [a, b].sort(), createdAt: TS(), updatedAt: TS() },
       { merge: true } as any
     );
     return id;
   }
 
+  /** Convenience: gibt dir direkt die Chat-ID (sortiert). */
+  getDirectChatId(a: UID, b: UID) {
+    return chatIdFor(a, b);
+  }
+
+  // ─────────────────────────────
+  // 👥 GRUPPEN-CHAT (neu, vorbereitet)
+  // ─────────────────────────────
+
+  /**
+   * Gruppe anlegen. Wenn groupId übergeben wird, wird diese verwendet;
+   * sonst wird eine neue ID erzeugt (return value).
+   */
+  async createGroup(params: {
+    name: string;
+    members: UID[];
+    groupId?: string;
+    avatarUrl?: string;
+  }): Promise<string> {
+    const { name, members, groupId, avatarUrl } = params;
+    if (!name || !members?.length) throw new Error('Group name and members required');
+
+    // Neue ID oder vorgegebene ID verwenden
+    if (groupId) {
+      const chatRef = doc(this.chatsCol, groupId);
+      await setDoc(
+        chatRef,
+        {
+          type: 'group' as ChatKind,
+          name,
+          participants: [...new Set(members)].sort(),
+          avatarUrl: avatarUrl ?? null,
+          createdAt: TS(),
+          updatedAt: TS(),
+        },
+        { merge: true } as any
+      );
+      return groupId;
+    } else {
+      const ref = await addDoc(this.chatsCol, {
+        type: 'group' as ChatKind,
+        name,
+        participants: [...new Set(members)].sort(),
+        avatarUrl: avatarUrl ?? null,
+        createdAt: TS(),
+        updatedAt: TS(),
+      });
+      return ref.id;
+    }
+  }
+
+  /** Mitglied hinzufügen (idempotent). */
+  async addMember(groupId: string, uid: UID) {
+    const chatRef = doc(this.chatsCol, groupId);
+    await setDoc(chatRef as any, { participants: arrayUnion(uid), updatedAt: TS() }, { merge: true } as any);
+  }
+
+  /** Mitglied entfernen. */
+  async removeMember(groupId: string, uid: UID) {
+    const chatRef = doc(this.chatsCol, groupId);
+    await setDoc(chatRef as any, { participants: arrayRemove(uid), updatedAt: TS() }, { merge: true } as any);
+  }
+
+  /** Gruppe umbenennen. */
+  async renameGroup(groupId: string, name: string) {
+    const chatRef = doc(this.chatsCol, groupId);
+    await setDoc(chatRef as any, { name, updatedAt: TS() }, { merge: true } as any);
+  }
+
+  // ─────────────────────────────
+  // 🌍 CHANNEL (global o. ä.)
+  // ─────────────────────────────
+
+  /**
+   * Stellt einen Channel mit fixer ID sicher (z. B. 'global').
+   * Falls das Dokument bereits existiert, wird es per merge aktualisiert.
+   */
+  async ensureChannel(channelId: string, name = 'Globaler Chat') {
+    const chatRef = doc(this.chatsCol, channelId);
+    await setDoc(
+      chatRef as any,
+      {
+        type: 'channel' as ChatKind,
+        name,
+        participants: [], // öffentlich, keine feste Mitgliederliste nötig
+        createdAt: TS(),
+        updatedAt: TS(),
+      },
+      { merge: true } as any
+    );
+    return channelId;
+  }
+
+  // ─────────────────────────────
+  // 🔔 Lesen / Abonnieren
+  // ─────────────────────────────
+
+  /** Nachrichten-Stream für direct / group / channel. */
   listenMessages(chatId: string, cb: (msgs: ChatMessage[]) => void, max = 200) {
     const msgsCol = collection(doc(this.chatsCol, chatId), 'messages');
     const q = query(msgsCol, orderBy('createdAt', 'asc'), limit(max));
@@ -70,29 +177,38 @@ export class ChatService {
     });
   }
 
+  /** Optional: Chat-Metadaten (Titel, Teilnehmer, lastMessage) abonnieren. */
+  listenChatMeta(chatId: string, cb: (meta: any) => void) {
+    const chatRef = doc(this.chatsCol, chatId);
+    return onSnapshot(chatRef, (snap) => cb({ id: chatId, ...snap.data() }));
+  }
+
+  // ─────────────────────────────
+  // ✉️ Senden (vereinheitlicht)
+  // ─────────────────────────────
+
+  /** Alte Signatur – bleibt für Kompatibilität und ruft sendDirect auf. */
   async send({ fromUid, toUid, text }: { fromUid: UID; toUid: UID; text: string }) {
+    return this.sendDirect({ fromUid, toUid, text });
+  }
+
+  /** Direct-Message senden (a↔b). */
+  async sendDirect({ fromUid, toUid, text }: { fromUid: UID; toUid: UID; text: string }) {
     const body = (text || '').trim();
     if (!fromUid || !toUid || !body) return;
+
     const chatId = chatIdFor(fromUid, toUid);
     await this.ensureChatExists(fromUid, toUid);
 
-    const chatRef = doc(this.chatsCol, chatId);
-    const msgsCol = collection(chatRef, 'messages');
-
-    await addDoc(msgsCol, {
-      text: body,
+    await this.writeMessage({
+      chatId,
+      body,
       senderId: fromUid,
       recipientId: toUid,
-      createdAt: TS(),
-      readBy: [fromUid],
+      kind: 'direct',
     });
 
-    await setDoc(
-      chatRef as any,
-      { lastMessage: body, lastSenderId: fromUid, updatedAt: TS() },
-      { merge: true } as any
-    );
-
+    // einfache Notification nur bei Direct-Chat
     if (shouldNotify(fromUid, toUid)) {
       await addDoc(this.notiCol, {
         type: 'chat_message',
@@ -103,6 +219,64 @@ export class ChatService {
         timestamp: TS(),
       });
     }
+  }
+
+  /** Gruppen-/Channel-Nachricht senden (erfordert bestehende chatId). */
+  async sendGroup({ fromUid, chatId, text }: { fromUid: UID; chatId: string; text: string }) {
+    const body = (text || '').trim();
+    if (!fromUid || !chatId || !body) return;
+
+    // ← NEU: mich als Teilnehmer sicherstellen (erfüllt gängige Firestore-Regeln)
+    await setDoc(doc(this.chatsCol, chatId) as any, {
+      participants: arrayUnion(fromUid),
+      updatedAt: TS(),
+    }, { merge: true } as any);
+
+    await this.touchChat(chatId); // optional, setzt updatedAt
+
+    await this.writeMessage({
+      chatId,
+      body,
+      senderId: fromUid,
+      recipientId: null,
+      kind: 'group', // Channel nutzt denselben Message-Typ
+    });
+  }
+
+  // ─────────────────────────────
+  // 🧩 Intern
+  // ─────────────────────────────
+
+  private async writeMessage(args: {
+    chatId: string;
+    body: string;
+    senderId: UID;
+    recipientId: UID | null;
+    kind: ChatKind;
+  }) {
+    const { chatId, body, senderId, recipientId, kind } = args;
+    const chatRef = doc(this.chatsCol, chatId);
+    const msgsCol = collection(chatRef, 'messages');
+
+    await addDoc(msgsCol, {
+      text: body,
+      senderId,
+      recipientId: recipientId ?? null,
+      createdAt: TS(),
+      readBy: [senderId],
+      type: kind,
+    });
+
+    await setDoc(
+      chatRef as any,
+      { lastMessage: body, lastSenderId: senderId, updatedAt: TS() },
+      { merge: true } as any
+    );
+  }
+
+  private async touchChat(chatId: string) {
+    const chatRef = doc(this.chatsCol, chatId);
+    await setDoc(chatRef as any, { updatedAt: TS() }, { merge: true } as any);
   }
 
   async markRead(chatId: string, myUid: UID) {

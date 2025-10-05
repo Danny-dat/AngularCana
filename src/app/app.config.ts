@@ -1,5 +1,5 @@
 // src/app/app.config.ts
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, inject, PLATFORM_ID, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,8 @@ import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth, connectAuthEmulator } from '@angular/fire/auth';
 import { provideFirestore, getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
 import { environment } from '../environments/environments'; // oder '../environments/environment'
+import { isPlatformBrowser } from '@angular/common';
+import { AdService } from './services/ad.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -33,6 +35,16 @@ export const appConfig: ApplicationConfig = {
         connectFirestoreEmulator(fs, 'localhost', 8080);
       }
       return fs;
+    }),
+    
+    provideAppInitializer(() => {
+      const ads = inject(AdService);
+      const platformId = inject(PLATFORM_ID);
+
+      if (isPlatformBrowser(platformId)) {
+        ads.init(); // Defaults setzen + Overrides prüfen
+      }
+      // nichts zurückgeben nötig; Promise wäre auch erlaubt
     }),
   ],
 };

@@ -1,0 +1,11 @@
+<app-chat-overlay
+  [partner]="null"
+  [title]="'Globaler Chat'"
+  [messages]="messages()"
+  [text]="text()"
+  (textChange)="text.set($event)"
+  [myUid]="uid()"
+  [showSender]="true"
+  (send)="onSend($event)"
+  (close)="close()"
+></app-chat-overlay>

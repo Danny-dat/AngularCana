@@ -1,10 +1,13 @@
 <div class="overlay" (click)="close.emit()">
   <div class="window" (click)="$event.stopPropagation()">
     <header>
-      <h3 *ngIf="partner">
+      <!-- Priorität: expliziter Titel > Partner > Fallback -->
+      <h3 *ngIf="title as t">{{ t }}</h3>
+      <h3 *ngIf="!title && partner">
         Chat mit {{ partner.username || partner.displayName || partner.label || partner.id }}
       </h3>
-      <h3 *ngIf="!partner">Chat</h3>
+      <h3 *ngIf="!title && !partner">Chat</h3>
+
       <button class="x" (click)="close.emit()">&times;</button>
     </header>
 
@@ -12,8 +15,15 @@
       <div
         class="bubble"
         *ngFor="let m of messages"
-        [class.sent]="partner ? m.senderId !== partner.id : true"
+        [class.sent]="isSent(m)"
       >
+        <!-- Optional: Absender anzeigen (für Global/Channel sinnvoll) -->
+        <ng-container *ngIf="showSender">
+          <small class="from" [class.me]="myUid && m.senderId === myUid">
+            {{ displayNameFor(m) }}
+          </small>
+        </ng-container>
+
         <p>{{ m.text }}</p>
       </div>
     </div>
@@ -22,10 +32,10 @@
       <input
         type="text"
         [(ngModel)]="text"
-        (keyup.enter)="send.emit()"
+        (keyup.enter)="onSend()"
         placeholder="Nachricht…"
       />
-      <button [disabled]="!text?.trim()" (click)="send.emit()">
+      <button [disabled]="!text?.trim()" (click)="onSend()">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"

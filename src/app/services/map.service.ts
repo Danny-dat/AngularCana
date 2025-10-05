@@ -1,6 +1,6 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type * as L from 'leaflet';
+
 import type { EventItem } from './events.service';
 
 @Injectable({ providedIn: 'root' })

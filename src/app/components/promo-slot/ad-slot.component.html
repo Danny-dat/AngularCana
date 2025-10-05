@@ -1,19 +1,14 @@
-<!-- src/app/components/promo-slot/ad-slot.component.html -->
-    <div class="ad-slot">
-      @if (vm$ | async; as vm) {
-      <img
-        [src]="vm.imgUrl || fallbackSrc"
-        [alt]="vm.alt || _slotId"
-        class="ad-img"
-        (error)="onErr(vm.imgUrl || fallbackSrc)"
-      />
-      } @else {
-      <!-- HARTE FALLBACK-ANZEIGE direkt aus assets -->
-      <img 
-        [src]="fallbackSrc"
-        [alt]="_slotId" class="ad-img" 
-        (error)="onErr(fallbackSrc)" />
-      }
-    </div>
-
-    <!-- (load)="onLoad(vm.imgUrl || fallbackSrc)" -->
+<div class="promo-slot">
+  <span class="ad-label">Anzeige</span>
+  <img
+    [src]="imgSrc"
+    [alt]="_slotId"
+    class="ad-img"
+    (error)="onImgError()"
+    (load)="onImgLoad($event)"
+    loading="eager"
+    decoding="async"
+    width="1200"
+    height="115"
+  />
+</div>

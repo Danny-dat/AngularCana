@@ -16,7 +16,7 @@
       <mat-icon class="material-icons-outlined">settings</mat-icon>
     </button>
 
-    <div class="bell-wrap">
+    <div class="bell-wrap" #bellWrap>
       <button class="icon-btn" aria-label="Benachrichtigungen" (click)="toggleNotifications($event)">
         <mat-icon fontSet="material-icons-outlined">notifications_none</mat-icon>
         @if (unreadCount$ | async; as c) {

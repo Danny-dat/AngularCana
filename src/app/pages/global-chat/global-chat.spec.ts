@@ -1,17 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { EventsComponent } from './events.component';
+import { GlobalChat } from './global-chat';
 
-describe('Events', () => {
-  let component: EventsComponent;
-  let fixture: ComponentFixture<EventsComponent>;
+describe('GlobalChat', () => {
+  let component: GlobalChat;
+  let fixture: ComponentFixture<GlobalChat>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [EventsComponent],
-    }).compileComponents();
+      imports: [GlobalChat]
+    })
+    .compileComponents();
 
-    fixture = TestBed.createComponent(EventsComponent);
+    fixture = TestBed.createComponent(GlobalChat);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -18,12 +18,13 @@
             "assets": [
               "src/favicon.ico",
               { "glob": "**/*", "input": "src/assets", "output": "assets" },
-              { "glob": "**/*", "input": "public" }
+              { "glob": "**/*", "input": "public" },
+              { "glob": "**/*", "input": "node_modules/leaflet/dist/images", "output": "assets" }
             ],
             "styles": [
               "src/custom-theme.scss",
               "src/styles.css",
-              "node_modules/leaflet/dist/leaflet.css"
+              "leaflet/dist/leaflet.css"
             ],
             "server": "src/main.server.ts",
             "outputMode": "server",
@@ -81,7 +82,12 @@
               { "glob": "**/*", "input": "public" }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "leaflet/dist/leaflet.css"
+            ],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
             ]
           }
         }

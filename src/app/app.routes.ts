@@ -55,20 +55,21 @@ export const routes: Routes = [
       },
       {
         path: 'chat',
-        loadComponent: comingSoon('Globaler Chat'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/global-chat/global-chat').then((m) => m.GlobalChatPage),
         data: { title: 'Globaler Chat' },
       },
       {
         path: 'social',
         canActivate: [authGuard],
-        loadComponent: () => import('./pages/social/social.page/social.page').then((m) => m.SocialPage),
+        loadComponent: () => import('./pages/social/social.page').then((m) => m.SocialPage),
         data: { title: 'Freunde & Soziales' },
       },
       {
         path: 'events',
         canActivate: [authGuard],
-        loadComponent: () => import('./pages/events/events.component').then((m) => m.EventsComponent),
+        loadComponent: () =>
+          import('./pages/events/events.component').then((m) => m.EventsComponent),
         data: { title: 'Events' },
       },
       {
