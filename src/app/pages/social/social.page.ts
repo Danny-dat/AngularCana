@@ -6,7 +6,7 @@ import { FriendRequest, FriendPublicProfile } from '../../models/social.models';
 import { ChatService } from '../../services/chat.services';
 import { FriendsService } from '../../services/friends.services';
 import { PresenceService } from '../../services/presence.service';
-import { ChatOverlayComponent } from '../../components/chat-overlay/chat-overlay.component';
+import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
 import QRCode from 'qrcode';
 
 @Component({

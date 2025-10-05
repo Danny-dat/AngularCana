@@ -32,7 +32,8 @@ const shouldNotify = (fromUid: UID, toUid: UID) => {
 const TS = () => serverTimestamp();
 export const chatIdFor = (a: UID, b: UID) => [a, b].sort().join('_');
 
-type ChatKind = 'direct' | 'group';
+// ⚠️ erweitert um 'channel'
+type ChatKind = 'direct' | 'group' | 'channel';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -131,10 +132,34 @@ export class ChatService {
   }
 
   // ─────────────────────────────
+  // 🌍 CHANNEL (global o. ä.)
+  // ─────────────────────────────
+
+  /**
+   * Stellt einen Channel mit fixer ID sicher (z. B. 'global').
+   * Falls das Dokument bereits existiert, wird es per merge aktualisiert.
+   */
+  async ensureChannel(channelId: string, name = 'Globaler Chat') {
+    const chatRef = doc(this.chatsCol, channelId);
+    await setDoc(
+      chatRef as any,
+      {
+        type: 'channel' as ChatKind,
+        name,
+        participants: [], // öffentlich, keine feste Mitgliederliste nötig
+        createdAt: TS(),
+        updatedAt: TS(),
+      },
+      { merge: true } as any
+    );
+    return channelId;
+  }
+
+  // ─────────────────────────────
   // 🔔 Lesen / Abonnieren
   // ─────────────────────────────
 
-  /** Nachrichten-Stream für direct ODER group. */
+  /** Nachrichten-Stream für direct / group / channel. */
   listenMessages(chatId: string, cb: (msgs: ChatMessage[]) => void, max = 200) {
     const msgsCol = collection(doc(this.chatsCol, chatId), 'messages');
     const q = query(msgsCol, orderBy('createdAt', 'asc'), limit(max));
@@ -196,19 +221,25 @@ export class ChatService {
     }
   }
 
-  /** Gruppen-Nachricht senden (erfordert bestehende groupId). */
+  /** Gruppen-/Channel-Nachricht senden (erfordert bestehende chatId). */
   async sendGroup({ fromUid, chatId, text }: { fromUid: UID; chatId: string; text: string }) {
     const body = (text || '').trim();
     if (!fromUid || !chatId || !body) return;
 
-    await this.touchChat(chatId); // falls Chat schon existiert, updatedAt setzen
+    // ← NEU: mich als Teilnehmer sicherstellen (erfüllt gängige Firestore-Regeln)
+    await setDoc(doc(this.chatsCol, chatId) as any, {
+      participants: arrayUnion(fromUid),
+      updatedAt: TS(),
+    }, { merge: true } as any);
+
+    await this.touchChat(chatId); // optional, setzt updatedAt
 
     await this.writeMessage({
       chatId,
       body,
       senderId: fromUid,
       recipientId: null,
-      kind: 'group',
+      kind: 'group', // Channel nutzt denselben Message-Typ
     });
   }
 

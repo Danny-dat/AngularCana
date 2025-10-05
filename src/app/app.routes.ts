@@ -55,8 +55,8 @@ export const routes: Routes = [
       },
       {
         path: 'chat',
-        loadComponent: comingSoon('Globaler Chat'),
         canActivate: [authGuard],
+        loadComponent: () => import('./pages/global-chat/global-chat').then((m) => m.GlobalChatPage),
         data: { title: 'Globaler Chat' },
       },
       {
