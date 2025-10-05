@@ -5,7 +5,7 @@ import type { EventItem } from './events.service';
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
-  private L?: typeof import('leaflet'); // dynamic import
+  private L?: typeof import('leaflet');   // dynamischer Import
   private map?: L.Map;
 
   private eventsLayer?: L.LayerGroup;
@@ -14,19 +14,18 @@ export class MapService {
 
   constructor(@Inject(PLATFORM_ID) private pid: Object) {}
 
+  /** Leaflet nur im Browser laden + Default-Icons setzen */
   private async ensureLeaflet(): Promise<typeof import('leaflet')> {
     if (!isPlatformBrowser(this.pid)) throw new Error('Leaflet only in browser');
+
     if (!this.L) {
       this.L = await import('leaflet');
 
-      // 1) Pfad für Standard-Assets (optional)
-      (this.L.Icon.Default as any).imagePath = 'assets/';
-
-      // 2) Default-Icon EXPLIZIT setzen (wichtig gegen "createIcon of undefined")
+      // Standard-Icon explizit setzen (mit ABSOLUTEN Pfaden!)
       const def = this.L.icon({
-        iconUrl: 'assets/marker-icon.png',
-        iconRetinaUrl: 'assets/marker-icon-2x.png',
-        shadowUrl: 'assets/marker-shadow.png',
+        iconUrl: '/assets/leaflet/marker-icon.png',
+        iconRetinaUrl: '/assets/leaflet/marker-icon-2x.png',
+        shadowUrl: '/assets/leaflet/marker-shadow.png',
         iconSize: [25, 41],
         iconAnchor: [12, 41],
         popupAnchor: [1, -34],
@@ -47,6 +46,7 @@ export class MapService {
 
     if (!this.map) {
       this.map = L.map(el).setView([51.16, 10.45], 6);
+
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap',
@@ -55,7 +55,7 @@ export class MapService {
       this.eventsLayer = L.layerGroup().addTo(this.map);
     }
 
-    // sichtbare Größe aktualisieren
+    // Größe nach dem ersten Render aktualisieren (Tabs/Dialogs)
     requestAnimationFrame(() => this.map?.invalidateSize(true));
     return this.map;
   }
@@ -66,20 +66,14 @@ export class MapService {
     this.invalidateTimer = setTimeout(() => this.map?.invalidateSize(true), delay);
   }
 
-  /** Map & Layer sauber abbauen (ohne Exceptions) */
+  /** Map & Layer sauber abbauen */
   destroyMap(): void {
     if (!isPlatformBrowser(this.pid)) return;
-    try {
-      this.clearRoute();
-    } catch {}
-    try {
-      this.clearEvents();
-    } catch {}
+    try { this.clearRoute(); } catch {}
+    try { this.clearEvents(); } catch {}
 
     try {
-      if (this.eventsLayer && this.map) {
-        this.eventsLayer.removeFrom(this.map);
-      }
+      if (this.eventsLayer && this.map) this.eventsLayer.removeFrom(this.map);
     } catch {}
 
     try {
@@ -96,11 +90,8 @@ export class MapService {
   // ---------- Events ----------
   clearEvents() {
     if (!this.eventsLayer) return;
-    try {
-      this.eventsLayer.clearLayers();
-    } catch (err) {
-      console.warn('[MapService] clearEvents failed:', err);
-    }
+    try { this.eventsLayer.clearLayers(); }
+    catch (err) { console.warn('[MapService] clearEvents failed:', err); }
   }
 
   addEventMarker(e: EventItem, highlight = false) {
@@ -116,7 +107,7 @@ export class MapService {
       return;
     }
 
-    // ⭐️-Icon als DivIcon (keine Assets nötig)
+    // ⭐ DivIcon (ohne externe Assets)
     const starHtml = `<div style="
       display:flex;align-items:center;justify-content:center;
       width:30px;height:30px;border-radius:50%;
@@ -124,17 +115,16 @@ export class MapService {
       box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:16px;line-height:1">⭐</div>`;
     const starIcon = L.divIcon({
       html: starHtml,
-      className: 'ev-star-icon', // optional, falls du später stylen willst
+      className: 'ev-star-icon',
       iconSize: [30, 30],
       iconAnchor: [15, 15],
       popupAnchor: [0, -16],
     });
 
-    const icon = highlight ? starIcon : (L.Marker as any).prototype.options.icon; // dein Default (PNG)
+    const icon = highlight ? starIcon : (L.Marker as any).prototype.options.icon;
 
-    const m = L.marker([nLat, nLng], { title: e.name, icon }).bindPopup(
-      `<strong>${e.name}</strong><br>${e.address ?? ''}`
-    );
+    const m = L.marker([nLat, nLng], { title: e.name, icon })
+      .bindPopup(`<strong>${e.name}</strong><br>${e.address ?? ''}`);
 
     m.addTo(this.eventsLayer);
     return m;
@@ -155,20 +145,20 @@ export class MapService {
     } else if (liked.length > 1) {
       const L = this.L;
       const b = L.latLngBounds(liked.map(e => [Number(e.lat), Number(e.lng)]) as L.LatLngTuple[]);
-      this.map.fitBounds(b, { padding: [20, 20] });
+      this.map!.fitBounds(b, { padding: [20, 20] });
     }
   }
 
-  /** Hilfsfunktion: auf alle Events zoomen (Debug/All-View) */
+  /** Auf alle Events zoomen */
   fitToEvents(events: EventItem[]) {
     if (!this.map || !this.L) return;
     const valid = (events || []).filter(
-      (e) => Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng))
+      e => Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng))
     );
     if (!valid.length) return;
     const L = this.L;
-    const b = L.latLngBounds(valid.map((e) => [Number(e.lat), Number(e.lng)]) as L.LatLngTuple[]);
-    this.map.fitBounds(b, { padding: [20, 20] });
+    const b = L.latLngBounds(valid.map(e => [Number(e.lat), Number(e.lng)]) as L.LatLngTuple[]);
+    this.map!.fitBounds(b, { padding: [20, 20] });
   }
 
   focus(lat: number, lng: number, zoom = 15) {
@@ -184,24 +174,19 @@ export class MapService {
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
-      const coords: [number, number][] | undefined = data?.routes?.[0]?.geometry?.coordinates?.map(
-        (c: [number, number]) => [c[1], c[0]]
-      );
+      const coords: [number, number][] | undefined =
+        data?.routes?.[0]?.geometry?.coordinates?.map((c: [number, number]) => [c[1], c[0]]);
       if (!coords?.length) return;
 
       this.clearRoute();
       const L = this.L!;
-      this.routeLine = L.polyline(coords as any, { weight: 5 }).addTo(this.map);
-      this.map.fitBounds(this.routeLine.getBounds(), { padding: [20, 20] });
+      this.routeLine = L.polyline(coords as any, { weight: 5 }).addTo(this.map!);
+      this.map!.fitBounds(this.routeLine.getBounds(), { padding: [20, 20] });
     } catch {}
   }
 
   clearRoute() {
-    try {
-      if (this.routeLine && this.map) {
-        this.map.removeLayer(this.routeLine);
-      }
-    } catch {}
+    try { if (this.routeLine && this.map) this.map.removeLayer(this.routeLine); } catch {}
     this.routeLine = undefined;
   }
 }

@@ -1,6 +1,8 @@
 /* =========================
    GLOBAL VARIABLES & THEMES
    ========================= */
+   @import 'leaflet/dist/leaflet.css';
+   
 :root {
   --primary-color: #4CAF50;
   --primary-dark: #388E3C;

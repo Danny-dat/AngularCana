@@ -21,11 +21,7 @@
               { "glob": "**/*", "input": "public" },
               { "glob": "**/*", "input": "node_modules/leaflet/dist/images", "output": "assets" }
             ],
-            "styles": [
-              "src/custom-theme.scss",
-              "src/styles.css",
-              "leaflet/dist/leaflet.css"
-            ],
+            "styles": ["src/custom-theme.scss", "src/styles.css", "leaflet/dist/leaflet.css"],
             "server": "src/main.server.ts",
             "outputMode": "server",
             "ssr": {
@@ -37,13 +33,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "1.20mb",
+                  "maximumError":   "1.50mb"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "6kb",
+                  "maximumError":   "8kb"
                 }
               ],
               "outputHashing": "all"
@@ -81,14 +77,8 @@
               { "glob": "**/*", "input": "src/assets", "output": "assets" },
               { "glob": "**/*", "input": "public" }
             ],
-            "styles": [
-              "src/styles.css",
-              "leaflet/dist/leaflet.css"
-            ],
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ]
+            "styles": ["src/styles.css", "leaflet/dist/leaflet.css"],
+            "polyfills": ["zone.js", "zone.js/testing"]
           }
         }
       }

@@ -7,7 +7,6 @@ import { ChatService } from '../../services/chat.services';
 import { FriendsService } from '../../services/friends.services';
 import { PresenceService } from '../../services/presence.service';
 import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
-import QRCode from 'qrcode';
 
 @Component({
   standalone: true,
@@ -150,14 +149,18 @@ export class SocialPage implements OnDestroy {
 
   async shareQR() {
     try {
-      const url = await QRCode.toDataURL(this.myCode, {
+      // Lazy-load nur wenn gebraucht -> kleineres initial bundle + keine CommonJS-Warnung
+      const { toDataURL } = await import('qrcode');
+      const url = await toDataURL(this.myCode, {
         width: 256,
         margin: 1,
         color: { dark: '#000000', light: '#00000000' },
       });
-    } catch {
+      this.qrDataUrl.set(url);
+      this.qrOpen.set(true);
+    } catch (err) {
+      console.error('QR-Fehler:', err);
       alert('QR-Code konnte nicht erzeugt werden.');
-      return;
     }
   }
 
