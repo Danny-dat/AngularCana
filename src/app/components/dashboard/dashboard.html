@@ -1,40 +1,66 @@
 <div class="tracker-container card">
   <h3>Neuen Konsum loggen</h3>
 
-  <div class="selection">
-    @for (item of products; track item.name) {
-      <div
-        (click)="selectProduct(item.name)"
-        [class.selected]="selection.product === item.name"
-        [attr.aria-pressed]="selection.product === item.name"
-        role="button" tabindex="0"
-        (keydown.enter)="selectProduct(item.name)"
-      >
-        <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'product')" />
-        <p>{{ item.name }}</p>
-      </div>
-    }
-  </div>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <button (click)="toggleDropdown('product')" class="dropdown-toggle" [class.filled]="selection.product">
+        <span class="dropdown-label">Was</span>
+        <span>{{ selection.product || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'product') {
+        <div class="dropdown-menu">
+          @for (item of products; track item.name) {
+            <div class="dropdown-item" (click)="selectProduct(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'product')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
 
-  <div class="selection">
-    @for (item of devices; track item.name) {
-      <div
-        (click)="selectDevice(item.name)"
-        [class.selected]="selection.device === item.name"
-        [attr.aria-pressed]="selection.device === item.name"
-        role="button" tabindex="0"
-        (keydown.enter)="selectDevice(item.name)"
-      >
-        <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'device')" />
-        <p>{{ item.name }}</p>
-      </div>
-    }
+    <div class="dropdown-wrapper" [class.disabled]="!selection.product">
+      <button (click)="selection.product && toggleDropdown('device')" class="dropdown-toggle" [class.filled]="selection.device">
+        <span class="dropdown-label">Mit was</span>
+        <span>{{ selection.device || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'device') {
+        <div class="dropdown-menu">
+          @for (item of devices; track item.name) {
+            <div class="dropdown-item" (click)="selectDevice(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'device')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="dropdown-wrapper" [class.disabled]="!selection.device">
+      <button (click)="selection.device && toggleDropdown('location')" class="dropdown-toggle" [class.filled]="selection.location">
+        <span class="dropdown-label">Wo</span>
+        <span>{{ selection.location || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'location') {
+        <div class="dropdown-menu">
+          @for (item of locations; track item.name) {
+            <div class="dropdown-item" (click)="selectLocation(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'location')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
   </div>
 
   <div class="actions">
     <button
       (click)="logConsumption()"
-      [disabled]="isSaving || !selection.product || !selection.device"
+      [disabled]="isSaving || !selection.product || !selection.device || !selection.location"
       [class.loading]="isSaving"
       [class.success]="justSaved"
       aria-live="polite"
@@ -44,26 +70,25 @@
         <span>Speichere…</span>
       } @else if (justSaved) {
         <span class="btn-check" aria-hidden="true">✓</span>
-        <span>Gespeichert</span>
+        <span>Gespeichert!</span>
       } @else {
-        <span>Bestätigen & (optional) Standort loggen</span>
+        <span>Loggen & Freunde benachrichtigen</span>
       }
     </button>
-
     @if (savedAt) {
       <div class="saved-stamp">Zuletzt gespeichert: <strong>{{ savedAt | date:'shortTime' }}</strong></div>
     }
   </div>
 </div>
 
-  <promo-slot slotId="dashboard-werbung1" data-variant="wide"></promo-slot>
+
+<promo-slot slotId="dashboard-werbung1" data-variant="wide"></promo-slot>
 
 <div class="map-container card">
   <h3>Event-Karte</h3>
   <div id="map-container" style="height:420px;width:100%"></div>
 </div>
 
-<!-- Toast oben rechts -->
 @if (toast) {
   <div class="toast" [class.success]="toast.type==='success'" [class.error]="toast.type==='error'">
     {{ toast.text }}

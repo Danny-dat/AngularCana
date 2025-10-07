@@ -22,11 +22,8 @@ export class PresenceService {
   private cleanupFns: Array<() => void> = [];
   private startedForUid: string | null = null;
 
-  // Online, wenn letzter Ping jünger als 45s
   private static readonly THRESHOLD_MS = 45_000;
-  // Heartbeat alle 20s
   private static readonly HEARTBEAT_MS = 20_000;
-
   private lastWrite = 0;
 
   constructor() {
@@ -38,20 +35,21 @@ export class PresenceService {
     if (!this.isBrowser) return;
     if (!myUid || this.startedForUid === myUid) return;
 
-    this.stop(); // evtl. Altzustand aufräumen
-    this.startedForUid = myUid;
+    // ▼▼▼ HIER IST DIE FINALE KORREKTUR ▼▼▼
+    // Wir umschließen die gesamte Logik, um alle Firebase-Aufrufe abzudecken.
+    runInInjectionContext(this.env, () => {
+      this.stop(); // evtl. Altzustand aufräumen
+      this.startedForUid = myUid;
 
-    const meRef = doc(this.presenceCol, myUid);
+      const meRef = doc(this.presenceCol, myUid); // `doc()` ist jetzt im richtigen Kontext
 
-    const writeOnline = () => {
-      // Throttle: max. alle 4s (zusätzlich zum Intervall)
-      const now = Date.now();
-      if (now - this.lastWrite < 4_000) return;
-      this.lastWrite = now;
+      const writeOnline = async () => { // Wir machen die Funktion async
+        const now = Date.now();
+        if (now - this.lastWrite < 4_000) return;
+        this.lastWrite = now;
 
-      // WICHTIG: Firestore Call im Injection Context ausführen
-      runInInjectionContext(this.env, async () => {
         try {
+          // Die innere runInInjectionContext-Verpackung ist jetzt nicht mehr nötig
           await updateDoc(meRef, { state: 'online', lastActiveAt: serverTimestamp() } as any)
             .catch(async () => {
               await setDoc(meRef, { state: 'online', lastActiveAt: serverTimestamp() } as any);
@@ -59,25 +57,22 @@ export class PresenceService {
         } catch {
           // still – kann bei Hot-Reload/Offline mal fehlschlagen
         }
-      });
-    };
+      };
 
-    // sofort + dann periodisch
-    writeOnline();
-    this.heartbeatTimer = setInterval(writeOnline, PresenceService.HEARTBEAT_MS);
+      writeOnline();
+      this.heartbeatTimer = setInterval(writeOnline, PresenceService.HEARTBEAT_MS);
 
-    // Sichtbarkeitswechsel: bei "visible" einmal pingen
-    const onVis = () => { if (document.visibilityState === 'visible') writeOnline(); };
-    document.addEventListener('visibilitychange', onVis, true);
+      const onVis = () => { if (document.visibilityState === 'visible') writeOnline(); };
+      document.addEventListener('visibilitychange', onVis, true);
 
-    // Beim Tab-Schließen nur aufräumen (Firestore hat kein onDisconnect)
-    const onBeforeUnload = () => { /* optional: offline markieren */ };
-    window.addEventListener('beforeunload', onBeforeUnload, true);
+      const onBeforeUnload = () => { /* optional: offline markieren */ };
+      window.addEventListener('beforeunload', onBeforeUnload, true);
 
-    this.cleanupFns.push(
-      () => document.removeEventListener('visibilitychange', onVis, true),
-      () => window.removeEventListener('beforeunload', onBeforeUnload, true),
-    );
+      this.cleanupFns.push(
+        () => document.removeEventListener('visibilitychange', onVis, true),
+        () => window.removeEventListener('beforeunload', onBeforeUnload, true),
+      );
+    });
   }
 
   /** Heartbeat & Listener zuverlässig stoppen */
@@ -91,8 +86,7 @@ export class PresenceService {
 
   /**
    * Präsenz für eine Liste von UIDs beobachten.
-   * Liefert array der UIDs, die aktuell als "online" gelten.
-   * Rückgabewert: Unsubscribe-Funktion.
+   * (Dieser Teil war bereits korrekt)
    */
   listen(uids: string[], cb: (onlineIds: string[]) => void): () => void {
     if (!this.isBrowser || !uids?.length) { cb([]); return () => {}; }
@@ -114,8 +108,6 @@ export class PresenceService {
 
     for (const uid of uids) {
       const ref = doc(this.presenceCol, uid);
-
-      // Auch onSnapshot im Injection Context anlegen – sauberer bei SSR/Hydration
       const off = runInInjectionContext(this.env, () =>
         onSnapshot(ref, snap => {
           if (!snap.exists()) { states.delete(uid); emit(); return; }
@@ -125,11 +117,9 @@ export class PresenceService {
           emit();
         })
       ) as unknown as () => void;
-
       unsubs.push(off);
     }
 
-    // regelmäßig neu bewerten (falls niemand schreibt)
     const tick = setInterval(emit, 10_000);
     unsubs.push(() => clearInterval(tick));
 
