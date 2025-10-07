@@ -28,7 +28,7 @@ function getDefaultSettings(): UserSettingsModel {
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
   private db = inject(Firestore);
-  private env = inject(EnvironmentInjector); // <-- INJECTOR HINZUGEFÜGT
+  private env = inject(EnvironmentInjector); 
 
   /** /users/{uid} */
   private userDoc(uid: string) {
@@ -40,7 +40,6 @@ export class UserDataService {
 
   /** Lädt Root-Dokument und mapped Theme aus personalization.theme. */
   async loadUserData(uid: string): Promise<UserDataModel> {
-    // ▼▼▼ HIER KORRIGIERT ▼▼▼
     return runInInjectionContext(this.env, async () => {
       const snap = await getDoc(this.userDoc(uid));
       const data: any = snap.exists() ? snap.data() : {};
@@ -54,7 +53,6 @@ export class UserDataService {
 
   /** Speichert nur die Felder, die übergeben werden (merge:true). */
   async saveUserData(uid: string, payload: Partial<UserDataModel>): Promise<void> {
-    // ▼▼▼ HIER KORRIGIERT ▼▼▼
     return runInInjectionContext(this.env, async () => {
       const body: any = {};
       if (typeof payload.displayName === 'string') body.displayName = payload.displayName;
@@ -78,7 +76,6 @@ export class UserDataService {
 
   /** Lädt /users/{uid} und merged robust mit Defaults. */
   async loadUserSettings(uid: string): Promise<UserSettingsModel> {
-    // ▼▼▼ HIER KORRIGIERT ▼▼▼
     return runInInjectionContext(this.env, async () => {
       const defaults = getDefaultSettings();
       const snap = await getDoc(this.userDoc(uid));
@@ -107,7 +104,6 @@ export class UserDataService {
    * So vermeiden wir 400 Bad Request.
    */
   async saveUserSettings(uid: string, settings: Partial<UserSettingsModel>): Promise<void> {
-    // ▼▼▼ HIER KORRIGIERT ▼▼▼
     return runInInjectionContext(this.env, async () => {
       const payload: Record<string, any> = {};
 
