@@ -145,7 +145,7 @@ export class FriendsService {
   /** Live-Listener für akzeptierte Freunde inkl. Public Profile */
   listenFriends(myUid: UID, callback: (friends: FriendPublicProfile[]) => void) {
     // ▼▼▼ SICHERHEITSPRÜFUNG HINZUGEFÜGT ▼▼▼
-    if (!myUid) return () => {}; 
+    if (!myUid) return () => {};
 
     const requestsQuery = query(
       this.friendRequestsCollection,
@@ -167,7 +167,7 @@ export class FriendsService {
       const profileSnapshots = await Promise.all(
         friendIds.map(async (friendId: string) => {
           // Die Prüfung hier drin ist wichtig, falls ein Profil gelöscht wurde
-          if (!friendId) return null; 
+          if (!friendId) return null;
           const profileRef = doc(this.publicProfilesCollection, friendId);
           try {
             const profileDoc = await getDoc(profileRef);
@@ -358,7 +358,22 @@ export class FriendsService {
         })
       );
       // Filtere eventuelle null-Werte heraus
-      callback(profiles.filter(p => p !== null) as FriendPublicProfile[]);
+      callback(profiles.filter((p) => p !== null) as FriendPublicProfile[]);
     });
+  }
+
+  async getAcceptedFriendIds(myUid: string): Promise<string[]> {
+    const snap = await getDocs(
+      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid))
+    );
+    const ids = new Set<string>();
+    snap.docs.forEach((d) => {
+      const data = d.data() as any;
+      if (data.status === 'accepted') {
+        const other = data.fromUid === myUid ? data.toUid : data.fromUid;
+        if (other) ids.add(other);
+      }
+    });
+    return [...ids];
   }
 }

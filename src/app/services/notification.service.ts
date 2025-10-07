@@ -18,9 +18,12 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  serverTimestamp,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { deleteDoc } from '@angular/fire/firestore';
 import { BehaviorSubject } from 'rxjs';
+import { FriendsService } from './friends.services';
 import { AppNotification } from '../models/notification-module';
 
 @Injectable({ providedIn: 'root' })
@@ -33,10 +36,10 @@ export class NotificationService {
   notifications$ = new BehaviorSubject<AppNotification[]>([]);
   unreadCount$ = new BehaviorSubject<number>(0);
 
+  // === LISTENER (bestehend) ===
   listen(userId: string, isChatOpenWith?: (senderId?: string) => boolean) {
     if (!userId || !isPlatformBrowser(this.platformId)) return () => {};
 
-    // ALLES innerhalb eines Injection Contexts ausführen
     return runInInjectionContext(this.injector, () => {
       const colRef = collection(this.fs, 'notifications');
       const qRef = query(
@@ -49,7 +52,6 @@ export class NotificationService {
       const unsub = onSnapshot(
         qRef,
         (snap) => {
-          // Zurück in Angulars Zone, damit CD/Hydration sauber laufen
           this.zone.run(() => {
             const all: AppNotification[] = snap.docs.map((d) => ({
               id: d.id,
@@ -74,9 +76,48 @@ export class NotificationService {
     await setDoc(ref, { read: true }, { merge: true });
   }
 
-  // endgültig löschen
   async delete(id: string) {
     const ref = doc(this.fs, 'notifications', id);
     await deleteDoc(ref);
+  }
+
+  // === NEU: Benachrichtigung an Freunde schicken ===
+  constructor(private friends: FriendsService) {}
+
+  async sendConsumptionToFriends(params: {
+    userId: string;
+    displayName?: string | null;
+    product: string;
+    device: string;
+    location: string;
+  }): Promise<void> {
+    const { userId, displayName, product, device, location } = params;
+    if (!userId || !product || !device || !location) return;
+
+    // akzeptierte Freunde besorgen
+    const recipientIds = await this.friends.getAcceptedFriendIds(userId);
+    if (!recipientIds.length) return;
+
+    return runInInjectionContext(this.injector, async () => {
+      const batch = writeBatch(this.fs);
+      const colRef = collection(this.fs, 'notifications');
+      const senderName = displayName || 'Ein Freund';
+      const message = `${senderName} hat ${product} mit einem ${device} in/im ${location} konsumiert.`;
+
+      recipientIds.forEach((rid) => {
+        const ref = doc(colRef);
+        batch.set(ref, {
+          type: 'consumption_activity',
+          recipientId: rid,
+          senderId: userId,
+          senderName,
+          message,
+          timestamp: serverTimestamp(),
+          read: false,
+        });
+      });
+
+      await batch.commit();
+    });
   }
 }
