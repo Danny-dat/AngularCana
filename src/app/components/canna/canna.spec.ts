@@ -1,18 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Canna } from './canna';
+// Korrekter Import: Die Klasse heißt 'CannaComponent' und kommt aus './canna.component'
+import { CannaComponent } from './canna';
 
-describe('Canna', () => {
-  let component: Canna;
-  let fixture: ComponentFixture<Canna>;
+describe('CannaComponent', () => {
+  // Alle Instanzen von 'Canna' wurden zu 'CannaComponent' geändert
+  let component: CannaComponent;
+  let fixture: ComponentFixture<CannaComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Canna]
+      imports: [CannaComponent] // Hier ebenfalls den korrekten Namen verwenden
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Canna);
+    fixture = TestBed.createComponent(CannaComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

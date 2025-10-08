@@ -1,1 +1,83 @@
-<p>canna works!</p>
+<div class="tracker-container card">
+  <h3>Neuen Konsum loggen</h3>
+
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <button (click)="toggleDropdown('product')" class="dropdown-toggle" [class.filled]="selection.product">
+        <span class="dropdown-label">Was</span>
+        <span>{{ selection.product || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'product') {
+        <div class="dropdown-menu">
+          @for (item of products; track item.name) {
+            <div class="dropdown-item" (click)="selectProduct(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'product')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="dropdown-wrapper" [class.disabled]="!selection.product">
+      <button (click)="selection.product && toggleDropdown('device')" class="dropdown-toggle" [class.filled]="selection.device">
+        <span class="dropdown-label">Mit was</span>
+        <span>{{ selection.device || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'device') {
+        <div class="dropdown-menu">
+          @for (item of devices; track item.name) {
+            <div class="dropdown-item" (click)="selectDevice(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'device')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="dropdown-wrapper" [class.disabled]="!selection.device">
+      <button (click)="selection.device && toggleDropdown('location')" class="dropdown-toggle" [class.filled]="selection.location">
+        <span class="dropdown-label">Wo</span>
+        <span>{{ selection.location || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'location') {
+        <div class="dropdown-menu">
+          @for (item of locations; track item.name) {
+            <div class="dropdown-item" (click)="selectLocation(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'location')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="actions">
+    <button
+      (click)="logConsumption()"
+      [disabled]="isSaving || !selection.product || !selection.device || !selection.location"
+      [class.loading]="isSaving"
+      [class.success]="justSaved"
+      aria-live="polite"
+    >
+      @if (isSaving) {
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span>Speichere…</span>
+      } @else if (justSaved) {
+        <span class="btn-check" aria-hidden="true">✓</span>
+        <span>Gespeichert!</span>
+      } @else {
+        <span>Loggen & Freunde benachrichtigen</span>
+      }
+    </button>
+    @if (savedAt) {
+      <div class="saved-stamp">Zuletzt gespeichert: <strong>{{ savedAt | date:'shortTime' }}</strong></div>
+    }
+  </div>
+</div>
+

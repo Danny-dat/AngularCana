@@ -10,6 +10,7 @@ import {
   inject,
   runInInjectionContext,
   ChangeDetectorRef,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MapService } from '../../services/map.service';
@@ -25,18 +26,17 @@ import {
 } from '@angular/fire/firestore';
 import { AdSlotComponent } from '../promo-slot/ad-slot.component';
 import { EventsService, EventItem } from '../../services/events.service';
-import { NotificationService } from '../../services/notification.service'; // ✅ neu hinzugefügt
+import { NotificationService } from '../../services/notification.service';
+// Der Pfad muss korrekt sein, damit CannaComponent gefunden wird
+import { CannaComponent, ConsumptionSelection } from '../canna/canna';
 
-interface Consumable {
-  name: string;
-  img: string;
-}
 type Toast = { type: 'success' | 'error'; text: string };
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AdSlotComponent],
+  // HIER IST DIE LÖSUNG: CannaComponent muss importiert werden
+  imports: [CommonModule, AdSlotComponent, CannaComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
@@ -45,44 +45,22 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly firestore = inject(Firestore);
   private readonly auth = inject(Auth);
 
+  @ViewChild(CannaComponent) private cannaComponent?: CannaComponent;
+
   constructor(
     private readonly mapService: MapService,
     private readonly eventsSvc: EventsService,
-    private readonly notifications: NotificationService, // ✅ NotificationService
+    private readonly notifications: NotificationService,
     @Inject(PLATFORM_ID) private readonly pid: Object,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
-  products: Consumable[] = [
-    { name: 'Blüte', img: 'assets/produkte/flower.png' },
-    { name: 'Hash', img: 'assets/produkte/hash.png' },
-    { name: 'Harz', img: 'assets/produkte/resin1.png' },
-  ];
-  devices: Consumable[] = [
-    { name: 'Joint', img: 'assets/devices/joint.png' },
-    { name: 'Bong', img: 'assets/devices/bong.png' },
-    { name: 'Vaporizer', img: 'assets/devices/vaporizer.png' },
-    { name: 'Pfeife', img: 'assets/devices/pfeife.png' },
-  ];
-  locations: Consumable[] = [
-    { name: 'Küche', img: 'assets/locations/kitchen.svg' },
-    { name: 'Badezimmer', img: 'assets/locations/bathroom.svg' },
-    { name: 'Garten', img: 'assets/locations/garden.svg' },
-    { name: 'Wohnzimmer', img: 'assets/locations/livingroom.svg' },
-  ];
-
-  selection = {
-    product: null as string | null,
-    device: null as string | null,
-    location: null as string | null,
-  };
-
   isSaving = false;
   justSaved = false;
   savedAt: Date | null = null;
   toast: Toast | null = null;
-  activeDropdown: 'product' | 'device' | 'location' | null = null;
+  
   private autoResetTimer?: any;
   private autoToastTimer?: any;
   private authUnsub?: () => void;
@@ -96,7 +74,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.mapService.initializeMap('map-container');
     this.mapService.invalidateSizeSoon();
 
-    // Auth Listener
     runInInjectionContext(this.env, () => {
       this.authUnsub = onAuthStateChanged(this.auth, (user) => {
         this.eventsSub?.unsubscribe?.();
@@ -122,38 +99,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.mapService.destroyMap();
     clearTimeout(this.autoResetTimer);
     clearTimeout(this.autoToastTimer);
-  }
-
-  toggleDropdown(menu: 'product' | 'device' | 'location' | null) {
-    this.activeDropdown = this.activeDropdown === menu ? null : menu;
-  }
-
-  selectProduct(name: string) {
-    this.selection.product = name;
-    this.activeDropdown = 'device';
-    this.cdr.markForCheck();
-  }
-
-  selectDevice(name: string) {
-    this.selection.device = name;
-    this.activeDropdown = 'location';
-    this.cdr.markForCheck();
-  }
-
-  selectLocation(name: string) {
-    this.selection.location = name;
-    this.activeDropdown = null;
-    this.cdr.markForCheck();
-  }
-
-  onImgError(ev: Event, _kind: string) {
-    const img = ev.target as HTMLImageElement;
-    if (img) {
-      img.src = `data:image/svg+xml;utf8,${encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="100%" height="100%" fill="#f0f0f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#9aa0a6">n/a</text></svg>`
-      )}`;
-      img.alt = 'Platzhalter';
-    }
   }
 
   private showToast(type: Toast['type'], text: string, ms = 2200) {
@@ -202,11 +147,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     ]);
   }
 
-  async logConsumption() {
+  async logConsumption(selection: ConsumptionSelection) {
     if (
-      !this.selection.product ||
-      !this.selection.device ||
-      !this.selection.location
+      !selection.product ||
+      !selection.device ||
+      !selection.location
     )
       return;
 
@@ -227,9 +172,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
       const payload = {
         userId: user.uid,
-        product: this.selection.product!,
-        device: this.selection.device!,
-        location: this.selection.location!,
+        product: selection.product!,
+        device: selection.device!,
+        location: selection.location!,
         timestamp: serverTimestamp(),
         ...(geo && { locationGeo: geo }),
       };
@@ -238,7 +183,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         addDoc(collection(this.firestore, 'consumptions'), payload)
       );
 
-      // 🔔 DisplayName aus users/{uid} holen
       const userSnap = await runInInjectionContext(this.env, () =>
         getDoc(doc(this.firestore, `users/${user.uid}`))
       );
@@ -246,13 +190,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         ? (userSnap.data() as any)['displayName'] ?? null
         : null;
 
-      // ✅ Freunde benachrichtigen
       await this.notifications.sendConsumptionToFriends({
         userId: user.uid,
         displayName,
-        product: this.selection.product!,
-        device: this.selection.device!,
-        location: this.selection.location!,
+        product: selection.product!,
+        device: selection.device!,
+        location: selection.location!,
       });
 
       this.buttonSavedPulse();
@@ -271,8 +214,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showToast('error', msg);
     } finally {
       this.isSaving = false;
-      this.selection = { product: null, device: null, location: null };
+      this.cannaComponent?.resetSelection(); 
       this.cdr.markForCheck();
     }
   }
 }
+
