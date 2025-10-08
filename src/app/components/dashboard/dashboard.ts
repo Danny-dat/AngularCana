@@ -35,7 +35,6 @@ type Toast = { type: 'success' | 'error'; text: string };
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  // HIER IST DIE LÖSUNG: CannaComponent muss importiert werden
   imports: [CommonModule, AdSlotComponent, CannaComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],

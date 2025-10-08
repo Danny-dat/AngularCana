@@ -1,1 +1,82 @@
-<p>hunting works!</p>
+<div class="tracker-container card">
+  <h3>Neue Jagd loggen</h3>
+
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <button (click)="toggleDropdown('animal')" class="dropdown-toggle" [class.filled]="selection.animal">
+        <span class="dropdown-label">Tier</span>
+        <span>{{ selection.animal || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'animal') {
+        <div class="dropdown-menu">
+          @for (item of animals; track item.name) {
+            <div class="dropdown-item" (click)="selectAnimal(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'animal')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="dropdown-wrapper" [class.disabled]="!selection.animal">
+      <button (click)="selection.animal && toggleDropdown('weapon')" class="dropdown-toggle" [class.filled]="selection.weapon">
+        <span class="dropdown-label">Waffe</span>
+        <span>{{ selection.weapon || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'weapon') {
+        <div class="dropdown-menu">
+          @for (item of weapons; track item.name) {
+            <div class="dropdown-item" (click)="selectWeapon(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'weapon')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="dropdown-wrapper" [class.disabled]="!selection.weapon">
+      <button (click)="selection.weapon && toggleDropdown('location')" class="dropdown-toggle" [class.filled]="selection.location">
+        <span class="dropdown-label">Wo</span>
+        <span>{{ selection.location || 'auswählen...' }}</span>
+        <span class="dropdown-caret"></span>
+      </button>
+      @if (activeDropdown === 'location') {
+        <div class="dropdown-menu">
+          @for (item of locations; track item.name) {
+            <div class="dropdown-item" (click)="selectLocation(item.name)">
+              <img [src]="item.img" [alt]="item.name" (error)="onImgError($event, 'location')" />
+              <p>{{ item.name }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="actions">
+    <button
+      (click)="logHunt()"
+      [disabled]="isSaving || !selection.animal || !selection.weapon || !selection.location"
+      [class.loading]="isSaving"
+      [class.success]="justSaved"
+      aria-live="polite"
+    >
+      @if (isSaving) {
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span>Speichere…</span>
+      } @else if (justSaved) {
+        <span class="btn-check" aria-hidden="true">✓</span>
+        <span>Gespeichert!</span>
+      } @else {
+        <span>Jagd loggen</span>
+      }
+    </button>
+    @if (savedAt) {
+      <div class="saved-stamp">Zuletzt gespeichert: <strong>{{ savedAt | date:'shortTime' }}</strong></div>
+    }
+  </div>
+</div>
