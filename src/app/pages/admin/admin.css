@@ -2,7 +2,7 @@
 .shell { height:100vh; }
 
 /* kompaktere Sidebar */
-.side { width: 180px; padding: 6px; }       /* vorher 260px */
+.side { width: 100px; padding: 6px; }       /* vorher 260px */
 .side.collapsed { width: 60px; }            /* vorher 76px */
 
 .brand {

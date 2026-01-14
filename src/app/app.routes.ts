@@ -100,7 +100,7 @@ export const routes: Routes = [
         canActivate: [authGuard, adminGuard], // doppelt sicher
         loadComponent: () => import('./pages/admin/admin').then((m) => m.AdminPage),
         loadChildren: () =>import('./pages/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-        data: { title: 'Admin Bereich' },
+        data: { title: 'Admin Bereich'},
       },
 
       // Öffentlich, aber mit Header:
