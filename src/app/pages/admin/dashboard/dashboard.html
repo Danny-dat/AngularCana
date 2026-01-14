@@ -1,20 +1,6 @@
 <h3>Admin Dashboard</h3>
-<div class="grid">
-  @for (k of kpis; track k.label) {
-    <mat-card class="kpi" [routerLink]="k.link">
-      <div class="kpi-row">
-        <mat-icon>{{ k.icon }}</mat-icon>
-        <div class="kpi-values">
-          <div class="val">{{ k.value }}</div>
-          <div class="lbl">{{ k.label }}</div>
-        </div>
-      </div>
-    </mat-card>
-  }
-</div>
-
+<div>
 <mat-card class="actions">
-  <h3>Schnellaktionen</h3>
   <div class="quick">
     @for (q of quick; track q.text) {
       <a mat-stroked-button [routerLink]="q.link">
@@ -24,3 +10,74 @@
     }
   </div>
 </mat-card>
+</div>
+
+<div class="grid">
+  @for (k of kpis; track k.label) {
+    <mat-card class="kpi" [routerLink]="k.link">
+      <div class="kpi-row">
+        <span class="kpi-icon">
+          <mat-icon>{{ k.icon }}</mat-icon>
+        </span>
+
+        <div class="kpi-values">
+          <div class="val">{{ k.value }}</div>
+          <div class="lbl">{{ k.label }}</div>
+        </div>
+      </div>
+    </mat-card>
+  }
+</div>
+
+<!-- ... dein bestehendes KPI Grid + Schnellaktionen ... -->
+
+<div class="widgets">
+  <mat-card class="widget">
+    <div class="widget-head">
+      <h3>Inbox</h3>
+      <a mat-button routerLink="/admin/reports">Alle</a>
+    </div>
+
+    @for (t of inbox; track t.title) {
+      <div class="row" [routerLink]="t.link">
+        <div>
+          <div class="title">{{ t.title }}</div>
+          <div class="meta">{{ t.meta }}</div>
+        </div>
+        <div class="pill">{{ t.count }}</div>
+      </div>
+    }
+  </mat-card>
+
+  <mat-card class="widget">
+    <div class="widget-head">
+      <h3>Neueste Reports</h3>
+      <a mat-button routerLink="/admin/reports">Alle</a>
+    </div>
+
+    @for (r of recentReports; track r.id) {
+      <div class="row" [routerLink]="['/admin/reports']">
+        <div>
+          <div class="title">{{ r.title }}</div>
+          <div class="meta">{{ r.when }} · {{ r.status }}</div>
+        </div>
+      </div>
+    }
+  </mat-card>
+
+  <mat-card class="widget">
+    <div class="widget-head">
+      <h3>Letzte Aktivitäten</h3>
+    </div>
+
+    @for (a of activity; track a.id) {
+      <div class="row">
+        <div>
+          <div class="title">{{ a.text }}</div>
+          <div class="meta">{{ a.when }}</div>
+        </div>
+      </div>
+    }
+  </mat-card>
+</div>
+
