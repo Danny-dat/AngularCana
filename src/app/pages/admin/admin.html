@@ -1,40 +1,56 @@
-<mat-sidenav-container class="shell">
-  <mat-sidenav mode="side" [opened]="true" class="side" [class.collapsed]="collapsed">
-    <div class="brand">
-      <mat-icon>admin_panel_settings</mat-icon>
-      @if (!collapsed) { <span>Admin</span> }
+<mat-sidenav-container class="shell" autosize>
+  <!-- SIDEBAR -->
+  <mat-sidenav class="side" [class.collapsed]="collapsed" mode="side" [opened]="true">
+    <div class="side-inner">
+      <!-- Brand -->
+      <div class="brand" [matTooltip]="collapsed ? 'Admin' : ''" matTooltipPosition="right">
+        <mat-icon>admin_panel_settings</mat-icon>
+        <span class="brand-text">Admin</span>
+      </div>
+
+            <div class="side-footer">
+        @if (!collapsed) {
+          <button mat-stroked-button class="collapse-btn" (click)="toggleCollapsed()">
+            <mat-icon>chevron_left</mat-icon>
+            <span>Menü einklappen</span>
+          </button>
+        } @else {
+          <button mat-icon-button class="collapse-icon" (click)="toggleCollapsed()">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        }
+      </div>
+
+      <!-- Menu -->
+      <div class="nav-scroll">
+        <mat-nav-list class="menu">
+          @for (item of nav; track item.label) {
+            <a
+              mat-list-item
+              class="menu-item"
+              [routerLink]="item.link"
+              routerLinkActive="active"
+              [matTooltip]="collapsed ? item.label : ''"
+              matTooltipPosition="right"
+            >
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+
+              @if (!collapsed) {
+                <span matListItemTitle>{{ item.label }}</span>
+              }
+            </a>
+          }
+        </mat-nav-list>
+      </div>
+
     </div>
-
-    <mat-divider></mat-divider>
-
-    <nav class="menu">
-      @for (item of nav; track item.label) {
-        <a mat-list-item [routerLink]="item.link" routerLinkActive="active">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          @if (!collapsed) { <div matListItemTitle>{{ item.label }}</div> }
-        </a>
-      }
-    </nav>
-
-    <div class="grow"></div>
-
-    <button mat-stroked-button class="collapse-btn" (click)="collapsed = !collapsed">
-      <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-      @if (!collapsed) { <span>Menü einklappen</span> }
-    </button>
   </mat-sidenav>
 
+  <!-- CONTENT -->
   <mat-sidenav-content>
-    <mat-toolbar color="primary" class="topbar">
-      <button mat-icon-button (click)="collapsed = !collapsed" class="hide-desktop">
-        <mat-icon>menu</mat-icon>
-      </button>
-    </mat-toolbar>
-
-    <main class="content">
-      <!-- HIER wird die jeweilige Unterseite gerendert -->
+    <div class="content">
       <router-outlet></router-outlet>
-    </main>
+    </div>
   </mat-sidenav-content>
   
 </mat-sidenav-container>

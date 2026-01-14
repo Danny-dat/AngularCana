@@ -1,42 +1,212 @@
-:host { display:block; height:100%; }
-.shell { height:100vh; }
+/* ==========================================================================
+   Admin Layout (Sidenav + Content)
+   ========================================================================== */
 
-/* kompaktere Sidebar */
-.side { width: 100px; padding: 6px; }       /* vorher 260px */
-.side.collapsed { width: 60px; }            /* vorher 76px */
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Container füllt jetzt den Host komplett */
+.shell {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Material Drawer: verhindert den hässlichen Container-Scroll */
+:host ::ng-deep .mat-drawer-inner-container {
+  overflow: hidden !important;
+}
+
+/* Sidenav + Content über volle Höhe */
+.side {
+  height: 100%;
+  width: var(--side-expanded);
+  padding: var(--side-pad);
+  box-sizing: border-box;
+  transition: width 160ms ease;
+}
+
+.side.collapsed {
+  width: var(--side-collapsed);
+}
+
+mat-sidenav-content {
+  height: 100%;
+  overflow: hidden;          /* <-- wichtig: nicht auto */
+  display: flex;             /* Layout als Column */
+  flex-direction: column;
+}
+
+/* Sidebar: innen fix, nur Menü scrollt */
+.side-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.nav-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding-right: 4px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.25) transparent;
+}
+
+.nav-scroll::-webkit-scrollbar { width: 8px; }
+.nav-scroll::-webkit-scrollbar-track { background: transparent; }
+.nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.25);
+  border-radius: 999px;
+}
+
+/* ==========================================================================
+   Brand/Header oben
+   ========================================================================== */
 
 .brand {
-  display:flex; align-items:center; gap:8px; padding:8px 6px;
-  font-weight:600; font-size:13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-/* Menü dichter + kleinere Icons/Text */
-.menu a { border-radius:8px; height:36px; padding:0 6px; line-height:36px; }
-.menu a.active { background: rgba(0,0,0,0.06); }
-.menu mat-icon { font-size:18px; height:18px; width:18px; }
-[matListItemTitle] { font-size:13px; }
+/* ==========================================================================
+   Menü (Material List Items)
+   ========================================================================== */
 
-.grow { flex:1 1 auto; }
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 6px 0;
+}
 
-/* Collapse-Button kompakt */
-.collapse-btn { width:100%; margin-top:10px; height:36px; font-size:12px; border-radius:18px; }
+.menu-item {
+  text-decoration: none !important;
+  color: inherit !important;
+  border-radius: var(--radius);
+}
 
-/* Topbar/Content etwas dichter */
-.topbar .title { font-weight:600; font-size:18px; }
-.spacer { flex:1 1 auto; }
-.content { padding:12px; max-width:1200px; margin:0 auto; }
+:host ::ng-deep a.menu-item.mat-mdc-list-item.mdc-list-item {
+  min-height: var(--item-h);
+  height: var(--item-h);
+  padding-inline: 12px;
+  border-radius: var(--radius);
+}
 
-.hide-desktop { display:none; }
-.hide-sm { display:inline; }
+.menu-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.menu-item.active {
+  background: rgba(0, 0, 0, 0.07);
+  font-weight: 600;
+  position: relative;
+}
+
+.menu-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.menu mat-icon {
+  font-size: 26px;
+  height: 26px;
+  width: 26px;
+}
+
+:host ::ng-deep .menu-item .mdc-list-item__start {
+  margin-right: 12px;
+}
+
+:host ::ng-deep .menu-item .mdc-list-item__primary-text {
+  color: inherit;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Collapsed Mode: Icons zentrieren
+   ========================================================================== */
+
+:host ::ng-deep .side.collapsed a.menu-item.mat-mdc-list-item.mdc-list-item {
+  justify-content: center;
+  padding-inline: 0;
+
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 14px;
+}
+
+:host ::ng-deep .side.collapsed .menu-item .mdc-list-item__start {
+  margin-right: 0 !important;
+}
+
+/* ==========================================================================
+   Sidebar Footer: Collapse Button unten
+   ========================================================================== */
+
+.side-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.side.collapsed .side-footer {
+  justify-content: center;
+}
+
+.collapse-btn {
+  width: 100%;
+  height: 38px;
+  border-radius: 999px;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+/* collapsed: kompakter + zentriert */
+.side.collapsed .collapse-btn {
+  justify-content: center;
+  width: 52px;         /* wie deine Menü-Buttons */
+  min-width: 52px;
+  padding: 0;
+}
+
+/* ==========================================================================
+   Topbar + Content
+   ========================================================================== */
+
+.topbar {
+  flex: 0 0 auto;
+}
+
+.content {
+  flex: 1 1 auto;            /* nimmt Resthöhe */
+  overflow: auto;            /* <-- NUR hier scrollen */
+  padding: 16px;
+}
+
+.hide-desktop {
+  display: none;
+}
 
 @media (max-width: 900px) {
-  .hide-desktop { display:inline-flex; }
+  .hide-desktop {
+    display: inline-flex;
+  }
 }
-@media (max-width: 640px) {
-  .hide-sm { display:none; }
-}
-
-/* Optional: Material-List noch kompakter erzwingen */
-:host ::ng-deep .mat-mdc-list-item.mdc-list-item { min-height:36px; padding:0 6px; }
-:host ::ng-deep .mat-mdc-list-item .mdc-list-item__start { margin-right:8px; }
-:host ::ng-deep .mat-mdc-list-item .mdc-list-item__primary-text { font-size:13px; }
