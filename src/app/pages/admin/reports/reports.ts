@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-reports',
+  standalone: true,
+  selector: 'app-AdminReports',
   imports: [],
   templateUrl: './reports.html',
   styleUrl: './reports.css'

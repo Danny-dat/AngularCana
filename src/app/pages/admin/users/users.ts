@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-users',
+  standalone: true,
+  selector: 'app-admin-users',
   imports: [],
   templateUrl: './users.html',
   styleUrl: './users.css'

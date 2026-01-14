@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-promo',
+  standalone: true,
+  selector: 'app-AdminPromo',
   imports: [],
   templateUrl: './promo.html',
   styleUrl: './promo.css'
