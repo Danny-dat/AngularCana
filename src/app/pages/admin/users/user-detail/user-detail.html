@@ -1,0 +1,96 @@
+@if (vm$ | async; as vm) {
+  <div class="page">
+    <a class="back" routerLink="/admin/users">
+      <mat-icon>arrow_back</mat-icon>
+      Zurück zur Liste
+    </a>
+
+    <mat-card class="card">
+      <div class="head">
+
+        @if (vm.photoURL) {
+          <div class="avatar">
+            <img [src]="vm.photoURL" alt="avatar" />
+          </div>
+        } @else {
+          <div class="avatar placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+        }
+
+        <div class="meta">
+          <div class="name">{{ vm.displayName }}</div>
+
+          <div class="sub">
+            @if (vm.username) {
+              <span>{{ vm.username }}</span>
+            }
+            <code>{{ vm.uid }}</code>
+          </div>
+
+          <mat-chip-set>
+            <mat-chip>{{ vm.roleLabel }}</mat-chip>
+            <mat-chip>{{ vm.statusLabel }}</mat-chip>
+          </mat-chip-set>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <div class="grid">
+        <div class="kv">
+          <div class="k">Letzte Aktivität</div>
+          <div class="v">
+            {{ vm.lastActiveAt ? (vm.lastActiveAt.toDate?.() || vm.lastActiveAt) : '—' }}
+          </div>
+        </div>
+
+        <div class="kv">
+          <div class="k">Ban / Lock Grund</div>
+          <div class="v">{{ vm.ban?.reason || '—' }}</div>
+        </div>
+
+        <div class="kv">
+          <div class="k">Deleted At</div>
+          <div class="v">
+            {{ vm.deletedAt ? (vm.deletedAt.toDate?.() || vm.deletedAt) : '—' }}
+          </div>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card class="card actions">
+      <h3>Aktionen</h3>
+      <p class="hint">
+        Phase 2: Bann / Sperre / Delete / Restore werden hier aktiviert.
+      </p>
+
+      <div class="btns">
+        <button mat-stroked-button disabled>
+          <mat-icon>gavel</mat-icon>
+          Bannen
+        </button>
+
+        <button mat-stroked-button disabled>
+          <mat-icon>lock_clock</mat-icon>
+          Sperren
+        </button>
+
+        <button mat-stroked-button disabled>
+          <mat-icon>lock_open</mat-icon>
+          Entsperren
+        </button>
+
+        <button mat-stroked-button disabled>
+          <mat-icon>delete</mat-icon>
+          Soft Delete
+        </button>
+
+        <button mat-stroked-button disabled>
+          <mat-icon>restore</mat-icon>
+          Restore
+        </button>
+      </div>
+    </mat-card>
+  </div>
+}

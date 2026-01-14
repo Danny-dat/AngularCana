@@ -1,24 +1,43 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { AdminStatsService } from '../services/admin-stats.service';
+import { map, startWith } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { CommonModule } from '@angular/common';
+
+type Kpi = { label: string; value: string; icon: string; link: string };
 
 @Component({
   standalone: true,
   selector: 'app-admin-dashboard',
-  imports: [RouterLink, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
 export class AdminDashboardComponent {
-  kpis = [
-    { label: 'Users', value: '1,248', icon: 'group', link: '/admin/users' },
-    { label: 'Reports', value: '12', icon: 'description', link: '/admin/reports' },
-    { label: 'Events (live)', value: '3', icon: 'event', link: '/admin/events' },
-    { label: 'Active Promos', value: '5', icon: 'local_offer', link: '/admin/promo' },
-    { label: 'Conversion', value: '4.7%', icon: 'insights', link: '/admin/statistics' },
-  ];
+  private stats = inject(AdminStatsService);
+  private nf = new Intl.NumberFormat('de-DE');
+
+  /** KPIs dynamisch: Users live, Rest erstmal hardcoded */
+  kpis$: Observable<Kpi[]> = this.stats.usersCount$.pipe(
+    map((count) => [
+      { label: 'Users', value: this.nf.format(count), icon: 'group', link: '/admin/users' },
+      { label: 'Reports', value: '12', icon: 'description', link: '/admin/reports' },
+      { label: 'Events (live)', value: '3', icon: 'event', link: '/admin/events' },
+      { label: 'Active Promos', value: '5', icon: 'local_offer', link: '/admin/promo' },
+      { label: 'Conversion', value: '4.7%', icon: 'insights', link: '/admin/statistics' },
+    ]),
+    startWith([
+      { label: 'Users', value: '…', icon: 'group', link: '/admin/users' },
+      { label: 'Reports', value: '12', icon: 'description', link: '/admin/reports' },
+      { label: 'Events (live)', value: '3', icon: 'event', link: '/admin/events' },
+      { label: 'Active Promos', value: '5', icon: 'local_offer', link: '/admin/promo' },
+      { label: 'Conversion', value: '4.7%', icon: 'insights', link: '/admin/statistics' },
+    ])
+  );
 
   quick = [
     { text: 'Neuen User anlegen', icon: 'person_add', link: '/admin/users' },

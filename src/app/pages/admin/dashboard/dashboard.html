@@ -13,7 +13,7 @@
 </div>
 
 <div class="grid">
-  @for (k of kpis; track k.label) {
+  @for (k of (kpis$ | async) ?? []; track k.label) {
     <mat-card class="kpi" [routerLink]="k.link">
       <div class="kpi-row">
         <span class="kpi-icon">
