@@ -1,1 +1,211 @@
-<p>events works!</p>
+<div class="events-admin">
+  <mat-card class="form-card">
+    <mat-card-header>
+      <div class="card-title">
+        <h2>{{ editingEvent ? 'Event bearbeiten' : 'Neues Event anlegen' }}</h2>
+        <p *ngIf="editingEvent" class="subtitle">Aktuelles Event: {{ editingEvent.name }}</p>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="event-form" [formGroup]="eventForm" (ngSubmit)="submit()">
+        <div class="form-grid">
+          <mat-form-field appearance="fill">
+            <mat-label>Event-Name</mat-label>
+            <input matInput formControlName="name" required placeholder="Name des Events" />
+            <mat-error *ngIf="hasError('name', 'required')">Bitte einen Namen angeben.</mat-error>
+            <mat-error *ngIf="hasError('name', 'maxlength')">
+              Maximal 120 Zeichen erlaubt.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Datum &amp; Uhrzeit</mat-label>
+            <input
+              matInput
+              type="datetime-local"
+              formControlName="start"
+              required
+              placeholder="2025-04-20T16:20"
+            />
+            <mat-error *ngIf="hasError('start', 'required')">
+              Bitte Datum und Uhrzeit auswählen.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" class="address-field">
+            <mat-label>Adresse</mat-label>
+            <textarea
+              matInput
+              formControlName="address"
+              rows="3"
+              placeholder="Straße, Hausnummer, Ort"
+            ></textarea>
+            <mat-hint>Optional</mat-hint>
+            <mat-error *ngIf="hasError('address', 'maxlength')">
+              Maximal 300 Zeichen erlaubt.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="coordinate-row">
+            <mat-form-field appearance="fill">
+              <mat-label>Breitengrad</mat-label>
+              <input matInput formControlName="lat" placeholder="z. B. 52.5200" />
+              <mat-error *ngIf="hasError('lat', 'pattern')">
+                Bitte eine gültige Dezimalzahl eingeben.
+              </mat-error>
+              <mat-error
+                *ngIf="eventForm.hasError('coordinatesPair') && eventForm.get('lat')?.touched"
+              >
+                Bitte beide Koordinaten gemeinsam angeben.
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>Längengrad</mat-label>
+              <input matInput formControlName="lng" placeholder="z. B. 13.4050" />
+              <mat-error *ngIf="hasError('lng', 'pattern')">
+                Bitte eine gültige Dezimalzahl eingeben.
+              </mat-error>
+              <mat-error
+                *ngIf="eventForm.hasError('coordinatesPair') && eventForm.get('lng')?.touched"
+              >
+                Bitte beide Koordinaten gemeinsam angeben.
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="banner-section">
+          <div class="banner-preview" *ngIf="bannerPreview; else emptyBanner">
+            <img [src]="bannerPreview" alt="Banner-Vorschau" />
+          </div>
+          <ng-template #emptyBanner>
+            <div class="banner-placeholder">
+              <span>Keine Banner-Grafik ausgewählt</span>
+            </div>
+          </ng-template>
+
+          <div class="banner-actions">
+            <button
+              mat-stroked-button
+              type="button"
+              color="primary"
+              (click)="openFileDialog()"
+              [disabled]="isSaving"
+            >
+              <mat-icon>upload</mat-icon>
+              Datei auswählen
+            </button>
+            <button
+              mat-button
+              type="button"
+              (click)="clearBannerSelection()"
+              [disabled]="!canRemoveBanner || isSaving"
+            >
+              <mat-icon>delete</mat-icon>
+              Banner entfernen
+            </button>
+           <input
+            #bannerInput
+             class="sr-only"
+             type="file"
+                accept="image/*"
+                (change)="onFileSelected($event)"
+                />
+            <p class="banner-hint" *ngIf="removeExistingBanner && !bannerFile">
+              Banner wird beim Speichern entfernt.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div class="error" *ngIf="saveError">{{ saveError }}</div>
+          <div class="button-group">
+            <button mat-raised-button color="primary" type="submit" [disabled]="isSaving">
+              {{ editingEvent ? 'Änderungen speichern' : 'Event speichern' }}
+            </button>
+            <button
+              mat-button
+              type="button"
+              (click)="cancelEdit()"
+              *ngIf="editingEvent"
+              [disabled]="isSaving"
+            >
+              Abbrechen
+            </button>
+            <mat-progress-spinner
+              *ngIf="isSaving"
+              mode="indeterminate"
+              diameter="24"
+              strokeWidth="4"
+            ></mat-progress-spinner>
+          </div>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="list-card">
+    <mat-card-header>
+      <div class="card-title">
+        <h2>Vorhandene Events</h2>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <ng-container *ngIf="events$ | async as events; else loading">
+        <p class="empty" *ngIf="!events.length">Noch keine Events gespeichert.</p>
+
+        <mat-list *ngIf="events.length">
+          <mat-list-item
+            *ngFor="let event of events; trackBy: trackById"
+            [class.is-deleting]="pendingDeleteIds.has(event.id)"
+          >
+            <div matListItemTitle>{{ event.name }}</div>
+            <div matListItemLine>
+              {{ event.startTimestamp ? (event.startTimestamp | date: 'medium') : 'Kein Datum' }}
+            </div>
+            <div matListItemLine class="address-line">
+              {{ event.address || 'Keine Adresse hinterlegt' }}
+            </div>
+            <div class="list-actions" matListItemMeta>
+              <button
+                mat-icon-button
+                type="button"
+                color="primary"
+                (click)="edit(event)"
+                [disabled]="isSaving || pendingDeleteIds.has(event.id)"
+                matTooltip="Bearbeiten"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                color="warn"
+                (click)="delete(event)"
+                [disabled]="pendingDeleteIds.has(event.id) || isSaving"
+                matTooltip="Löschen"
+              >
+                <mat-icon *ngIf="!pendingDeleteIds.has(event.id)">delete</mat-icon>
+                <mat-progress-spinner
+                  *ngIf="pendingDeleteIds.has(event.id)"
+                  diameter="20"
+                  strokeWidth="4"
+                  mode="indeterminate"
+                ></mat-progress-spinner>
+              </button>
+            </div>
+          </mat-list-item>
+        </mat-list>
+      </ng-container>
+      <ng-template #loading>
+        <div class="loading">
+          <mat-progress-spinner mode="indeterminate" diameter="32" strokeWidth="4"></mat-progress-spinner>
+          <span>Events werden geladen…</span>
+        </div>
+      </ng-template>
+      <div class="error" *ngIf="deleteError">{{ deleteError }}</div>
+    </mat-card-content>
+  </mat-card>
+</div>
