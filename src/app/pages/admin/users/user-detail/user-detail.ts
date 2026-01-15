@@ -39,6 +39,25 @@ type BanDoc = {
   reason?: string;
 };
 
+type Vm = {
+  uid: string;
+  displayName: string;
+  username: string;
+  photoURL: string | null;
+
+  roleLabel: 'admin' | 'user';
+  status: UserStatus;
+  statusLabel: string;
+
+  lastActiveAt: any | null;
+  deletedAt: any | null;
+  ban: BanDoc | null;
+
+  lockUntil: any | null;
+
+  isOwner: boolean;
+};
+
 @Component({
   standalone: true,
   selector: 'app-admin-user-detail',
@@ -108,7 +127,7 @@ export class AdminUserDetailComponent {
     )
   );
 
-  vm$ = combineLatest([
+  vm$: Observable<Vm> = combineLatest([
     this.uid$,
     this.userDoc$,
     this.profile$,
@@ -143,12 +162,17 @@ export class AdminUserDetailComponent {
         displayName,
         username: profile?.username ? `@${profile.username}` : '',
         photoURL: profile?.photoURL ?? null,
+
         roleLabel: isAdmin ? 'admin' : 'user',
         status,
         statusLabel,
+
         lastActiveAt: profile?.lastActiveAt ?? null,
         deletedAt,
-        ban,
+        ban: ban ?? null,
+
+        lockUntil: (ban?.type === 'lock' && ban?.until) ? ban.until : null,
+        
         isOwner: uid === this.OWNER_UID,
       };
     })

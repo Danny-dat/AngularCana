@@ -1,4 +1,6 @@
-@if (vm$ | async; as vm) {
+@let vm = (vm$ | async);
+
+@if (vm) {
   <div class="page">
     <a class="back" routerLink="/admin/users">
       <mat-icon>arrow_back</mat-icon>
@@ -61,32 +63,59 @@
 
     <mat-card class="card actions">
       <h3>Aktionen</h3>
+
       <p class="hint">
-        Phase 2: Bann / Sperre / Delete / Restore werden hier aktiviert.
+        Status: <b>{{ vm.statusLabel }}</b>
+        @if (vm.isOwner) { · <b>OWNER (geschützt)</b> }
+        @if (vm.lockUntil) {
+          · bis: <b>{{ vm.lockUntil.toDate?.() || vm.lockUntil }}</b>
+        }
       </p>
 
       <div class="btns">
-        <button mat-stroked-button disabled>
+        <button
+          mat-stroked-button
+          color="warn"
+          [disabled]="vm.isOwner"
+          (click)="onBan(vm.uid)"
+        >
           <mat-icon>gavel</mat-icon>
           Bannen
         </button>
 
-        <button mat-stroked-button disabled>
+        <button
+          mat-stroked-button
+          [disabled]="vm.isOwner"
+          (click)="onLock(vm.uid)"
+        >
           <mat-icon>lock_clock</mat-icon>
           Sperren
         </button>
 
-        <button mat-stroked-button disabled>
+        <button
+          mat-stroked-button
+          [disabled]="vm.isOwner || !vm.ban"
+          (click)="onUnlock(vm.uid)"
+        >
           <mat-icon>lock_open</mat-icon>
           Entsperren
         </button>
 
-        <button mat-stroked-button disabled>
+        <button
+          mat-stroked-button
+          color="warn"
+          [disabled]="vm.isOwner || vm.status === 'deleted'"
+          (click)="onSoftDelete(vm.uid)"
+        >
           <mat-icon>delete</mat-icon>
           Soft Delete
         </button>
 
-        <button mat-stroked-button disabled>
+        <button
+          mat-stroked-button
+          [disabled]="vm.status !== 'deleted'"
+          (click)="onRestore(vm.uid)"
+        >
           <mat-icon>restore</mat-icon>
           Restore
         </button>
