@@ -93,9 +93,13 @@ code { font-size: 11px; }
   text-overflow: ellipsis;
 }
 
+/* Aktionen-Spalte: NICHT flex auf dem <td> */
 .actions {
-  display: flex;
-  justify-content: flex-end;
+  display: table-cell;        /* sorgt dafür, dass es wie ein normales td bleibt */
+  vertical-align: middle;     /* Icon mittig zur Zeilenhöhe */
+  text-align: center;         /* oder right, wenn du rechts willst */
+  padding: 0 8px;
+  white-space: nowrap;
 }
 
 /* Empty-State */
