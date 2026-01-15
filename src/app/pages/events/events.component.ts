@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { EventsService, EventItem } from '../../services/events.service';
+import { EventSuggestionsService } from '../../services/event-suggestions.service';
 import { Auth } from '@angular/fire/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -11,6 +12,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 })
 export class EventsComponent {
   private eventsSvc = inject(EventsService);
+  private suggestSvc = inject(EventSuggestionsService);
   private auth = inject(Auth);
 
   private readonly CONFIRM_KEY = 'maps.confirm.skip';
@@ -32,11 +34,78 @@ export class EventsComponent {
   dontAskAgain = signal<boolean>(false);
   skipConfirm = signal<boolean>(false);
 
+  // Vorschlag-Modal
+  suggestOpen = signal<boolean>(false);
+  sName = signal<string>('');
+  sAddress = signal<string>('');
+  sLat = signal<string>('');
+  sLng = signal<string>('');
+  sNote = signal<string>('');
+  suggestBusy = signal<boolean>(false);
+
   constructor() {
     this.events$.subscribe(this.eventsSig.set);
     onAuthStateChanged(this.auth, (u) => this.uid.set(u?.uid ?? null));
 
     try { this.skipConfirm.set(localStorage.getItem(this.CONFIRM_KEY) === '1'); } catch {}
+  }
+
+  // ─────────────────────────────────────────────
+  // Vorschlag machen
+  // ─────────────────────────────────────────────
+
+  openSuggest() {
+    if (!this.uid()) {
+      alert('Bitte zuerst einloggen.');
+      return;
+    }
+    this.sName.set('');
+    this.sAddress.set('');
+    this.sLat.set('');
+    this.sLng.set('');
+    this.sNote.set('');
+    this.suggestBusy.set(false);
+    this.suggestOpen.set(true);
+  }
+
+  cancelSuggest() {
+    this.suggestOpen.set(false);
+  }
+
+  async submitSuggest() {
+    const uid = this.uid();
+    if (!uid) return;
+
+    const name = this.sName().trim();
+    if (!name) {
+      alert('Bitte gib mindestens einen Event-Namen an.');
+      return;
+    }
+
+    const display =
+      this.auth.currentUser?.displayName ||
+      this.auth.currentUser?.email ||
+      uid;
+
+    this.suggestBusy.set(true);
+    try {
+      await this.suggestSvc.createSuggestion({
+        createdBy: uid,
+        createdByName: display,
+        name,
+        address: this.sAddress().trim() || null,
+        lat: this.sLat().trim() ? Number(this.sLat().trim()) : null,
+        lng: this.sLng().trim() ? Number(this.sLng().trim()) : null,
+        note: this.sNote().trim() || null,
+      });
+      this.suggestOpen.set(false);
+      alert('Danke! Dein Vorschlag wurde an die Admins geschickt.');
+    } catch (e) {
+      console.error('suggest failed', e);
+      alert('Vorschlag konnte nicht gesendet werden.');
+    } finally {
+      this.suggestBusy.set(false);
+    }
   }
 
   isUpvoted = (e: EventItem) => !!this.uid() && !!e.upvotes?.includes(this.uid()!);

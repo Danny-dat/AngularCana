@@ -1,1 +1,155 @@
-<p>events works!</p>
+<div class="page">
+  <header class="header">
+    <div>
+      <h2>Events verwalten</h2>
+      <p class="muted">
+        Events anlegen, bearbeiten und löschen – und Vorschläge aus der Community übernehmen.
+      </p>
+    </div>
+
+    <button mat-flat-button color="primary" (click)="onCreateEvent()">
+      + Neues Event
+    </button>
+  </header>
+
+  <section class="card">
+    <div class="card-header">
+      <h3>Events</h3>
+
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>Suchen</mat-label>
+        <input matInput [formControl]="searchEventsCtrl" placeholder="Name / Adresse / Koordinaten" />
+      </mat-form-field>
+    </div>
+
+    <table mat-table [dataSource]="(eventsFiltered$ | async) ?? []" class="table">
+      <!-- Name -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let e">
+          <div class="cell-title">{{ e.name }}</div>
+        </td>
+      </ng-container>
+
+      <!-- Address -->
+      <ng-container matColumnDef="address">
+        <th mat-header-cell *matHeaderCellDef>Adresse</th>
+        <td mat-cell *matCellDef="let e">
+          <div class="cell-sub">{{ e.address || '—' }}</div>
+        </td>
+      </ng-container>
+
+      <!-- Coords -->
+      <ng-container matColumnDef="coords">
+        <th mat-header-cell *matHeaderCellDef>Koordinaten</th>
+        <td mat-cell *matCellDef="let e">
+          <code>{{ e.lat }}, {{ e.lng }}</code>
+        </td>
+      </ng-container>
+
+      <!-- Votes -->
+      <ng-container matColumnDef="votes">
+        <th mat-header-cell *matHeaderCellDef>Votes</th>
+        <td mat-cell *matCellDef="let e">
+          <span class="pill up">👍 {{ e.upvotes?.length || 0 }}</span>
+          <span class="pill down">👎 {{ e.downvotes?.length || 0 }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Actions -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions">Aktionen</th>
+        <td mat-cell *matCellDef="let e" class="actions">
+          <button mat-icon-button (click)="onEditEvent(e)" aria-label="Bearbeiten">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button (click)="onDeleteEvent(e)" aria-label="Löschen">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedEvents"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedEvents"></tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3>Vorschläge</h3>
+
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>Suchen</mat-label>
+        <input matInput [formControl]="searchSuggestCtrl" placeholder="Name / Adresse / User" />
+      </mat-form-field>
+    </div>
+
+    <table mat-table [dataSource]="(suggestionsFiltered$ | async) ?? []" class="table">
+      <!-- Created -->
+      <ng-container matColumnDef="createdAt">
+        <th mat-header-cell *matHeaderCellDef>Datum</th>
+        <td mat-cell *matCellDef="let s">
+          {{ asDate(s.createdAt) | date: 'short' }}
+        </td>
+      </ng-container>
+
+      <!-- Name -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Vorschlag</th>
+        <td mat-cell *matCellDef="let s">
+          <div class="cell-title">{{ s.name }}</div>
+          <div class="cell-sub">{{ s.address || '—' }}</div>
+          @if (s.note) {
+            <div class="cell-note">{{ s.note }}</div>
+          }
+          @if (s.lat && s.lng) {
+            <div class="cell-sub"><code>{{ s.lat }}, {{ s.lng }}</code></div>
+          }
+        </td>
+      </ng-container>
+
+      <!-- CreatedBy -->
+      <ng-container matColumnDef="createdBy">
+        <th mat-header-cell *matHeaderCellDef>User</th>
+        <td mat-cell *matCellDef="let s">
+          <div class="cell-title">{{ s.createdByName || (s.createdBy | slice:0:10) }}</div>
+          <div class="cell-sub">{{ s.createdBy }}</div>
+        </td>
+      </ng-container>
+
+      <!-- Status -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let s">
+          <span class="status" [attr.data-status]="s.status">{{ s.status }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Actions -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions">Aktionen</th>
+        <td mat-cell *matCellDef="let s" class="actions">
+          <button mat-icon-button (click)="openChatWith(s.createdBy)" aria-label="Chat">
+            <mat-icon>chat</mat-icon>
+          </button>
+          <button mat-icon-button (click)="acceptSuggestionAsEvent(s)" aria-label="Als Event übernehmen">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+          <button mat-icon-button (click)="setSuggestionStatus(s, 'resolved')" aria-label="Erledigt">
+            <mat-icon>done</mat-icon>
+          </button>
+          <button mat-icon-button (click)="setSuggestionStatus(s, 'rejected')" aria-label="Ablehnen">
+            <mat-icon>close</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedSuggestions"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedSuggestions"></tr>
+    </table>
+
+    <p class="hint">
+      Tipp: „Als Event übernehmen“ klappt nur, wenn Lat/Lng vorhanden sind – sonst zuerst im Chat klären.
+    </p>
+  </section>
+</div>

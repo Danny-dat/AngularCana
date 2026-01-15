@@ -22,6 +22,10 @@
     @if (uid()) {
       <div class="ev-stats"><span class="badge">Meine Likes: {{ likedCount() }}</span></div>
     }
+
+    <button class="btn primary" (click)="openSuggest()" title="Event vorschlagen">
+      + Vorschlagen
+    </button>
   </div>
 </header>
 
@@ -63,6 +67,58 @@
   <div class="ev-empty">
     <div>Keine passenden Events gefunden.</div>
     <small>Tipp: Filter deaktivieren oder Suchbegriff ändern.</small>
+  </div>
+}
+
+<!-- === Vorschlag-Modal === -->
+@if (suggestOpen()) {
+  <div class="modal-backdrop" (click)="cancelSuggest()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">Event vorschlagen</div>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Schreib deinen Vorschlag hier rein – die Admins bekommen automatisch eine Chat-Nachricht.
+        </p>
+
+        <div class="form-grid">
+          <label>
+            <span>Event-Name *</span>
+            <input type="text" [value]="sName()" (input)="sName.set($any($event.target).value)" placeholder="z.B. Smoke Session am See" />
+          </label>
+
+          <label>
+            <span>Adresse / Ort</span>
+            <input type="text" [value]="sAddress()" (input)="sAddress.set($any($event.target).value)" placeholder="z.B. Berlin, Treptower Park" />
+          </label>
+
+          <div class="two">
+            <label>
+              <span>Lat (optional)</span>
+              <input type="number" inputmode="decimal" [value]="sLat()" (input)="sLat.set($any($event.target).value)" placeholder="52.5" />
+            </label>
+            <label>
+              <span>Lng (optional)</span>
+              <input type="number" inputmode="decimal" [value]="sLng()" (input)="sLng.set($any($event.target).value)" placeholder="13.4" />
+            </label>
+          </div>
+
+          <label>
+            <span>Notiz</span>
+            <textarea rows="4" [value]="sNote()" (input)="sNote.set($any($event.target).value)" placeholder="Was soll passieren? Wann ungefähr? Besonderheiten?"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn outline" (click)="cancelSuggest()" [disabled]="suggestBusy()">Abbrechen</button>
+        <button class="btn primary" (click)="submitSuggest()" [disabled]="suggestBusy()">
+          @if (suggestBusy()) { Sende… } @else { Abschicken }
+        </button>
+      </div>
+    </div>
   </div>
 }
 

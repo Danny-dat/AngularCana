@@ -9,6 +9,10 @@ import {
   runTransaction,
   arrayUnion,
   arrayRemove,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
 } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 
@@ -69,6 +73,48 @@ export class EventsService {
         }
       }
     });
+  }
+
+  // ─────────────────────────────────────────────
+  // Admin: CRUD
+  // ─────────────────────────────────────────────
+
+  async createEvent(params: { name: string; address?: string | null; lat: number; lng: number; [k: string]: any }) {
+    const name = (params.name ?? '').trim();
+    if (!name) throw new Error('NAME_REQUIRED');
+
+    const lat = Number(params.lat);
+    const lng = Number(params.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('COORDS_REQUIRED');
+
+    const payload: any = {
+      name,
+      address: (params.address ?? '').toString().trim() || null,
+      lat,
+      lng,
+      upvotes: [],
+      downvotes: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // optionale zusätzliche Felder
+    for (const k of Object.keys(params)) {
+      if (['name', 'address', 'lat', 'lng'].includes(k)) continue;
+      payload[k] = (params as any)[k];
+    }
+
+    const ref = await addDoc(this.col, payload);
+    return ref.id;
+  }
+
+  async updateEvent(eventId: string, patch: Partial<EventItem>) {
+    const ref = doc(this.fs, 'events', eventId);
+    await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() } as any);
+  }
+
+  async deleteEvent(eventId: string) {
+    await deleteDoc(doc(this.fs, 'events', eventId));
   }
 
   // ---------- Helpers ----------
