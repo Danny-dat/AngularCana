@@ -29,3 +29,10 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .icon.danger:hover { background: rgba(220,38,38,.08); }
 .icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
 .icon.danger { color: #b91c1c; }
+
+.report-body { padding: 12px; }
+.report-label { display:block; font-size:12px; opacity:.8; margin: 6px 0; }
+.report-body .select, .report-body .input { width: 100%; box-sizing: border-box; }
+.report-body textarea { resize: vertical; min-height: 80px; }
+.report-actions { display:flex; justify-content:flex-end; gap:8px; margin-top: 12px; }
+.report-error { margin-top: 8px; color:#d32f2f; font-size:12px; }

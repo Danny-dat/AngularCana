@@ -10,9 +10,11 @@ import { provideFirestore, getFirestore, connectFirestoreEmulator } from '@angul
 import { environment } from '../environments/environments'; // oder '../environments/environment'
 import { isPlatformBrowser } from '@angular/common';
 import { AdService } from './services/ad.service';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideNativeDateAdapter(),
     provideRouter(routes),
     importProvidersFrom(FormsModule),
     provideHttpClient(withInterceptorsFromDi(), withFetch()),

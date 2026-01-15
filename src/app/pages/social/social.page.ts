@@ -10,7 +10,13 @@ import { FriendsService } from '../../services/friends.services';
 import { PresenceService } from '../../services/presence.service';
 import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
 
-type ReportEvent = { userId: string; messageId?: string | null; text: string };
+type ReportEvent = {
+  userId: string;
+  messageId?: string | null;
+  text: string;
+  reasonCategory: string;
+  reasonText?: string | null;
+};
 
 @Component({
   standalone: true,
@@ -294,33 +300,43 @@ export class SocialPage implements OnDestroy {
   }
 
   // Report aus dem ChatOverlay
-  async onReport(evt: ReportEvent) {
-    const me = this.user().uid;
-    const cid = this.currentChatId();
-    if (!me || !cid) return;
+async onReport(evt: ReportEvent) {
+  const me = this.user().uid;
+  const cid = this.currentChatId();
+  if (!me || !cid) return;
 
-    try {
-      await addDoc(collection(this.afs, 'reports'), {
-        type: 'chat_message',
-        scope: 'direct',
-        chatId: cid,
+  // Guard / Normalisierung (sicherer)
+  const cat = (evt.reasonCategory || '').trim();
+  const note = (evt.reasonText ?? '').toString().trim();
+  if (!cat) return;
 
-        reporterId: me,
-        reportedId: evt.userId,
+  try {
+    await addDoc(collection(this.afs, 'reports'), {
+      type: 'chat_message',
+      scope: 'direct',
+      chatId: cid,
 
-        messageId: evt.messageId ?? null,
-        messageText: evt.text ?? '',
+      reporterId: me,
+      reportedId: evt.userId,
 
-        status: 'new',
-        createdAt: serverTimestamp(),
-      });
+      messageId: evt.messageId ?? null,
+      messageText: evt.text ?? '',
 
-      alert('Danke! Die Nachricht wurde gemeldet.');
-    } catch (e) {
-      console.error('Report fehlgeschlagen', e);
-      alert('Melden hat nicht funktioniert.');
-    }
+      // hier die normalisierten Werte nutzen
+      reasonCategory: cat,
+      reasonText: note ? note : null,
+
+      status: 'new',
+      createdAt: serverTimestamp(),
+    });
+
+    alert('Danke! Die Nachricht wurde gemeldet.');
+  } catch (e) {
+    console.error('Report fehlgeschlagen', e);
+    alert('Melden hat nicht funktioniert.');
   }
+}
+
 
   // Cleanup
   ngOnDestroy() {

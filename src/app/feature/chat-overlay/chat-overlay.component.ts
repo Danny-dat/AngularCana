@@ -3,6 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FriendPublicProfile, ChatMessage } from '../../models/social.models';
 
+type ReportPayload = {
+  userId: string;
+  messageId?: string;
+  text: string;
+  reasonCategory: string;
+  reasonText?: string | null;
+};
+
 @Component({
   standalone: true,
   selector: 'app-chat-overlay',
@@ -25,7 +33,26 @@ export class ChatOverlayComponent {
 
   // neue Aktionen:
   @Output() addFriend = new EventEmitter<string>(); // userId
-  @Output() report = new EventEmitter<{ userId: string; messageId?: string; text: string }>();
+  @Output() report = new EventEmitter<ReportPayload>();
+
+  // ─────────────────────────────────────────────
+  // Report-Dialog State
+  // ─────────────────────────────────────────────
+  reportOpen = false;
+  reportTarget: ChatMessage | null = null;
+
+  reportReason = 'spam';
+  reportNote = '';
+  reportError = '';
+
+  readonly reportReasons: Array<{ id: string; label: string }> = [
+    { id: 'spam', label: 'Spam / Werbung' },
+    { id: 'harassment', label: 'Belästigung / Mobbing' },
+    { id: 'hate', label: 'Hass / Hetze' },
+    { id: 'misinfo', label: 'Falsche Informationen' },
+    { id: 'illegal', label: 'Illegale Inhalte' },
+    { id: 'other', label: 'Sonstiges' },
+  ];
 
   onSend() {
     const trimmed = this.text?.trim();
@@ -54,8 +81,55 @@ export class ChatOverlayComponent {
     this.addFriend.emit(m.senderId);
   }
 
-  onReport(m: ChatMessage) {
+  // öffnet Modal statt direkt zu melden
+  openReport(m: ChatMessage) {
     if (!this.myUid || m.senderId === this.myUid) return;
-    this.report.emit({ userId: m.senderId, messageId: (m as any).id, text: m.text });
+
+    this.reportTarget = m;
+    this.reportReason = 'spam';
+    this.reportNote = '';
+    this.reportError = '';
+    this.reportOpen = true;
+  }
+
+  cancelReport() {
+    this.reportOpen = false;
+    this.reportTarget = null;
+    this.reportNote = '';
+    this.reportError = '';
+  }
+
+  confirmReport() {
+    if (!this.reportTarget || !this.myUid) return;
+
+    const reason = (this.reportReason || '').trim();
+    const note = (this.reportNote || '').trim();
+
+    if (!reason) {
+      this.reportError = 'Bitte wähle einen Grund aus.';
+      return;
+    }
+
+    // "Sonstiges" -> Text Pflicht
+    if (reason === 'other' && note.length < 3) {
+      this.reportError = 'Bitte gib bei „Sonstiges“ kurz eine Begründung an (mind. 3 Zeichen).';
+      return;
+    }
+
+    // max Länge (optional)
+    if (note.length > 300) {
+      this.reportError = 'Der Text ist zu lang (max. 300 Zeichen).';
+      return;
+    }
+
+    this.report.emit({
+      userId: this.reportTarget.senderId,
+      messageId: (this.reportTarget as any).id ?? undefined,
+      text: this.reportTarget.text,
+      reasonCategory: reason,
+      reasonText: note ? note : null,
+    });
+
+    this.cancelReport();
   }
 }
