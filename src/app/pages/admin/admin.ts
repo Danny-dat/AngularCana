@@ -44,6 +44,7 @@ export class AdminPage {
   // Sidebar navigation
   nav: AdminNavItem[] = [
     { label: 'Dashboard',  link: '/admin/dashboard',  icon: 'dashboard' },
+    { label: 'Admins',     link: '/admin/admins',     icon: 'admin_panel_settings' },
     { label: 'Users',      link: '/admin/users',      icon: 'group' },
     { label: 'Reports',    link: '/admin/reports',    icon: 'description' },
     { label: 'Events',     link: '/admin/events',     icon: 'event' },
