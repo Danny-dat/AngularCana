@@ -51,6 +51,7 @@
     "@types/leaflet": "^1.9.20",
     "@types/node": "^20.17.19",
     "@types/qrcode": "^1.5.5",
+    "baseline-browser-mapping": "^2.9.14",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
