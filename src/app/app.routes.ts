@@ -41,7 +41,11 @@ export const routes: Routes = [
       },
     ],
   },
-
+  {
+    path: 'account-blocked',
+    loadComponent: () =>
+      import('./pages/admin/dialogs/account-blocked').then(m => m.AccountBlockedComponent),
+  },
   // --- App-Layout: mit Header ---
   {
     path: '',

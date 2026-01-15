@@ -21,3 +21,24 @@
 .auth-switch { color:var(--primary-color); cursor:pointer; margin-top:20px; font-size:14px; }
 .footer-banner { width:100%; max-width:400px; margin:20px 0; }
 .footer-banner img { width:100%; border-radius:var(--border-radius); }
+.auth-switch.small { margin-top: 8px; }
+
+.error-message{
+  margin-top:12px;
+  color:#b91c1c;
+  background:#fee2e2;
+  border:1px solid #fecaca;
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:14px;
+}
+
+.info-message{
+  margin-top:12px;
+  color:#065f46;
+  background:#d1fae5;
+  border:1px solid #a7f3d0;
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:14px;
+}

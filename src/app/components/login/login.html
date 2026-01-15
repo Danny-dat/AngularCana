@@ -32,11 +32,23 @@
     <a routerLink="/register">Noch kein Account? Registrieren</a>
   </p>
 
+  <p class="auth-switch small">
+    <a href="" (click)="$event.preventDefault(); doResetPassword()">
+      Passwort vergessen?
+    </a>
+  </p>
+
   @if (errorMessage) {
     <div class="error-message" role="alert" aria-live="polite">
       {{ errorMessage }}
     </div>
   }
+
+  @if (infoMessage) {
+  <div class="info-message" role="status" aria-live="polite">
+    {{ infoMessage }}
+  </div>
+}
 
     <promo-slot
       slotId="login-werbung1"
