@@ -1,1 +1,107 @@
-<p>reports works!</p>
+<div class="page">
+  <div class="header">
+    <h2>Reports</h2>
+
+    <div class="filters">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>Suche (UID / Text / ChatId)</mat-label>
+        <input matInput [formControl]="searchCtrl" />
+        <button matSuffix mat-icon-button *ngIf="searchCtrl.value" (click)="searchCtrl.setValue('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="status">
+        <mat-label>Status</mat-label>
+        <mat-select [formControl]="statusCtrl">
+          <mat-option value="all">Alle</mat-option>
+          <mat-option value="new">Neu</mat-option>
+          <mat-option value="in_review">In Prüfung</mat-option>
+          <mat-option value="resolved">Erledigt</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <table mat-table [dataSource]="(rows$ | async) || []" class="table">
+
+    <ng-container matColumnDef="createdAt">
+      <th mat-header-cell *matHeaderCellDef>Datum</th>
+      <td mat-cell *matCellDef="let r">
+        {{ r.createdAtDate ? (r.createdAtDate | date:'dd.MM.yyyy, HH:mm') : '—' }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="scope">
+      <th mat-header-cell *matHeaderCellDef>Bereich</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-chip class="chip">{{ r.scopeLabel }}</mat-chip>
+        <div class="sub" *ngIf="r.chatId"><code>{{ r.chatId }}</code></div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="reporter">
+      <th mat-header-cell *matHeaderCellDef>Reporter</th>
+      <td mat-cell *matCellDef="let r">
+        <a [routerLink]="['/admin/users', r.reporterId]" class="uid-link">
+          <code>{{ r.reporterId }}</code>
+        </a>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="reported">
+      <th mat-header-cell *matHeaderCellDef>Gemeldet</th>
+      <td mat-cell *matCellDef="let r">
+        <a [routerLink]="['/admin/users', r.reportedId]" class="uid-link">
+          <code>{{ r.reportedId }}</code>
+        </a>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="message">
+      <th mat-header-cell *matHeaderCellDef>Nachricht</th>
+      <td mat-cell *matCellDef="let r">
+        <div class="msg">{{ r.messageText || '—' }}</div>
+        <div class="sub" *ngIf="r.messageId">msgId: <code>{{ r.messageId }}</code></div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-chip class="chip"
+          [class.chip-new]="r.statusFixed === 'new'"
+          [class.chip-review]="r.statusFixed === 'in_review'"
+          [class.chip-resolved]="r.statusFixed === 'resolved'">
+          {{ r.statusLabel }}
+        </mat-chip>
+
+        <div class="sub" *ngIf="r.assignedTo">assigned: <code>{{ r.assignedTo }}</code></div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+      <td mat-cell *matCellDef="let r" class="actions">
+        <button mat-icon-button (click)="assignToMe(r)" [disabled]="r.statusFixed === 'resolved'" title="Mir zuweisen">
+          <mat-icon>person</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="markInReview(r)" [disabled]="r.statusFixed === 'resolved'" title="In Prüfung">
+          <mat-icon>rule</mat-icon>
+        </button>
+
+        <button mat-icon-button color="primary" (click)="resolve(r)" [disabled]="r.statusFixed === 'resolved'" title="Erledigen">
+          <mat-icon>done</mat-icon>
+        </button>
+
+        <button mat-icon-button color="warn" *ngIf="r.statusFixed === 'resolved'" (click)="reopen(r)" title="Wieder öffnen">
+          <mat-icon>restart_alt</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</div>

@@ -197,6 +197,10 @@
     [partner]="partner()"
     [messages]="messages()"
     [text]="chatInput()" (textChange)="chatInput.set($event)"
+
+    [myUid]="user().uid"
+    (report)="onReport($event)"
+
     (close)="closeChat()"
     (send)="sendMsg($event)"
   ></app-chat-overlay>

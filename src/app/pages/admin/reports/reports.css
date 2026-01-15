@@ -1,0 +1,73 @@
+.page {
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search {
+  min-width: 320px;
+  max-width: 520px;
+  flex: 1;
+}
+
+.status {
+  width: 200px;
+}
+
+.table {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.uid-link {
+  text-decoration: none;
+}
+
+.sub {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.msg {
+  max-width: 520px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.chip {
+  font-size: 12px;
+}
+
+.chip-new {
+  /* nur leichte visuelle Abhebung */
+  opacity: 0.95;
+}
+
+.chip-review {
+  font-weight: 600;
+}
+
+.chip-resolved {
+  opacity: 0.8;
+}

@@ -2,11 +2,15 @@ import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
+import { Firestore, addDoc, collection, serverTimestamp } from '@angular/fire/firestore';
+
 import { FriendRequest, FriendPublicProfile } from '../../models/social.models';
 import { ChatService } from '../../services/chat.services';
 import { FriendsService } from '../../services/friends.services';
 import { PresenceService } from '../../services/presence.service';
 import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
+
+type ReportEvent = { userId: string; messageId?: string | null; text: string };
 
 @Component({
   standalone: true,
@@ -21,6 +25,7 @@ export class SocialPage implements OnDestroy {
   private chat = inject(ChatService);
   private auth = inject(Auth);
   private presence = inject(PresenceService); // nur zum Lesen (listen), Heartbeat läuft global
+  private afs = inject(Firestore);
 
   // Subscriptions/Listener
   private subs: Array<() => void> = [];
@@ -57,6 +62,9 @@ export class SocialPage implements OnDestroy {
   messages = signal<any[]>([]);
   chatInput = signal('');
 
+  // wichtig für Reports im Direct-Chat
+  private currentChatId = signal<string | null>(null);
+
   constructor() {
     onAuthStateChanged(this.auth, (u: User | null) => {
       // bestehende Listener sauber beenden
@@ -75,6 +83,8 @@ export class SocialPage implements OnDestroy {
         this.showChat.set(false);
         this.partner.set(null);
         this.messages.set([]);
+        this.chatInput.set('');
+        this.currentChatId.set(null);
         return;
       }
 
@@ -233,8 +243,9 @@ export class SocialPage implements OnDestroy {
 
     this.partner.set(friend);
 
-    // NEU: Chat-ID über den Service berechnen
+    // Chat-ID über den Service berechnen
     const cid = this.chat.getDirectChatId(this.user().uid, friend.id);
+    this.currentChatId.set(cid);
 
     // sicherstellen, dass der Chat existiert
     this.chat.ensureChatExists(this.user().uid, friend.id);
@@ -262,7 +273,7 @@ export class SocialPage implements OnDestroy {
     const p = this.partner();
     if (!txt || !p || !this.user().uid) return;
 
-    // ✅ NEU: vereinheitlicht über Service (Direct)
+    // vereinheitlicht über Service (Direct)
     await this.chat.sendDirect({
       fromUid: this.user().uid,
       toUid: p.id,
@@ -278,6 +289,37 @@ export class SocialPage implements OnDestroy {
     this.showChat.set(false);
     this.partner.set(null);
     this.messages.set([]);
+    this.chatInput.set('');
+    this.currentChatId.set(null);
+  }
+
+  // Report aus dem ChatOverlay
+  async onReport(evt: ReportEvent) {
+    const me = this.user().uid;
+    const cid = this.currentChatId();
+    if (!me || !cid) return;
+
+    try {
+      await addDoc(collection(this.afs, 'reports'), {
+        type: 'chat_message',
+        scope: 'direct',
+        chatId: cid,
+
+        reporterId: me,
+        reportedId: evt.userId,
+
+        messageId: evt.messageId ?? null,
+        messageText: evt.text ?? '',
+
+        status: 'new',
+        createdAt: serverTimestamp(),
+      });
+
+      alert('Danke! Die Nachricht wurde gemeldet.');
+    } catch (e) {
+      console.error('Report fehlgeschlagen', e);
+      alert('Melden hat nicht funktioniert.');
+    }
   }
 
   // Cleanup

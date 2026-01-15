@@ -123,6 +123,8 @@ async onSend(text: string) {
     if (!me) return;
     await addDoc(collection(this.afs, 'reports'), {
       type: 'chat_message',
+      scope: 'channel',
+      status: 'new',
       chatId: this.channelId,
       reporterId: me,
       reportedId: evt.userId,
