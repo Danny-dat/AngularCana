@@ -6,6 +6,16 @@ import { Auth, user } from '@angular/fire/auth';
 import { Observable, of, combineLatest, firstValueFrom } from 'rxjs';
 import { map, switchMap, catchError } from 'rxjs/operators';
 
+import {
+  setDoc,
+  deleteDoc,
+  addDoc,
+  collection,
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove,
+} from 'firebase/firestore';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,9 +25,9 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AdminModerationService } from '../../services/admin-moderation.service';
-import { BanDialogComponent } from './dialogs/ban-dialog';
-import { LockDialogComponent } from './dialogs/lock-dialog';
-import { ReasonDialogComponent } from './dialogs/reason-dialog';
+import { BanDialogComponent } from '../../dialogs/ban-dialog';
+import { LockDialogComponent } from '../../dialogs/lock-dialog';
+import { ReasonDialogComponent } from '../../dialogs/reason-dialog';
 
 type UserStatus = 'active' | 'locked' | 'banned' | 'deleted';
 
@@ -56,6 +66,7 @@ type Vm = {
   lockUntil: any | null;
 
   isOwner: boolean;
+  canManageAdmins: boolean;
 };
 
 @Component({
@@ -87,42 +98,53 @@ export class AdminUserDetailComponent {
   /** Owner darf nicht gebannt/gesperrt/gelöscht werden */
   private readonly OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
 
-  uid$: Observable<string> = this.route.paramMap.pipe(
-    map(p => p.get('uid') ?? '')
+  uid$: Observable<string> = this.route.paramMap.pipe(map((p) => p.get('uid') ?? ''));
+
+  private actorUid$ = user(this.auth).pipe(
+    map((u) => u?.uid ?? ''),
+    catchError(() => of(''))
   );
 
   private userDoc$ = this.uid$.pipe(
-    switchMap(uid =>
+    switchMap((uid) =>
       uid
-        ? (docData(doc(this.firestore, 'users', uid)) as Observable<UserDoc>)
-            .pipe(map(d => d ?? null), catchError(() => of(null)))
+        ? (docData(doc(this.firestore, 'users', uid)) as Observable<UserDoc>).pipe(
+            map((d) => d ?? null),
+            catchError(() => of(null))
+          )
         : of(null)
     )
   );
 
   private profile$ = this.uid$.pipe(
-    switchMap(uid =>
+    switchMap((uid) =>
       uid
-        ? (docData(doc(this.firestore, 'profiles_public', uid)) as Observable<PublicProfileDoc>)
-            .pipe(map(d => d ?? null), catchError(() => of(null)))
+        ? (docData(doc(this.firestore, 'profiles_public', uid)) as Observable<PublicProfileDoc>).pipe(
+            map((d) => d ?? null),
+            catchError(() => of(null))
+          )
         : of(null)
     )
   );
 
   private ban$ = this.uid$.pipe(
-    switchMap(uid =>
+    switchMap((uid) =>
       uid
-        ? (docData(doc(this.firestore, 'banlist', uid)) as Observable<BanDoc>)
-            .pipe(map(d => d ?? null), catchError(() => of(null)))
+        ? (docData(doc(this.firestore, 'banlist', uid)) as Observable<BanDoc>).pipe(
+            map((d) => d ?? null),
+            catchError(() => of(null))
+          )
         : of(null)
     )
   );
 
   private isAdmin$ = this.uid$.pipe(
-    switchMap(uid =>
+    switchMap((uid) =>
       uid
-        ? (docData(doc(this.firestore, 'admins', uid)) as Observable<any>)
-            .pipe(map(() => true), catchError(() => of(false)))
+        ? (docData(doc(this.firestore, 'admins', uid)) as Observable<any>).pipe(
+            map((d) => !!d),
+            catchError(() => of(false))
+          )
         : of(false)
     )
   );
@@ -133,8 +155,9 @@ export class AdminUserDetailComponent {
     this.profile$,
     this.ban$,
     this.isAdmin$,
+    this.actorUid$,
   ]).pipe(
-    map(([uid, userDoc, profile, ban, isAdmin]) => {
+    map(([uid, userDoc, profile, ban, isAdmin, actorUid]) => {
       const deletedAt = userDoc?.status?.deletedAt ?? null;
 
       let status: UserStatus = 'active';
@@ -152,10 +175,10 @@ export class AdminUserDetailComponent {
       }
 
       const displayName =
-        profile?.displayName?.trim()
-        || userDoc?.profile?.displayName?.trim()
-        || (profile?.username ? `@${profile.username}` : '')
-        || uid;
+        profile?.displayName?.trim() ||
+        userDoc?.profile?.displayName?.trim() ||
+        (profile?.username ? `@${profile.username}` : '') ||
+        uid;
 
       return {
         uid,
@@ -171,9 +194,10 @@ export class AdminUserDetailComponent {
         deletedAt,
         ban: ban ?? null,
 
-        lockUntil: (ban?.type === 'lock' && ban?.until) ? ban.until : null,
-        
+        lockUntil: ban?.type === 'lock' && ban?.until ? ban.until : null,
+
         isOwner: uid === this.OWNER_UID,
+        canManageAdmins: actorUid === this.OWNER_UID,
       };
     })
   );
@@ -193,6 +217,127 @@ export class AdminUserDetailComponent {
 
   private fail(msg: string) {
     this.snack.open(msg, 'OK', { duration: 3500 });
+  }
+
+  private async audit(params: {
+    action: string;
+    targetUid: string;
+    actorUid: string;
+    reason: string;
+    meta?: any;
+  }) {
+    await addDoc(collection(this.firestore as any, 'audit_logs'), {
+      timestamp: serverTimestamp(),
+      action: params.action,
+      targetUid: params.targetUid,
+      actorUid: params.actorUid,
+      reason: params.reason ?? '',
+      meta: params.meta ?? {},
+    });
+  }
+
+  // =========================
+  // Rollen (Admin ⇄ User)
+  // =========================
+  async onGrantAdmin(targetUid: string) {
+    if (!targetUid || targetUid === this.OWNER_UID) return;
+
+    const actorUid = await this.actorUid();
+    if (actorUid !== this.OWNER_UID) {
+      this.fail('Nur der Owner darf Admins vergeben.');
+      return;
+    }
+
+    const res = await firstValueFrom(
+      this.dialog
+        .open(ReasonDialogComponent, {
+          data: {
+            title: 'Zum Admin machen',
+            hint: 'Optional: Notiz / Grund.',
+            required: false,
+            confirmText: 'Admin geben',
+          },
+        })
+        .afterClosed()
+    );
+    if (!res) return;
+
+    try {
+      await setDoc(
+        doc(this.firestore, 'admins', targetUid),
+        {
+          createdAt: serverTimestamp(),
+          createdBy: actorUid,
+          note: (res.reason ?? '').trim(),
+        },
+        { merge: true }
+      );
+
+      // optional fürs UI: roles[] pflegen
+      await setDoc(
+        doc(this.firestore, 'users', targetUid),
+        { roles: arrayUnion('admin'), updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+
+      await this.audit({
+        action: 'GRANT_ADMIN',
+        targetUid,
+        actorUid,
+        reason: (res.reason ?? '').trim(),
+        meta: {},
+      });
+
+      this.ok('Admin-Rechte vergeben');
+    } catch {
+      this.fail('Konnte Admin nicht vergeben (Rules/Permissions?)');
+    }
+  }
+
+  async onRevokeAdmin(targetUid: string) {
+    if (!targetUid || targetUid === this.OWNER_UID) return;
+
+    const actorUid = await this.actorUid();
+    if (actorUid !== this.OWNER_UID) {
+      this.fail('Nur der Owner darf Admins entfernen.');
+      return;
+    }
+
+    const res = await firstValueFrom(
+      this.dialog
+        .open(ReasonDialogComponent, {
+          data: {
+            title: 'Admin entfernen',
+            hint: 'Optional: Grund.',
+            required: false,
+            confirmText: 'Admin entfernen',
+          },
+        })
+        .afterClosed()
+    );
+    if (!res) return;
+
+    try {
+      await deleteDoc(doc(this.firestore, 'admins', targetUid));
+
+      await setDoc(
+        doc(this.firestore, 'users', targetUid),
+        { roles: arrayRemove('admin'), updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+
+      await this.audit({
+        action: 'REVOKE_ADMIN',
+        targetUid,
+        actorUid,
+        reason: (res.reason ?? '').trim(),
+        meta: {},
+      });
+
+      this.ok('Admin-Rechte entfernt');
+    } catch {
+      this.fail('Konnte Admin nicht entfernen (Rules/Permissions?)');
+    }
   }
 
   // =========================
@@ -255,14 +400,16 @@ export class AdminUserDetailComponent {
     if (!targetUid || targetUid === this.OWNER_UID) return;
 
     const res = await firstValueFrom(
-      this.dialog.open(ReasonDialogComponent, {
-        data: {
-          title: 'User soft löschen',
-          hint: 'User hat danach 0 Zugriff (wie gebannt).',
-          required: true,
-          confirmText: 'Soft Delete',
-        },
-      }).afterClosed()
+      this.dialog
+        .open(ReasonDialogComponent, {
+          data: {
+            title: 'User soft löschen',
+            hint: 'User hat danach 0 Zugriff (wie gebannt).',
+            required: true,
+            confirmText: 'Soft Delete',
+          },
+        })
+        .afterClosed()
     );
 
     if (!res) return;
@@ -283,14 +430,16 @@ export class AdminUserDetailComponent {
     if (!targetUid) return;
 
     const res = await firstValueFrom(
-      this.dialog.open(ReasonDialogComponent, {
-        data: {
-          title: 'User wiederherstellen',
-          hint: 'DeletedAt wird entfernt.',
-          required: false,
-          confirmText: 'Restore',
-        },
-      }).afterClosed()
+      this.dialog
+        .open(ReasonDialogComponent, {
+          data: {
+            title: 'User wiederherstellen',
+            hint: 'DeletedAt wird entfernt.',
+            required: false,
+            confirmText: 'Restore',
+          },
+        })
+        .afterClosed()
     );
 
     if (!res) return;

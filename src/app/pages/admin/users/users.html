@@ -2,6 +2,11 @@
   <div class="header">
     <h2>Benutzerverwaltung</h2>
 
+    <button mat-flat-button color="primary" (click)="onCreateUser()">
+      <mat-icon>person_add</mat-icon>
+      Neuer User
+    </button>
+
     <mat-form-field appearance="outline" class="search">
       <mat-label>Suche (Name / Username / UID)</mat-label>
       <input matInput [formControl]="searchCtrl" />

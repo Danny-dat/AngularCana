@@ -10,8 +10,7 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { AdminAdminsService, AdminRow } from '../services/admin-admins.service';
-import { AddAdminDialogComponent } from '../users/user-detail/dialogs/add-admin-dialog';
-
+import { AddAdminDialogComponent } from '../dialogs/add-admin-dialog';
 
 @Component({
   standalone: true,
@@ -35,16 +34,24 @@ export class AdminAdminsComponent {
 
   private readonly OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
 
-  rows$: Observable<(AdminRow & { isOwner: boolean })[]> = this.adminsService.admins$().pipe(
-    map(rows =>
-      [...rows]
-        .map(r => ({ ...r, isOwner: r.uid === this.OWNER_UID }))
-        .sort((a, b) => (a.isOwner === b.isOwner ? a.uid.localeCompare(b.uid) : a.isOwner ? -1 : 1))
-    )
-  );
+  rows$: Observable<(AdminRow & { isOwner: boolean })[]> = this.adminsService
+    .admins$()
+    .pipe(
+      map((rows) =>
+        [...rows]
+          .map((r) => ({ ...r, isOwner: r.uid === this.OWNER_UID }))
+          .sort((a, b) =>
+            a.isOwner === b.isOwner ? a.uid.localeCompare(b.uid) : a.isOwner ? -1 : 1
+          )
+      )
+    );
 
-  private ok(msg: string) { this.snack.open(msg, 'OK', { duration: 2500 }); }
-  private fail(msg: string) { this.snack.open(msg, 'OK', { duration: 3500 }); }
+  private ok(msg: string) {
+    this.snack.open(msg, 'OK', { duration: 2500 });
+  }
+  private fail(msg: string) {
+    this.snack.open(msg, 'OK', { duration: 3500 });
+  }
 
   private async actorUid(): Promise<string> {
     const u = await firstValueFrom(user(this.auth));

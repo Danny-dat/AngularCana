@@ -120,6 +120,36 @@
           Restore
         </button>
       </div>
+
+      <mat-divider></mat-divider>
+
+      <h3 style="margin-top: 12px;">Rollen</h3>
+      @if (!vm.canManageAdmins) {
+        <p class="hint">Hinweis: Admin-Rollen können nur vom Owner geändert werden.</p>
+      } @else {
+        <div class="btns" style="margin-top: 8px;">
+          @if (vm.roleLabel === 'user') {
+            <button
+              mat-stroked-button
+              [disabled]="vm.isOwner"
+              (click)="onGrantAdmin(vm.uid)"
+            >
+              <mat-icon>admin_panel_settings</mat-icon>
+              Zum Admin machen
+            </button>
+          } @else {
+            <button
+              mat-stroked-button
+              color="warn"
+              [disabled]="vm.isOwner"
+              (click)="onRevokeAdmin(vm.uid)"
+            >
+              <mat-icon>remove_moderator</mat-icon>
+              Admin entfernen
+            </button>
+          }
+        </div>
+      }
     </mat-card>
   </div>
 }
