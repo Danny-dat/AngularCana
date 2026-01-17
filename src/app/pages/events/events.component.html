@@ -80,34 +80,119 @@
 
       <div class="modal-body">
         <p>
-          Schreib deinen Vorschlag hier rein – die Admins bekommen automatisch eine Chat-Nachricht.
+          Gib Adresse + Datum/Uhrzeit an – wir holen automatisch die Koordinaten dazu.
         </p>
 
         <div class="form-grid">
           <label>
             <span>Event-Name *</span>
-            <input type="text" [value]="sName()" (input)="sName.set($any($event.target).value)" placeholder="z.B. Smoke Session am See" />
+            <input
+              type="text"
+              [value]="sName()"
+              (input)="sName.set($any($event.target).value)"
+              placeholder="z.B. Smoke Session am See" />
           </label>
 
           <label>
-            <span>Adresse / Ort</span>
-            <input type="text" [value]="sAddress()" (input)="sAddress.set($any($event.target).value)" placeholder="z.B. Berlin, Treptower Park" />
+            <span>Straße *</span>
+            <input
+              type="text"
+              [value]="sStreet()"
+              (input)="sStreet.set($any($event.target).value)"
+              placeholder="z.B. Hauptstraße 12" />
           </label>
 
           <div class="two">
             <label>
-              <span>Lat (optional)</span>
-              <input type="number" inputmode="decimal" [value]="sLat()" (input)="sLat.set($any($event.target).value)" placeholder="52.5" />
+              <span>PLZ (optional)</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                [value]="sZip()"
+                (input)="sZip.set($any($event.target).value)"
+                placeholder="z.B. 10115" />
             </label>
+
             <label>
-              <span>Lng (optional)</span>
-              <input type="number" inputmode="decimal" [value]="sLng()" (input)="sLng.set($any($event.target).value)" placeholder="13.4" />
+              <span>Stadt *</span>
+              <input
+                type="text"
+                [value]="sCity()"
+                (input)="sCity.set($any($event.target).value)"
+                placeholder="z.B. Berlin" />
             </label>
           </div>
 
+          <div class="two">
+            <label>
+              <span>Datum *</span>
+              <input
+                type="date"
+                [value]="sDate()"
+                (input)="sDate.set($any($event.target).value)" />
+            </label>
+
+            <label>
+              <span>Uhrzeit *</span>
+              <input
+                type="time"
+                [value]="sTime()"
+                (input)="sTime.set($any($event.target).value)" />
+            </label>
+          </div>
+
+          <div class="geo-tools">
+            <button
+              class="btn outline"
+              type="button"
+              (click)="checkAddress()"
+              [disabled]="geoBusy() || suggestBusy()">
+              @if (geoBusy()) { Suche… } @else { Adresse prüfen }
+            </button>
+
+            @if (geoError()) {
+              <small class="geo-error">{{ geoError() }}</small>
+            }
+          </div>
+
+          @if (geoResults().length === 1) {
+            <div class="geo-ok">
+              ✅ Adresse gefunden: <strong>{{ geoResults()[0].label }}</strong>
+              <div class="geo-sub"><code>{{ geoResults()[0].lat }}, {{ geoResults()[0].lng }}</code></div>
+            </div>
+          }
+
+          @if (geoResults().length > 1) {
+            <div class="geo-results">
+              <div class="geo-title">Meintest du …?</div>
+              <div class="geo-list">
+                @for (r of geoResults(); track $index) {
+                  <label class="geo-item">
+                    <input
+                      type="radio"
+                      name="geoPick"
+                      [checked]="geoSelected() === $index"
+                      (change)="pickGeo($index)" />
+                    <span>{{ r.label }}</span>
+                  </label>
+                }
+              </div>
+
+              @if (geoSelected() >= 0) {
+                <div class="geo-sub">
+                  Ausgewählt: <code>{{ geoResults()[geoSelected()].lat }}, {{ geoResults()[geoSelected()].lng }}</code>
+                </div>
+              }
+            </div>
+          }
+
           <label>
             <span>Notiz</span>
-            <textarea rows="4" [value]="sNote()" (input)="sNote.set($any($event.target).value)" placeholder="Was soll passieren? Wann ungefähr? Besonderheiten?"></textarea>
+            <textarea
+              rows="4"
+              [value]="sNote()"
+              (input)="sNote.set($any($event.target).value)"
+              placeholder="Optional: Infos zum Ablauf / Details"></textarea>
           </label>
         </div>
       </div>

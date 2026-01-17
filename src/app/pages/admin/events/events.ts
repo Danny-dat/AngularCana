@@ -70,7 +70,7 @@ export class AdminEvents {
 
   // Tables
   displayedEvents: string[] = ['name', 'address', 'coords', 'votes', 'actions'];
-  displayedSuggestions: string[] = ['createdAt', 'name', 'createdBy', 'status', 'actions'];
+  displayedSuggestions: string[] = ['createdAt', 'startAt', 'name', 'createdBy', 'status', 'actions'];
 
   // Data
   private events$ = this.eventsSvc.listen();
@@ -215,6 +215,7 @@ export class AdminEvents {
         address: s.address ?? null,
         lat: Number(s.lat),
         lng: Number(s.lng),
+        startAt: s.startAt ?? null,
         sourceSuggestionId: s.id,
       });
       await this.suggestSvc.setStatus(s.id, 'accepted', { eventId: id } as any);
