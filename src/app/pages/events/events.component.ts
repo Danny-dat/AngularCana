@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Auth } from '@angular/fire/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { firstValueFrom } from 'rxjs';
@@ -18,6 +18,7 @@ export class EventsComponent {
   private suggestSvc = inject(EventSuggestionsService);
   private geo = inject(GeocodingService);
   private auth = inject(Auth);
+  private destroyRef = inject(DestroyRef);
 
   private readonly CONFIRM_KEY = 'maps.confirm.skip';
 
@@ -26,6 +27,12 @@ export class EventsComponent {
   // Live-Daten
   events$ = this.eventsSvc.listen();
   eventsSig = signal<EventItem[]>([]);
+
+  // "Jetzt" für aktive/abgelaufene Events (damit Tabs live umschalten können)
+  now = signal<number>(Date.now());
+
+  // Tabs
+  tab = signal<'active' | 'inactive'>('active');
 
   // UI-State
   onlyMine = signal<boolean>(false);
@@ -59,6 +66,10 @@ export class EventsComponent {
   constructor() {
     this.events$.subscribe(this.eventsSig.set);
     onAuthStateChanged(this.auth, (u) => this.uid.set(u?.uid ?? null));
+
+    // jede Minute aktualisieren
+    const t = window.setInterval(() => this.now.set(Date.now()), 60_000);
+    this.destroyRef.onDestroy(() => window.clearInterval(t));
 
     try {
       this.skipConfirm.set(localStorage.getItem(this.CONFIRM_KEY) === '1');
@@ -234,7 +245,39 @@ export class EventsComponent {
   isUpvoted = (e: EventItem) => !!this.uid() && !!e.upvotes?.includes(this.uid()!);
   isDownvoted = (e: EventItem) => !!this.uid() && !!e.downvotes?.includes(this.uid()!);
 
-  filtered = computed(() => {
+  // --- Active / Inactive --------------------------------------------------
+
+  private asDate(x: any): Date | null {
+    if (!x) return null;
+    if (x instanceof Date) return x;
+    if (typeof x?.toDate === 'function') return x.toDate(); // Firestore Timestamp
+    const d = new Date(x);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  isActiveEvent = (e: EventItem): boolean => {
+    // Legacy: wenn kein startAt vorhanden -> aktiv
+    const d = this.asDate((e as any).startAt);
+    if (!d) return true;
+    return d.getTime() >= this.now();
+  };
+
+  formatStart = (e: EventItem): string => {
+    const d = this.asDate((e as any).startAt);
+    if (!d) return '';
+    try {
+      return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+    } catch {
+      return d.toLocaleString();
+    }
+  };
+
+  private startKeyMs(e: EventItem): number {
+    const d = this.asDate((e as any).startAt);
+    return d ? d.getTime() : Number.POSITIVE_INFINITY;
+  }
+
+  baseFiltered = computed(() => {
     const q = this.query().trim().toLowerCase();
     const mine = this.onlyMine();
     const me = this.uid();
@@ -249,6 +292,27 @@ export class EventsComponent {
     if (mine && me) res = res.filter((e) => e.upvotes?.includes(me));
     return res;
   });
+
+  activeFiltered = computed(() =>
+    this.baseFiltered()
+      .filter((e) => this.isActiveEvent(e))
+      .slice()
+      // aktiv: bald zuerst (Events ohne startAt kommen nach hinten)
+      .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b) || (a.name ?? '').localeCompare(b.name ?? ''))
+  );
+
+  inactiveFiltered = computed(() =>
+    this.baseFiltered()
+      .filter((e) => !this.isActiveEvent(e))
+      .slice()
+      // nicht aktiv: zuletzt zuerst
+      .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a) || (a.name ?? '').localeCompare(b.name ?? ''))
+  );
+
+  filtered = computed(() => (this.tab() === 'active' ? this.activeFiltered() : this.inactiveFiltered()));
+
+  activeCount = computed(() => this.activeFiltered().length);
+  inactiveCount = computed(() => this.inactiveFiltered().length);
 
   likedCount = computed(() => {
     const me = this.uid();

@@ -29,6 +29,24 @@
   </div>
 </header>
 
+<nav class="ev-tabs" aria-label="Event-Status">
+  <button
+    type="button"
+    class="tab"
+    [class.active]="tab() === 'active'"
+    (click)="tab.set('active')">
+    Aktiv <span class="pill">{{ activeCount() }}</span>
+  </button>
+
+  <button
+    type="button"
+    class="tab"
+    [class.active]="tab() === 'inactive'"
+    (click)="tab.set('inactive')">
+    Nicht aktiv <span class="pill">{{ inactiveCount() }}</span>
+  </button>
+</nav>
+
 @if (filtered().length) {
   <ul class="ev-list">
     @for (e of filtered(); track e.id) {
@@ -36,6 +54,10 @@
         <div class="ev-main">
           <div class="ev-title">{{ e.name }}</div>
           <div class="ev-sub">{{ e.address }}</div>
+
+          @if (formatStart(e)) {
+            <div class="ev-when">🗓️ {{ formatStart(e) }}</div>
+          }
 
           <div class="ev-counters">
             <span class="chip chip-up" [class.me]="isUpvoted(e)">👍 {{ e.upvotes?.length || 0 }}</span>
@@ -65,7 +87,10 @@
   </ul>
 } @else {
   <div class="ev-empty">
-    <div>Keine passenden Events gefunden.</div>
+    <div>
+      @if (tab() === 'active') { Keine aktiven Events gefunden. }
+      @else { Keine nicht aktiven Events gefunden. }
+    </div>
     <small>Tipp: Filter deaktivieren oder Suchbegriff ändern.</small>
   </div>
 }
