@@ -172,7 +172,33 @@ export class AdminUsers {
       await setDoc(
         doc(fs2, 'users', uid),
         {
-          profile: { displayName: params.displayName },
+          email: params.email,
+
+          // legacy / compatibility
+          displayName: params.displayName,
+          phoneNumber: null,
+
+          // neues Profil-Objekt
+          profile: {
+            displayName: params.displayName,
+            username: null,
+            firstName: null,
+            lastName: null,
+            phoneNumber: null,
+            photoURL: null,
+            bio: null,
+            website: null,
+            location: { city: null, country: null },
+            birthday: null,
+            gender: 'unspecified',
+            socials: { instagram: null, tiktok: null, youtube: null, discord: null, telegram: null },
+            visibility: { showBio: true, showWebsite: true, showLocation: true, showSocials: true },
+          },
+
+          friends: [],
+          settings: { consumptionThreshold: 3 },
+          personalization: { theme: 'light' },
+
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
@@ -186,6 +212,12 @@ export class AdminUsers {
           displayName: params.displayName,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          username: null,
+          photoURL: null,
+          bio: null,
+          website: null,
+          locationText: null,
+          socials: null,
         },
         { merge: true }
       );

@@ -8,6 +8,7 @@ import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs/operators'
 import { NotificationSoundService } from '../../services/notification-sound.service';
 import { ProfileService } from '../../services/profile.service';
 import { ThemeService, Theme } from '../../services/theme.service';
+import { AVATAR_PRESETS, AvatarPreset } from '../../utils/avatar-presets';
 import {
   UserDataService,
   UserDataModel,
@@ -40,8 +41,84 @@ export class UserDataComponent implements OnInit, OnDestroy {
   // Forms
   profileForm = this.fb.group({
     displayName: ['', [Validators.required, Validators.maxLength(50)]],
+    username: ['', [Validators.maxLength(20), Validators.pattern(/^[a-z0-9_]{3,20}$/)]],
+    firstName: ['', [Validators.maxLength(40)]],
+    lastName: ['', [Validators.maxLength(60)]],
+    email: [{ value: '', disabled: true }],
     phoneNumber: [''],
+    // Spark Plan: Avatar kommt aus Presets im /assets Ordner (kein Storage)
+    photoURL: ['', [Validators.maxLength(300)]],
+
+    bio: ['', [Validators.maxLength(280)]],
+    website: ['', [Validators.maxLength(200)]],
+    city: ['', [Validators.maxLength(80)]],
+    country: ['', [Validators.maxLength(80)]],
+    birthday: [''],
+    gender: ['unspecified'],
+
+    instagram: ['', [Validators.maxLength(60)]],
+    tiktok: ['', [Validators.maxLength(60)]],
+    youtube: ['', [Validators.maxLength(120)]],
+    discord: ['', [Validators.maxLength(60)]],
+    telegram: ['', [Validators.maxLength(60)]],
+
+    // Privacy / Public Sync
+    showBio: [true],
+    showWebsite: [true],
+    showLocation: [true],
+    showSocials: [true],
   });
+
+  // Avatar Presets (assets)
+  avatarPresets: AvatarPreset[] = AVATAR_PRESETS;
+
+  selectAvatar(path: string | null) {
+    // Wir speichern weiterhin in photoURL (legacy + public profile)
+    this.profileForm.controls.photoURL.setValue(path ?? '', { emitEvent: false });
+    this.profileForm.controls.photoURL.markAsDirty();
+    this.profileForm.markAsDirty();
+  }
+
+  isAvatarSelected(path: string | null): boolean {
+    return (this.profileForm.getRawValue().photoURL ?? '') === (path ?? '');
+  }
+
+  /** Live Vorschau: so landet es (inkl. Privacy) in profiles_public */
+  publicProfilePreview() {
+    const raw = this.profileForm.getRawValue();
+    const name = (raw.displayName ?? '').trim() || 'Unbekannt';
+    const uname = (raw.username ?? '').trim().toLowerCase();
+    const city = (raw.city ?? '').trim();
+    const country = (raw.country ?? '').trim();
+    const locationText = [city, country].filter(Boolean).join(', ') || null;
+
+    const normUrl = (value: string) => {
+      const v = (value ?? '').trim();
+      if (!v) return null;
+      if (!/^https?:\/\//i.test(v)) return `https://${v}`;
+      return v;
+    };
+
+    const socials = {
+      instagram: (raw.instagram ?? '').trim() || null,
+      tiktok: (raw.tiktok ?? '').trim() || null,
+      youtube: (raw.youtube ?? '').trim() || null,
+      discord: (raw.discord ?? '').trim() || null,
+      telegram: (raw.telegram ?? '').trim() || null,
+    };
+
+    return {
+      displayName: name,
+      username: uname ? `@${uname}` : null,
+      photoURL: (raw.photoURL ?? '').trim() || null,
+      bio: raw.showBio ? (raw.bio ?? '').trim() || null : null,
+      website: raw.showWebsite ? normUrl(raw.website ?? '') : null,
+      locationText: raw.showLocation ? locationText : null,
+      socials: raw.showSocials ? socials : null,
+    };
+  }
+
+  usernameState = signal<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
 
   // Settings
   settingsForm = this.fb.group({
@@ -84,6 +161,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
   private subAuth?: Subscription;
   private subThemeChanges?: Subscription;
   private subLiveName?: Subscription;
+  private subUsernameChanges?: Subscription;
   private subVolumeChanges?: Subscription;
   private subSoundToggle?: Subscription;
   private subThresholdChanges?: Subscription;
@@ -119,6 +197,50 @@ export class UserDataComponent implements OnInit, OnDestroy {
         this.saveNameTimer = setTimeout(() => this.persistDisplayName(name), 15000);
       });
 
+    // Username Availability (gegen profiles_public)
+    this.subUsernameChanges = this.profileForm.controls.username.valueChanges
+      .pipe(
+        map((v) => (v ?? '').trim().toLowerCase()),
+        debounceTime(450),
+        distinctUntilChanged(),
+        filter(() => !!this.uid)
+      )
+      .subscribe(async (uname) => {
+        const ctrl = this.profileForm.controls.username;
+
+        // leer -> ok (optional)
+        if (!uname) {
+          this.usernameState.set('idle');
+          // ggf. taken-error entfernen
+          const errs = { ...(ctrl.errors ?? {}) };
+          delete (errs as any).taken;
+          ctrl.setErrors(Object.keys(errs).length ? errs : null);
+          return;
+        }
+
+        // Pattern/Validatoren zuerst
+        if (ctrl.invalid) {
+          this.usernameState.set('invalid');
+          return;
+        }
+
+        this.usernameState.set('checking');
+        try {
+          const ok = await this.svc.isUsernameAvailable(uname, this.uid!);
+          if (ok) {
+            this.usernameState.set('ok');
+            const errs = { ...(ctrl.errors ?? {}) };
+            delete (errs as any).taken;
+            ctrl.setErrors(Object.keys(errs).length ? errs : null);
+          } else {
+            this.usernameState.set('taken');
+            ctrl.setErrors({ ...(ctrl.errors ?? {}), taken: true });
+          }
+        } catch {
+          this.usernameState.set('idle');
+        }
+      });
+
     // User + Daten laden
     this.subAuth = user(this.auth).subscribe(async (u) => {
       this.uid = u?.uid ?? null;
@@ -134,7 +256,44 @@ export class UserDataComponent implements OnInit, OnDestroy {
         // Profilfelder
         const displayName = (data.displayName ?? '').trim();
         const phoneNumber = data.phoneNumber ?? '';
-        this.profileForm.reset({ displayName, phoneNumber });
+        const authEmail = u?.email ?? data.email ?? '';
+        const username = (data.username ?? '').toString();
+
+        this.profileForm.reset(
+          {
+            displayName,
+            username: username || '',
+            firstName: data.firstName ?? '',
+            lastName: data.lastName ?? '',
+            email: authEmail,
+            phoneNumber,
+            photoURL: data.photoURL ?? '',
+            bio: data.bio ?? '',
+            website: data.website ?? '',
+            city: data.city ?? '',
+            country: data.country ?? '',
+            birthday: data.birthday ?? '',
+            gender: data.gender ?? 'unspecified',
+            instagram: data.socials?.instagram ?? '',
+            tiktok: data.socials?.tiktok ?? '',
+            youtube: data.socials?.youtube ?? '',
+            discord: data.socials?.discord ?? '',
+            telegram: data.socials?.telegram ?? '',
+            showBio: data.visibility?.showBio ?? true,
+            showWebsite: data.visibility?.showWebsite ?? true,
+            showLocation: data.visibility?.showLocation ?? true,
+            showSocials: data.visibility?.showSocials ?? true,
+          },
+          { emitEvent: false }
+        );
+
+        // UI-Status für Username
+        this.usernameState.set(username ? 'ok' : 'idle');
+
+        // Email-Snapshot (für Admin-Ansicht) aktuell halten
+        try {
+          if (authEmail) await this.svc.saveUserData(this.uid, { email: authEmail });
+        } catch {}
         try {
           localStorage.setItem('displayName', displayName);
         } catch {}
@@ -240,6 +399,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
     this.subAuth?.unsubscribe();
     this.subThemeChanges?.unsubscribe();
     this.subLiveName?.unsubscribe();
+    this.subUsernameChanges?.unsubscribe();
     this.subVolumeChanges?.unsubscribe();
     this.subSoundToggle?.unsubscribe();
     this.subThresholdChanges?.unsubscribe();
@@ -261,9 +421,14 @@ export class UserDataComponent implements OnInit, OnDestroy {
   async persistDisplayName(name: string) {
     if (!this.uid) return;
     try {
+      const raw = this.profileForm.getRawValue();
       await this.svc.saveUserData(this.uid, { displayName: name } as Partial<UserDataModel>);
       await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
-      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
+      if (this.auth.currentUser)
+        await updateProfile(this.auth.currentUser, {
+          displayName: name,
+          photoURL: (raw.photoURL ?? '').trim() || null,
+        });
       try {
         window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name }));
       } catch {}
@@ -275,19 +440,77 @@ export class UserDataComponent implements OnInit, OnDestroy {
   // SPEICHERN
   async saveProfile() {
     if (!this.uid || this.profileForm.invalid) return;
+    if (this.profileForm.controls.username.hasError('taken')) return;
     this.savingProfile.set(true);
     this.errorMsg.set(null);
 
-    const name = (this.profileForm.value.displayName ?? '').trim();
-    const phoneNumber = this.profileForm.value.phoneNumber ?? '';
+    const raw = this.profileForm.getRawValue();
+    const name = (raw.displayName ?? '').trim();
+    const phoneNumber = raw.phoneNumber ?? '';
+    const username = (raw.username ?? '').trim().toLowerCase();
+    const city = (raw.city ?? '').trim();
+    const country = (raw.country ?? '').trim();
+
+    const locationText = [city, country].filter(Boolean).join(', ') || null;
+
+    const normUrl = (value: string) => {
+      const v = (value ?? '').trim();
+      if (!v) return null;
+      // sehr einfache Normalisierung: wenn kein Schema -> https://
+      if (!/^https?:\/\//i.test(v)) return `https://${v}`;
+      return v;
+    };
 
     try {
       clearTimeout(this.saveNameTimer);
       await this.svc.saveUserData(this.uid, {
         displayName: name,
-        phoneNumber,
+        username: username || null,
+        firstName: (raw.firstName ?? '').trim() || null,
+        lastName: (raw.lastName ?? '').trim() || null,
+        email: (raw.email ?? '').trim() || null,
+        phoneNumber: phoneNumber || null,
+        photoURL: (raw.photoURL ?? '').trim() || null,
+        bio: (raw.bio ?? '').trim() || null,
+        website: normUrl(raw.website ?? ''),
+        city: city || null,
+        country: country || null,
+        birthday: (raw.birthday ?? '').trim() || null,
+        gender: (raw.gender as any) ?? 'unspecified',
+        socials: {
+          instagram: (raw.instagram ?? '').trim() || null,
+          tiktok: (raw.tiktok ?? '').trim() || null,
+          youtube: (raw.youtube ?? '').trim() || null,
+          discord: (raw.discord ?? '').trim() || null,
+          telegram: (raw.telegram ?? '').trim() || null,
+        },
+        visibility: {
+          showBio: !!raw.showBio,
+          showWebsite: !!raw.showWebsite,
+          showLocation: !!raw.showLocation,
+          showSocials: !!raw.showSocials,
+        },
       } as Partial<UserDataModel>);
-      await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
+
+      // Public profile synchronisieren (nur "öffentliche" Felder)
+      await this.profileSvc.updatePublicProfile(this.uid, {
+        displayName: name,
+        username: username || null,
+        photoURL: (raw.photoURL ?? '').trim() || null,
+        bio: raw.showBio ? (raw.bio ?? '').trim() || null : null,
+        website: raw.showWebsite ? normUrl(raw.website ?? '') : null,
+        locationText: raw.showLocation ? locationText : null,
+        socials: raw.showSocials
+          ? {
+              instagram: (raw.instagram ?? '').trim() || null,
+              tiktok: (raw.tiktok ?? '').trim() || null,
+              youtube: (raw.youtube ?? '').trim() || null,
+              discord: (raw.discord ?? '').trim() || null,
+              telegram: (raw.telegram ?? '').trim() || null,
+            }
+          : null,
+      });
+
       if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
 
       try {

@@ -61,6 +61,185 @@
       </div>
     </mat-card>
 
+    <mat-card class="card">
+      <h3>Profil bearbeiten</h3>
+      <p class="hint">
+        Hinweis: Die Login-E-Mail kann ein Admin clientseitig nicht ändern. Hier bearbeitest du die
+        Profilfelder in Firestore + das öffentliche Profil.
+      </p>
+
+      <div class="form" [formGroup]="editForm">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Anzeigename</mat-label>
+            <input matInput formControlName="displayName" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="username" placeholder="z.B. canna_ole" />
+            @if (editForm.controls.username.hasError('pattern')) {
+              <mat-error>Nur a-z, 0-9 und _ (3–20)</mat-error>
+            }
+            @if (editForm.controls.username.hasError('taken')) {
+              <mat-error>Username ist bereits vergeben</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Vorname</mat-label>
+            <input matInput formControlName="firstName" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nachname</mat-label>
+            <input matInput formControlName="lastName" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>E-Mail (Snapshot)</mat-label>
+            <input matInput formControlName="email" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Telefon</mat-label>
+            <input matInput formControlName="phoneNumber" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Geburtstag</mat-label>
+            <input matInput type="date" formControlName="birthday" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Geschlecht</mat-label>
+            <mat-select formControlName="gender">
+              <mat-option value="unspecified">Keine Angabe</mat-option>
+              <mat-option value="male">Männlich</mat-option>
+              <mat-option value="female">Weiblich</mat-option>
+              <mat-option value="diverse">Divers</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="avatar-field">
+            <div class="avatar-label">Avatar</div>
+            <div class="avatar-grid">
+              <button type="button"
+                      class="avatar-tile"
+                      [class.active]="isAvatarSelected(null)"
+                      (click)="selectAvatar(null)"
+                      aria-label="Kein Avatar">
+                <span class="avatar-none">—</span>
+              </button>
+
+              @for (a of avatarPresets; track a.id) {
+                <button type="button"
+                        class="avatar-tile"
+                        [class.active]="isAvatarSelected(a.path)"
+                        (click)="selectAvatar(a.path)"
+                        [attr.aria-label]="a.label">
+                  <img [src]="a.path" alt="" loading="lazy" />
+                </button>
+              }
+            </div>
+            <div class="avatar-hint">Spark Plan: Avatar nur aus Presets (assets).</div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Bio</mat-label>
+            <textarea matInput rows="4" formControlName="bio"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Website</mat-label>
+            <input matInput formControlName="website" placeholder="deine-seite.de" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Stadt</mat-label>
+            <input matInput formControlName="city" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Land</mat-label>
+            <input matInput formControlName="country" />
+          </mat-form-field>
+
+          <div></div>
+        </div>
+
+        <mat-divider></mat-divider>
+        <h3 style="margin-top: 12px;">Social Links</h3>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Instagram</mat-label>
+            <input matInput formControlName="instagram" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>TikTok</mat-label>
+            <input matInput formControlName="tiktok" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>YouTube</mat-label>
+            <input matInput formControlName="youtube" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Discord</mat-label>
+            <input matInput formControlName="discord" />
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Telegram</mat-label>
+            <input matInput formControlName="telegram" />
+          </mat-form-field>
+          <div></div>
+        </div>
+
+        <mat-divider></mat-divider>
+        <h3 style="margin-top: 12px;">Öffentlichkeit</h3>
+        <div class="toggles">
+          <mat-slide-toggle formControlName="showBio">Bio öffentlich</mat-slide-toggle>
+          <mat-slide-toggle formControlName="showWebsite">Website öffentlich</mat-slide-toggle>
+          <mat-slide-toggle formControlName="showLocation">Ort öffentlich</mat-slide-toggle>
+          <mat-slide-toggle formControlName="showSocials">Social Links öffentlich</mat-slide-toggle>
+        </div>
+      </div>
+
+      <div class="btns" style="margin-top: 12px;">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="saveProfileAdmin()"
+          [disabled]="editForm.invalid || editForm.pristine || savingProfile()"
+        >
+          <mat-icon>save</mat-icon>
+          Speichern
+        </button>
+      </div>
+    </mat-card>
+
     <mat-card class="card actions">
       <h3>Aktionen</h3>
 

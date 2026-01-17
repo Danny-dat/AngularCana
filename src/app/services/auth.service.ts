@@ -69,25 +69,51 @@ export class AuthService {
     } catch {}
 
     const userDocRef = doc(this.firestore, `users/${cred.user.uid}`);
+    const safeName = displayName?.trim() || null;
     await setDoc(userDocRef, {
       email,
-      displayName: displayName?.trim() || null,
+      // legacy / compatibility:
+      displayName: safeName,
       phoneNumber: phoneNumber || null,
+
+      // neues Profil-Objekt (für „Social Media Profil“)
+      profile: {
+        displayName: safeName,
+        username: null,
+        firstName: null,
+        lastName: null,
+        phoneNumber: phoneNumber || null,
+        photoURL: null,
+        bio: null,
+        website: null,
+        location: { city: null, country: null },
+        birthday: null,
+        gender: 'unspecified',
+        socials: { instagram: null, tiktok: null, youtube: null, discord: null, telegram: null },
+        visibility: { showBio: true, showWebsite: true, showLocation: true, showSocials: true },
+      },
+
       friends: [],
       settings: { consumptionThreshold: 3 },
       personalization: { theme: initialTheme },
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       lastActiveAt: serverTimestamp(),
     });
 
     const publicDocRef = doc(this.firestore, `profiles_public/${cred.user.uid}`);
     await setDoc(publicDocRef, {
-      displayName: displayName?.trim() || null,
+      displayName: safeName,
       username: null,
       photoURL: null,
+      bio: null,
+      website: null,
+      locationText: null,
+      socials: null,
       lastLocation: null,
       lastActiveAt: serverTimestamp(),
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
 
     // nach Register ist Access ok

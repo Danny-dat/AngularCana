@@ -6,7 +6,17 @@ import { map, shareReplay } from 'rxjs/operators';
 export type UserStatus = 'active' | 'locked' | 'banned' | 'deleted';
 
 export interface UserDoc {
-  profile?: { displayName?: string; phoneNumber?: string };
+  email?: string | null;
+  displayName?: string | null; // legacy
+  phoneNumber?: string | null; // legacy
+  profile?: {
+    displayName?: string | null;
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    phoneNumber?: string | null;
+    photoURL?: string | null;
+  };
   settings?: any;
   roles?: string[];
   status?: { deletedAt?: any | null; deletedBy?: string | null; deleteReason?: string | null };
@@ -18,6 +28,10 @@ export interface PublicProfileDoc {
   displayName?: string;
   username?: string;
   photoURL?: string;
+  bio?: string | null;
+  website?: string | null;
+  locationText?: string | null;
+  socials?: any;
   lastActiveAt?: any;
   createdAt?: any;
   updatedAt?: any;
@@ -94,7 +108,11 @@ export class AdminDirectoryService {
         const { status, statusLabel, lockUntil, banUntil } = this.computeStatus(b, deletedAt);
 
         const displayName =
-          p?.displayName?.trim() || u.profile?.displayName?.trim() || p?.username?.trim() || u.uid;
+          p?.displayName?.trim() ||
+          u.profile?.displayName?.trim() ||
+          (u.displayName ?? '').trim() ||
+          p?.username?.trim() ||
+          u.uid;
 
         return {
           uid: u.uid,
