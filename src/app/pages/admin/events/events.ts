@@ -15,6 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTabsModule } from '@angular/material/tabs';
 import {
   MatDialog,
   MatDialogModule,
@@ -22,6 +23,9 @@ import {
   MAT_DIALOG_DATA,
 } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 
 import { Timestamp } from 'firebase/firestore';
 
@@ -31,12 +35,15 @@ import {
   EventSuggestionRow,
   SuggestionStatus,
 } from '../../../services/event-suggestions.service';
+import { GeocodingService, GeocodeResult } from '../../../services/geocoding.service';
 
 type EventFormValue = {
   name: string;
   address: string;
   lat: number;
   lng: number;
+  status?: 'active' | 'inactive';
+  startAt?: Date | null;
 };
 
 @Component({
@@ -51,8 +58,10 @@ type EventFormValue = {
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatTabsModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatSelectModule,
   ],
   templateUrl: './events.html',
   styleUrl: './events.css',
@@ -69,12 +78,17 @@ export class AdminEvents {
   searchSuggestCtrl = new FormControl<string>('', { nonNullable: true });
 
   // Tables
-  displayedEvents: string[] = ['name', 'address', 'coords', 'votes', 'actions'];
+  displayedEvents: string[] = ['name', 'startAt', 'address', 'coords', 'votes', 'actions'];
   displayedSuggestions: string[] = ['createdAt', 'startAt', 'name', 'createdBy', 'status', 'actions'];
 
   // Data
   private events$ = this.eventsSvc.listen();
-  private suggestions$ = this.suggestSvc.listenAll();
+
+  // Suggestions: split streams so tabs stay snappy and lists don't grow without bounds
+  private sOpen$ = this.suggestSvc.listenByStatus('open', 200);
+  private sAccepted$ = this.suggestSvc.listenByStatus('accepted', 200);
+  private sResolved$ = this.suggestSvc.listenByStatus('resolved', 200);
+  private sRejected$ = this.suggestSvc.listenByStatus('rejected', 200);
 
   eventsFiltered$: Observable<EventItem[]> = combineLatest([
     this.events$,
@@ -92,25 +106,59 @@ export class AdminEvents {
     })
   );
 
-  suggestionsFiltered$: Observable<EventSuggestionRow[]> = combineLatest([
-    this.suggestions$,
-    this.searchSuggestCtrl.valueChanges.pipe(startWith('')),
-  ]).pipe(
-    map(([rows, q]) => {
-      const query = (q ?? '').trim().toLowerCase();
-      const base = (rows || []).slice();
-      const res = query
-        ? base.filter(
-            (s) =>
-              (s.name ?? '').toLowerCase().includes(query) ||
-              (s.address ?? '').toLowerCase().includes(query) ||
-              (s.createdByName ?? '').toLowerCase().includes(query) ||
-              (s.createdBy ?? '').toLowerCase().includes(query)
-          )
-        : base;
-      return res;
-    })
+  /** Admin: Events in Tabs (Aktiv / Nicht aktiv) */
+  eventsActive$: Observable<EventItem[]> = this.eventsFiltered$.pipe(
+    map((rows) =>
+      (rows || [])
+        .filter((e) => this.isEventActiveAdmin(e))
+        .slice()
+        // aktiv: bald zuerst (Events ohne Datum nach hinten)
+        .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b))
+    )
   );
+
+  eventsInactive$: Observable<EventItem[]> = this.eventsFiltered$.pipe(
+    map((rows) =>
+      (rows || [])
+        .filter((e) => !this.isEventActiveAdmin(e))
+        .slice()
+        // inaktiv: zuletzt zuerst
+        .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a))
+    )
+  );
+
+  private filterSuggestions(rows: EventSuggestionRow[], q: string): EventSuggestionRow[] {
+    const query = (q ?? '').trim().toLowerCase();
+    const base = (rows || []).slice();
+    if (!query) return base;
+    return base.filter(
+      (s) =>
+        (s.name ?? '').toLowerCase().includes(query) ||
+        (s.address ?? '').toLowerCase().includes(query) ||
+        (s.createdByName ?? '').toLowerCase().includes(query) ||
+        (s.createdBy ?? '').toLowerCase().includes(query)
+    );
+  }
+
+  suggestionsOpen$: Observable<EventSuggestionRow[]> = combineLatest([
+    this.sOpen$,
+    this.searchSuggestCtrl.valueChanges.pipe(startWith('')),
+  ]).pipe(map(([rows, q]) => this.filterSuggestions(rows, q)));
+
+  suggestionsAccepted$: Observable<EventSuggestionRow[]> = combineLatest([
+    this.sAccepted$,
+    this.searchSuggestCtrl.valueChanges.pipe(startWith('')),
+  ]).pipe(map(([rows, q]) => this.filterSuggestions(rows, q)));
+
+  suggestionsResolved$: Observable<EventSuggestionRow[]> = combineLatest([
+    this.sResolved$,
+    this.searchSuggestCtrl.valueChanges.pipe(startWith('')),
+  ]).pipe(map(([rows, q]) => this.filterSuggestions(rows, q)));
+
+  suggestionsRejected$: Observable<EventSuggestionRow[]> = combineLatest([
+    this.sRejected$,
+    this.searchSuggestCtrl.valueChanges.pipe(startWith('')),
+  ]).pipe(map(([rows, q]) => this.filterSuggestions(rows, q)));
 
   asDate(x: any): Date {
     if (!x) return new Date(0);
@@ -118,6 +166,35 @@ export class AdminEvents {
     if (x instanceof Timestamp) return x.toDate();
     if (typeof x?.toDate === 'function') return x.toDate();
     return new Date(String(x));
+  }
+
+  private startKeyMs(e: any): number {
+    const d = this.asMaybeDate(e?.startAt);
+    return d ? d.getTime() : Number.POSITIVE_INFINITY;
+  }
+
+  private asMaybeDate(x: any): Date | null {
+    if (!x) return null;
+    if (x instanceof Date) return x;
+    if (x instanceof Timestamp) return x.toDate();
+    if (typeof x?.toDate === 'function') return x.toDate();
+    const d = new Date(String(x));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  isEventActiveAdmin(e: EventItem): boolean {
+    const status = String((e as any)?.status ?? 'active');
+    return status !== 'inactive';
+  }
+
+  async setEventActive(e: EventItem, active: boolean) {
+    try {
+      await this.eventsSvc.updateEvent(e.id, { status: active ? 'active' : 'inactive' } as any);
+      this.snack.open(active ? 'Event ist wieder aktiv' : 'Event wurde deaktiviert', 'OK', { duration: 2200 });
+    } catch (err) {
+      console.error(err);
+      this.snack.open('Status-Update fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -152,6 +229,8 @@ export class AdminEvents {
             address: e.address ?? '',
             lat: e.lat,
             lng: e.lng,
+            status: (e as any).status ?? 'active',
+            startAt: (e as any).startAt ?? null,
           },
         },
       }).afterClosed()
@@ -164,6 +243,8 @@ export class AdminEvents {
         address: res.address,
         lat: res.lat,
         lng: res.lng,
+        status: res.status ?? (e as any).status ?? 'active',
+        startAt: res.startAt ?? null,
       } as any);
       this.snack.open('Event aktualisiert', 'OK', { duration: 2500 });
     } catch (err) {
@@ -203,6 +284,39 @@ export class AdminEvents {
     }
   }
 
+  async onEditSuggestion(s: EventSuggestionRow) {
+    const patch = await firstValueFrom(
+      this.dialog
+        .open(SuggestionEditDialogComponent, {
+          data: { suggestion: s },
+          maxWidth: '720px',
+          width: '100%',
+        })
+        .afterClosed()
+    );
+    if (!patch) return;
+
+    try {
+      await this.suggestSvc.updateSuggestion(s.id, patch);
+      this.snack.open('Vorschlag gespeichert', 'OK', { duration: 2200 });
+    } catch (e) {
+      console.error(e);
+      this.snack.open('Speichern fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
+  async onDeleteSuggestion(s: EventSuggestionRow) {
+    const ok = confirm(`Vorschlag wirklich löschen?\n\n${s.name}`);
+    if (!ok) return;
+    try {
+      await this.suggestSvc.deleteSuggestion(s.id);
+      this.snack.open('Vorschlag gelöscht', 'OK', { duration: 2200 });
+    } catch (e) {
+      console.error(e);
+      this.snack.open('Löschen fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
   async acceptSuggestionAsEvent(s: EventSuggestionRow) {
     const ok = confirm(
       `Vorschlag als Event übernehmen?\n\n${s.name}\n${s.address ?? ''}`
@@ -237,6 +351,7 @@ export class AdminEvents {
 
 @Component({
   standalone: true,
+  providers: [provideNativeDateAdapter()],
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -244,6 +359,10 @@ export class AdminEvents {
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatIconModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   template: `
     <h2 mat-dialog-title>
@@ -251,15 +370,39 @@ export class AdminEvents {
     </h2>
 
     <div mat-dialog-content style="display:grid; gap:12px;">
-      <mat-form-field appearance="outline">
-        <mat-label>Name *</mat-label>
-        <input matInput [formControl]="form.controls.name" />
-      </mat-form-field>
+      <div style="display:grid; grid-template-columns:1fr 180px; gap:12px; align-items:start;">
+        <mat-form-field appearance="outline">
+          <mat-label>Name *</mat-label>
+          <input matInput [formControl]="form.controls.name" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select [formControl]="form.controls.status">
+            <mat-option value="active">aktiv</mat-option>
+            <mat-option value="inactive">nicht aktiv</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
 
       <mat-form-field appearance="outline">
         <mat-label>Adresse</mat-label>
         <input matInput [formControl]="form.controls.address" />
       </mat-form-field>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <mat-form-field appearance="outline">
+          <mat-label>Datum</mat-label>
+          <input matInput [matDatepicker]="picker" [formControl]="form.controls.date" />
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Uhrzeit</mat-label>
+          <input matInput type="time" [formControl]="form.controls.time" />
+        </mat-form-field>
+      </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <mat-form-field appearance="outline">
@@ -283,6 +426,13 @@ export class AdminEvents {
   `,
 })
 export class EventEditDialogComponent {
+  static combineDateTime(date: Date, time: string): Date {
+    const [h, m] = (time || '').split(':').map((n) => Number(n));
+    const d = new Date(date);
+    d.setHours(Number.isFinite(h) ? h : 0, Number.isFinite(m) ? m : 0, 0, 0);
+    return d;
+  }
+
   ref = inject(MatDialogRef<EventEditDialogComponent, EventFormValue>);
 
   form = new FormGroup({
@@ -290,26 +440,267 @@ export class EventEditDialogComponent {
     address: new FormControl<string>('', { nonNullable: true }),
     lat: new FormControl<number | null>(null, { validators: [Validators.required] }),
     lng: new FormControl<number | null>(null, { validators: [Validators.required] }),
+    status: new FormControl<'active' | 'inactive'>('active', { nonNullable: true }),
+    date: new FormControl<Date | null>(null),
+    time: new FormControl<string>('19:00', { nonNullable: true }),
   });
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: any) {
     if (data?.event) {
+      const start = this.asMaybeDate(data.event.startAt);
+      const time = start ? this.toTime(start) : '19:00';
       this.form.patchValue({
         name: data.event.name ?? '',
         address: data.event.address ?? '',
         lat: data.event.lat ?? null,
         lng: data.event.lng ?? null,
+        status: data.event.status === 'inactive' ? 'inactive' : 'active',
+        date: start,
+        time,
       });
     }
   }
 
+  private asMaybeDate(x: any): Date | null {
+    if (!x) return null;
+    if (x instanceof Date) return x;
+    if (x instanceof Timestamp) return x.toDate();
+    if (typeof x?.toDate === 'function') return x.toDate();
+    const d = new Date(String(x));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private toTime(d: Date): string {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
   submit() {
     const v = this.form.getRawValue();
+    const startAt = v.date ? EventEditDialogComponent.combineDateTime(v.date, v.time) : null;
     this.ref.close({
       name: (v.name ?? '').trim(),
       address: (v.address ?? '').trim(),
       lat: Number(v.lat),
       lng: Number(v.lng),
+      status: v.status,
+      startAt,
+    });
+  }
+}
+
+// ─────────────────────────────────────────────
+// Dialog: Admin edit Suggestion
+// ─────────────────────────────────────────────
+
+type SuggestionEditResult = {
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  startAt: Date | null;
+  note: string | null;
+  status: SuggestionStatus;
+};
+
+@Component({
+  standalone: true,
+  providers: [provideNativeDateAdapter()],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Vorschlag bearbeiten</h2>
+
+    <div mat-dialog-content style="display:grid; gap:12px;">
+      <div style="display:grid; grid-template-columns:1fr 180px; gap:12px; align-items:start;">
+        <mat-form-field appearance="outline">
+          <mat-label>Name *</mat-label>
+          <input matInput [formControl]="form.controls.name" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select [formControl]="form.controls.status">
+            <mat-option value="open">open</mat-option>
+            <mat-option value="accepted">accepted</mat-option>
+            <mat-option value="resolved">resolved</mat-option>
+            <mat-option value="rejected">rejected</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Adresse</mat-label>
+          <input matInput [formControl]="form.controls.address" />
+        </mat-form-field>
+
+        <button mat-stroked-button type="button" (click)="checkAddress()" [disabled]="geoBusy || !form.controls.address.value">
+          <mat-icon>search</mat-icon>
+          Adresse prüfen
+        </button>
+      </div>
+
+      @if (geoResults.length > 0) {
+        <div style="display:grid; gap:8px;">
+          <div style="font-size:12px; opacity:0.75;">Meintest du…?</div>
+          <div style="display:grid; gap:8px;">
+            <button
+              mat-button
+              type="button"
+              *ngFor="let r of geoResults; let i = index"
+              (click)="pickGeo(i)"
+              style="text-align:left; justify-content:flex-start; white-space:normal;"
+            >
+              {{ r.label }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <mat-form-field appearance="outline">
+          <mat-label>Datum</mat-label>
+          <input matInput [matDatepicker]="picker" [formControl]="form.controls.date" />
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Uhrzeit</mat-label>
+          <input matInput type="time" [formControl]="form.controls.time" />
+        </mat-form-field>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <mat-form-field appearance="outline">
+          <mat-label>Lat</mat-label>
+          <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lat" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Lng</mat-label>
+          <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lng" />
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Notiz</mat-label>
+        <textarea matInput rows="3" [formControl]="form.controls.note"></textarea>
+      </mat-form-field>
+    </div>
+
+    <div mat-dialog-actions align="end">
+      <button mat-button (click)="ref.close()">Abbrechen</button>
+      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Speichern</button>
+    </div>
+  `,
+})
+export class SuggestionEditDialogComponent {
+  ref = inject(MatDialogRef<SuggestionEditDialogComponent, SuggestionEditResult>);
+  private geo = inject(GeocodingService);
+
+  geoBusy = false;
+  geoResults: GeocodeResult[] = [];
+
+  form = new FormGroup({
+    name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    address: new FormControl<string>('', { nonNullable: true }),
+    status: new FormControl<SuggestionStatus>('open', { nonNullable: true }),
+    date: new FormControl<Date | null>(null),
+    time: new FormControl<string>('19:00', { nonNullable: true }),
+    lat: new FormControl<number | null>(null),
+    lng: new FormControl<number | null>(null),
+    note: new FormControl<string>('', { nonNullable: true }),
+  });
+
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any) {
+    const s: EventSuggestionRow | undefined = data?.suggestion;
+    if (s) {
+      const start = this.asMaybeDate(s.startAt);
+      this.form.patchValue({
+        name: s.name ?? '',
+        address: (s.address ?? '').toString(),
+        status: (s.status as any) ?? 'open',
+        date: start,
+        time: start ? this.toTime(start) : '19:00',
+        lat: Number.isFinite(Number(s.lat)) ? Number(s.lat) : null,
+        lng: Number.isFinite(Number(s.lng)) ? Number(s.lng) : null,
+        note: (s.note ?? '').toString(),
+      });
+    }
+  }
+
+  private asMaybeDate(x: any): Date | null {
+    if (!x) return null;
+    if (x instanceof Date) return x;
+    if (x instanceof Timestamp) return x.toDate();
+    if (typeof x?.toDate === 'function') return x.toDate();
+    const d = new Date(String(x));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private toTime(d: Date): string {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  async checkAddress() {
+    const q = (this.form.controls.address.value ?? '').trim();
+    if (!q) return;
+    this.geoBusy = true;
+    this.geoResults = [];
+    try {
+      const res = await firstValueFrom(this.geo.geocode(q, 5));
+      this.geoResults = res ?? [];
+    } catch (e) {
+      console.error('geocode failed', e);
+      this.geoResults = [];
+    } finally {
+      this.geoBusy = false;
+    }
+  }
+
+  pickGeo(i: number) {
+    const r = this.geoResults[i];
+    if (!r) return;
+    this.form.patchValue({
+      address: r.label,
+      lat: r.lat,
+      lng: r.lng,
+    });
+    this.geoResults = [];
+  }
+
+  submit() {
+    const v = this.form.getRawValue();
+    const name = (v.name ?? '').trim();
+    const address = (v.address ?? '').trim() || null;
+    const note = (v.note ?? '').trim() || null;
+    const lat = Number(v.lat);
+    const lng = Number(v.lng);
+    const startAt = v.date ? EventEditDialogComponent.combineDateTime(v.date, v.time) : null;
+
+    this.ref.close({
+      name,
+      address,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+      startAt,
+      note,
+      status: v.status,
     });
   }
 }

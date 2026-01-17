@@ -47,8 +47,25 @@
 .cell-note { font-size: 12px; opacity: 0.85; margin-top: 6px; white-space: pre-wrap; }
 
 .actions {
-  width: 140px;
+  width: 170px;
   text-align: right;
+}
+
+.status-select {
+  width: 100%;
+  font-size: 12px;
+}
+
+.status-field {
+  width: 160px;
+}
+
+:host ::ng-deep .table .mat-mdc-form-field {
+  margin: 0;
+}
+
+:host ::ng-deep .table .mat-mdc-form-field-subscript-wrapper {
+  display: none;
 }
 
 .pill {

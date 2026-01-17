@@ -22,6 +22,8 @@ export interface EventItem {
   address?: string;
   lat: number;
   lng: number;
+  /** Admin-controlled visibility/status. Missing => treated as 'active'. */
+  status?: 'active' | 'inactive';
   upvotes?: string[];
   downvotes?: string[];
   [key: string]: any; // weitere Felder erlaubt
@@ -92,6 +94,7 @@ export class EventsService {
       address: (params.address ?? '').toString().trim() || null,
       lat,
       lng,
+      status: 'active',
       upvotes: [],
       downvotes: [],
       createdAt: serverTimestamp(),
@@ -121,12 +124,15 @@ export class EventsService {
 
   private normalizeEvent(doc: any): EventItem {
     const { lat, lng } = this.extractLatLng(doc);
+    const statusRaw = String(doc?.status ?? doc?.state ?? 'active');
+    const status: 'active' | 'inactive' = statusRaw === 'inactive' ? 'inactive' : 'active';
     return {
       id: doc.id,
       name: doc.name ?? '(ohne Name)',
       address: doc.address ?? '',
       lat,
       lng,
+      status,
       upvotes: Array.isArray(doc.upvotes) ? doc.upvotes.map(String) : [],
       downvotes: Array.isArray(doc.downvotes) ? doc.downvotes.map(String) : [],
       ...doc,

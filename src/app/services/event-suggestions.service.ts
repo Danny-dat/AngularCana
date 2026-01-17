@@ -5,7 +5,9 @@ import {
   collection,
   collectionData,
   doc,
+  deleteDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -124,7 +126,20 @@ export class EventSuggestionsService {
   // ─────────────────────────────────────────────
 
   listenAll(): Observable<EventSuggestionRow[]> {
-    const q = query(this.suggestionsCol, orderBy('createdAt', 'desc'));
+    // Safety: cap the live list so the admin UI doesn't grow without bounds (Spark-friendly)
+    const q = query(this.suggestionsCol, orderBy('createdAt', 'desc'), limit(400));
+    return collectionData(q, { idField: 'id' }).pipe(
+      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
+    );
+  }
+
+  listenByStatus(status: SuggestionStatus, max = 200): Observable<EventSuggestionRow[]> {
+    const q = query(
+      this.suggestionsCol,
+      where('status', '==', status),
+      orderBy('createdAt', 'desc'),
+      limit(max)
+    );
     return collectionData(q, { idField: 'id' }).pipe(
       map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
     );
@@ -159,5 +174,14 @@ export class EventSuggestionsService {
       updatedAt: serverTimestamp(),
       ...(patch ?? {}),
     } as any);
+  }
+
+  async updateSuggestion(id: string, patch: Partial<EventSuggestionDoc>) {
+    const ref = doc(this.fs, 'event_suggestions', id);
+    await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() } as any);
+  }
+
+  async deleteSuggestion(id: string) {
+    await deleteDoc(doc(this.fs, 'event_suggestions', id));
   }
 }

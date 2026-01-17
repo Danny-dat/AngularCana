@@ -256,6 +256,9 @@ export class EventsComponent {
   }
 
   isActiveEvent = (e: EventItem): boolean => {
+    // Admin override: inactive means inactive – unabhängig vom Datum
+    const status = String((e as any)?.status ?? 'active');
+    if (status === 'inactive') return false;
     // Legacy: wenn kein startAt vorhanden -> aktiv
     const d = this.asDate((e as any).startAt);
     if (!d) return true;
