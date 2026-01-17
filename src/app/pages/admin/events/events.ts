@@ -405,50 +405,73 @@ export class AdminEvents {
         </mat-form-field>
       </div>
 
-      @if (data?.mode !== 'edit') {
-        <div style="display:grid; grid-template-columns:1fr 120px 1fr auto; gap:12px; align-items:start;">
-          <mat-form-field appearance="outline">
-            <mat-label>Straße</mat-label>
-            <input matInput placeholder="Musterstraße 1" [formControl]="form.controls.street" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>PLZ</mat-label>
-            <input matInput inputmode="numeric" [formControl]="form.controls.zip" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Stadt</mat-label>
-            <input matInput placeholder="Berlin" [formControl]="form.controls.city" />
-          </mat-form-field>
-
-          <button
-            mat-stroked-button
-            type="button"
-            (click)="checkAddress()"
-            [disabled]="geoBusy || !canCheckCreateAddress()"
-          >
-            <mat-icon>search</mat-icon>
-            Adresse prüfen
-          </button>
-        </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <mat-form-field appearance="outline">
+          <mat-label>Datum</mat-label>
+          <input matInput [matDatepicker]="picker" [formControl]="form.controls.date" />
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Adresse (Ergebnis)</mat-label>
-          <input matInput [formControl]="form.controls.address" />
+          <mat-label>Uhrzeit</mat-label>
+          <input matInput type="time" [formControl]="form.controls.time" />
         </mat-form-field>
-      } @else {
-        <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
-          <mat-form-field appearance="outline" class="full">
-            <mat-label>Adresse</mat-label>
-            <input matInput [formControl]="form.controls.address" />
-          </mat-form-field>
+      </div>
 
-          <button mat-stroked-button type="button" (click)="checkAddress()" [disabled]="geoBusy || !form.controls.address.value">
-            <mat-icon>search</mat-icon>
-            Adresse prüfen
+      <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Adresse *</mat-label>
+          <input
+            matInput
+            placeholder="Musterstraße 1, 12345 Musterstadt"
+            [formControl]="form.controls.address"
+          />
+          <mat-hint>Du kannst die Adresse komplett eintippen oder unten aus Straße/PLZ/Stadt zusammensetzen.</mat-hint>
+        </mat-form-field>
+
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="checkAddress()"
+          [disabled]="geoBusy || !canCheckAddress()"
+        >
+          <mat-icon>search</mat-icon>
+          Adresse prüfen
+        </button>
+      </div>
+
+      @if (data?.mode !== 'edit') {
+        <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+          <button mat-button type="button" (click)="splitAddress = !splitAddress">
+            <mat-icon>{{ splitAddress ? 'expand_less' : 'expand_more' }}</mat-icon>
+            Straße/PLZ/Stadt {{ splitAddress ? 'ausblenden' : 'anzeigen' }}
+          </button>
+
+          <button mat-button type="button" (click)="applyPartsToAddress()" [disabled]="!hasParts()">
+            <mat-icon>north_east</mat-icon>
+            In Adresse übernehmen
           </button>
         </div>
+
+        @if (splitAddress) {
+          <div style="display:grid; grid-template-columns:1fr 120px 1fr; gap:12px; align-items:start;">
+            <mat-form-field appearance="outline">
+              <mat-label>Straße</mat-label>
+              <input matInput placeholder="Musterstraße 1" [formControl]="form.controls.street" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>PLZ</mat-label>
+              <input matInput inputmode="numeric" [formControl]="form.controls.zip" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Stadt</mat-label>
+              <input matInput placeholder="Musterstadt" [formControl]="form.controls.city" />
+            </mat-form-field>
+          </div>
+        }
       }
 
       @if (geoError) {
@@ -472,36 +495,39 @@ export class AdminEvents {
         </div>
       }
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <mat-form-field appearance="outline">
-          <mat-label>Datum</mat-label>
-          <input matInput [matDatepicker]="picker" [formControl]="form.controls.date" />
-          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-datepicker #picker></mat-datepicker>
-        </mat-form-field>
+      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+        <div style="font-size:12px; opacity:0.75;">
+          @if (form.controls.lat.value != null && form.controls.lng.value != null) {
+            Koordinaten: {{ form.controls.lat.value }}, {{ form.controls.lng.value }}
+          } @else {
+            Koordinaten: – (Adresse prüfen)
+          }
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Uhrzeit</mat-label>
-          <input matInput type="time" [formControl]="form.controls.time" />
-        </mat-form-field>
+        <button mat-button type="button" (click)="showCoords = !showCoords">
+          <mat-icon>{{ showCoords ? 'visibility_off' : 'edit' }}</mat-icon>
+          Koordinaten {{ showCoords ? 'verbergen' : 'bearbeiten' }}
+        </button>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <mat-form-field appearance="outline">
-          <mat-label>Lat *</mat-label>
-          <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lat" />
-        </mat-form-field>
+      @if (showCoords) {
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Lat *</mat-label>
+            <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lat" />
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Lng *</mat-label>
-          <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lng" />
-        </mat-form-field>
-      </div>
+          <mat-form-field appearance="outline">
+            <mat-label>Lng *</mat-label>
+            <input matInput type="number" inputmode="decimal" [formControl]="form.controls.lng" />
+          </mat-form-field>
+        </div>
+      }
     </div>
 
     <div mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">Abbrechen</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">
+      <button mat-flat-button color="primary" [disabled]="isSaveDisabled()" (click)="submit()">
         Speichern
       </button>
     </div>
@@ -521,6 +547,10 @@ export class EventEditDialogComponent {
   geoBusy = false;
   geoResults: GeocodeResult[] = [];
   geoError = '';
+
+  // UI toggles (Create Dialog)
+  splitAddress = false;
+  showCoords = false;
 
   form = new FormGroup({
     name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
@@ -566,13 +596,20 @@ export class EventEditDialogComponent {
     return `${hh}:${mm}`;
   }
 
-  canCheckCreateAddress(): boolean {
+  hasParts(): boolean {
     const street = (this.form.controls.street.value ?? '').trim();
+    const zip = (this.form.controls.zip.value ?? '').trim();
     const city = (this.form.controls.city.value ?? '').trim();
-    return !!street && !!city;
+    return !!street || !!zip || !!city;
   }
 
-  private buildCreateQuery(): string {
+  applyPartsToAddress() {
+    const q = this.buildPartsQuery();
+    if (!q) return;
+    this.form.controls.address.setValue(q);
+  }
+
+  private buildPartsQuery(): string {
     const street = (this.form.controls.street.value ?? '').trim();
     const zip = (this.form.controls.zip.value ?? '').trim();
     const city = (this.form.controls.city.value ?? '').trim();
@@ -580,16 +617,41 @@ export class EventEditDialogComponent {
   }
 
   private buildGeoQuery(): string {
-    if (this.data?.mode !== 'edit') return this.buildCreateQuery();
-    return (this.form.controls.address.value ?? '').trim();
+    const addr = (this.form.controls.address.value ?? '').trim();
+    if (addr) return addr;
+    return this.buildPartsQuery();
+  }
+
+  canCheckAddress(): boolean {
+    const q = this.buildGeoQuery();
+    return !!q && q.trim().length >= 6;
+  }
+
+  isSaveDisabled(): boolean {
+    const name = (this.form.controls.name.value ?? '').trim();
+    if (!name) return true;
+
+    // In Create: Datum ist Pflicht
+    if (this.data?.mode !== 'edit' && !this.form.controls.date.value) return true;
+
+    // Adresse: entweder Adresse-Feld oder Parts
+    const q = this.buildGeoQuery();
+    if (!q || q.trim().length < 3) return true;
+
+    return false;
   }
 
   async checkAddress() {
+    // Wenn Adresse leer ist aber Parts gesetzt sind: in Adresse übernehmen (damit Admin sieht, was gesucht wird)
+    const currentAddr = (this.form.controls.address.value ?? '').trim();
+    if (!currentAddr) {
+      const parts = this.buildPartsQuery();
+      if (parts) this.form.controls.address.setValue(parts);
+    }
+
     const q = this.buildGeoQuery();
     if (!q || q.length < 6) {
-      this.geoError = this.data?.mode !== 'edit'
-        ? 'Bitte gib mindestens Straße und Stadt an.'
-        : 'Bitte gib eine Adresse an.';
+      this.geoError = 'Bitte gib eine vollständige Adresse an (mind. Straße + Stadt).';
       return;
     }
 
@@ -600,8 +662,16 @@ export class EventEditDialogComponent {
     try {
       const res = await firstValueFrom(this.geo.geocode(q, 5));
       this.geoResults = res ?? [];
+
       if (!this.geoResults.length) {
         this.geoError = 'Adresse nicht gefunden. Bitte präziser eingeben (z.B. mit PLZ).';
+        return;
+      }
+
+      // 1 Treffer: automatisch übernehmen
+      if (this.geoResults.length === 1) {
+        this.pickGeo(0);
+        return;
       }
     } catch (e) {
       console.error('geocode failed', e);
@@ -624,21 +694,60 @@ export class EventEditDialogComponent {
     this.geoError = '';
   }
 
-  submit() {
+  async submit() {
     const v = this.form.getRawValue();
+
+    const name = (v.name ?? '').trim();
+    if (!name) {
+      this.geoError = 'Bitte gib einen Namen an.';
+      return;
+    }
+
+    if (this.data?.mode !== 'edit' && !v.date) {
+      this.geoError = 'Bitte wähle ein Datum.';
+      return;
+    }
+
+    // Adresse: wenn leer, aus Parts zusammensetzen
+    const partsAddr = this.buildPartsQuery();
+    const address = ((v.address ?? '').trim() || partsAddr).trim();
+    if (!address) {
+      this.geoError = 'Bitte gib eine Adresse an.';
+      return;
+    }
+    if (!(v.address ?? '').trim() && partsAddr) {
+      this.form.controls.address.setValue(partsAddr);
+    }
+
+    // StartAt
     const startAt = v.date ? EventEditDialogComponent.combineDateTime(v.date, v.time) : null;
 
-    const fallbackAddress = this.data?.mode !== 'edit'
-      ? [v.street, v.zip, v.city].map((x) => (x ?? '').trim()).filter(Boolean).join(', ')
-      : '';
+    // Koordinaten: wenn fehlen -> Adresse prüfen und ggf. Auswahl verlangen
+    let lat = Number(this.form.controls.lat.value);
+    let lng = Number(this.form.controls.lng.value);
 
-    const address = (v.address ?? '').trim() || fallbackAddress;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      await this.checkAddress();
+
+      lat = Number(this.form.controls.lat.value);
+      lng = Number(this.form.controls.lng.value);
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        // Bei mehreren Treffern bleibt die Liste offen -> User muss wählen
+        if (this.geoResults.length > 1) {
+          this.geoError = 'Bitte wähle den passenden Adress-Treffer aus.';
+        } else if (!this.geoError) {
+          this.geoError = 'Bitte Adresse prüfen.';
+        }
+        return;
+      }
+    }
 
     this.ref.close({
-      name: (v.name ?? '').trim(),
+      name,
       address,
-      lat: Number(v.lat),
-      lng: Number(v.lng),
+      lat,
+      lng,
       status: v.status,
       startAt,
     });
