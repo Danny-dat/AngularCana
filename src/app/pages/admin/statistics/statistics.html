@@ -1,1 +1,238 @@
-<p>statistics works!</p>
+<div class="page">
+  <div class="header">
+    <div class="title">
+      <h2>Statistics</h2>
+      <div class="sub">{{ metaText() }}</div>
+    </div>
+
+    <div class="actions">
+      <mat-form-field class="range" appearance="outline">
+        <mat-label>Zeitraum</mat-label>
+        <mat-select [value]="rangeDays()" (selectionChange)="setRange($event.value)">
+          <mat-option [value]="7">7 Tage</mat-option>
+          <mat-option [value]="30">30 Tage</mat-option>
+          <mat-option [value]="90">90 Tage</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        class="sync-btn"
+        (click)="syncNow()"
+        [disabled]="isSyncing()"
+      >
+        <mat-icon>sync</mat-icon>
+        Sync
+        <mat-progress-spinner
+          *ngIf="isSyncing()"
+          class="btn-spinner"
+          mode="indeterminate"
+          diameter="18"
+          strokeWidth="3"
+        ></mat-progress-spinner>
+      </button>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <mat-card class="kpi" *ngFor="let k of kpis()">
+      <mat-card-content>
+        <div class="kpi-row">
+          <mat-icon class="kpi-icon">{{ k.icon }}</mat-icon>
+          <div>
+            <div class="kpi-value">{{ k.value }}</div>
+            <div class="kpi-label">{{ k.label }}</div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>Logs pro Tag</mat-card-title>
+      <mat-card-subtitle>
+        Aggregiert aus <code>consumptions</code> → <code>stats_daily</code>
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="chart-wrap" *ngIf="daily().length; else emptyState">
+        <canvas #dailyCanvas></canvas>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="empty">
+          Noch keine aggregierten Daten gefunden. Klicke auf <b>Sync</b>, damit neue
+          <code>consumptions</code> nach <code>stats_daily</code> aggregiert werden.
+        </div>
+      </ng-template>
+
+      <div class="loading" *ngIf="isLoading()">
+        <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
+        <span>Lädt…</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="grid-2">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top Produkte</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="topProducts()" class="mini-table" *ngIf="topProducts().length">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Produkt</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <div class="empty" *ngIf="!topProducts().length">—</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top Devices</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="topDevices()" class="mini-table" *ngIf="topDevices().length">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Device</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <div class="empty" *ngIf="!topDevices().length">—</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top Locations</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="topLocations()" class="mini-table" *ngIf="topLocations().length">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Ort</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <div class="empty" *ngIf="!topLocations().length">—</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top Kombis (Produkt + Device)</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="topPairs()" class="mini-table" *ngIf="topPairs().length">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Kombi</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <div class="empty" *ngIf="!topPairs().length">—</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top Uhrzeiten</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="topHours()" class="mini-table" *ngIf="topHours().length">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Uhrzeit</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <div class="empty" *ngIf="!topHours().length">—</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="recent-card">
+    <mat-card-header>
+      <mat-card-title>Letzte Logs</mat-card-title>
+      <mat-card-subtitle>Direkt aus <code>consumptions</code> (nur zum schnellen Check)</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <table mat-table [dataSource]="recent()" class="mini-table" *ngIf="recent().length">
+        <ng-container matColumnDef="when">
+          <th mat-header-cell *matHeaderCellDef>Wann</th>
+          <td mat-cell *matCellDef="let r">{{ r.when ? (r.when | date:'short') : '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>User</th>
+          <td mat-cell *matCellDef="let r">
+            {{ r.userDisplayName || (r.userId | slice:0:8) }}
+            <mat-icon *ngIf="r.hasGeo" class="geo">my_location</mat-icon>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="product">
+          <th mat-header-cell *matHeaderCellDef>Produkt</th>
+          <td mat-cell *matCellDef="let r">{{ r.product }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="device">
+          <th mat-header-cell *matHeaderCellDef>Device</th>
+          <td mat-cell *matCellDef="let r">{{ r.device }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="location">
+          <th mat-header-cell *matHeaderCellDef>Ort</th>
+          <td mat-cell *matCellDef="let r">{{ r.location }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="recentColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: recentColumns"></tr>
+      </table>
+
+      <div class="empty" *ngIf="!recent().length">—</div>
+    </mat-card-content>
+  </mat-card>
+</div>

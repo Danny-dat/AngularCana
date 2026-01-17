@@ -29,6 +29,7 @@ import { EventsService, EventItem } from '../../services/events.service';
 import { NotificationService } from '../../services/notification.service';
 // Der Pfad muss korrekt sein, damit CannaComponent gefunden wird
 import { CannaComponent, ConsumptionSelection } from '../canna/canna';
+import { geoCellE2, keyify } from '../../utils/analytics-utils';
 
 type Toast = { type: 'success' | 'error'; text: string };
 
@@ -169,25 +170,55 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         ? new GeoPoint(pos.coords.latitude, pos.coords.longitude)
         : null;
 
-      const payload = {
-        userId: user.uid,
-        product: selection.product!,
-        device: selection.device!,
-        location: selection.location!,
-        timestamp: serverTimestamp(),
-        ...(geo && { locationGeo: geo }),
-      };
-
-      await runInInjectionContext(this.env, () =>
-        addDoc(collection(this.firestore, 'consumptions'), payload)
-      );
-
+      // DisplayName einmal lesen (für Payload + Notification)
       const userSnap = await runInInjectionContext(this.env, () =>
         getDoc(doc(this.firestore, `users/${user.uid}`))
       );
       const displayName: string | null = userSnap.exists()
         ? (userSnap.data() as any)['displayName'] ?? null
         : null;
+
+      const productLabel = selection.product!;
+      const deviceLabel = selection.device!;
+      const locationLabel = selection.location!;
+
+      // stabile Keys für spätere Auswertungen
+      const productKey = keyify(productLabel);
+      const deviceKey = keyify(deviceLabel);
+      const locationKey = keyify(locationLabel);
+
+      // Privacy-friendly Geo Raster (optional)
+      const cell = geo ? geoCellE2(geo.latitude, geo.longitude) : null;
+
+      const payload: any = {
+        userId: user.uid,
+        userDisplayName: displayName,
+        product: productLabel,
+        device: deviceLabel,
+        location: locationLabel,
+
+        productKey,
+        deviceKey,
+        locationKey,
+
+        // Server-Zeit für Statistik/Queries
+        timestamp: serverTimestamp(),
+
+        // Debug/Qualität: Clientzeit (nicht für Auswertung, nur hilfreich)
+        clientTimestampMs: Date.now(),
+        platform: 'web',
+
+        ...(geo && { locationGeo: geo, hasGeo: true }),
+        ...(cell && {
+          geoCellLatE2: cell.latE2,
+          geoCellLngE2: cell.lngE2,
+          geoCellId: cell.id,
+        }),
+      };
+
+      await runInInjectionContext(this.env, () =>
+        addDoc(collection(this.firestore, 'consumptions'), payload)
+      );
 
       await this.notifications.sendConsumptionToFriends({
         userId: user.uid,
