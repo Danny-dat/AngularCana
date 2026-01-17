@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { combineLatest, Observable, firstValueFrom } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 
@@ -61,6 +61,9 @@ export class AdminUsers {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
 
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
@@ -83,6 +86,27 @@ export class AdminUsers {
       );
     })
   );
+
+  constructor() {
+    // Wenn man vom Dashboard kommt ("Neuen User anlegen"), direkt Dialog öffnen.
+    void this.openCreateDialogIfRequested();
+  }
+
+  private async openCreateDialogIfRequested(): Promise<void> {
+    const qp = await firstValueFrom(this.route.queryParamMap);
+    if (qp.get('create') !== '1') return;
+
+    // Param entfernen, damit der Dialog nicht bei jedem Refresh erneut aufpoppt
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { create: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    // Dialog öffnen
+    await this.onCreateUser();
+  }
 
   // =========================
   // Neuer User anlegen (Spark-safe)
