@@ -20,11 +20,9 @@ import {
 import { combineLatest, Observable, firstValueFrom, of } from 'rxjs';
 import { catchError, map, shareReplay, startWith, switchMap } from 'rxjs/operators';
 
-import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -36,7 +34,6 @@ import { ReasonDialogComponent } from '../dialogs/reason-dialog';
 
 type ReportStatus = 'new' | 'in_review' | 'resolved';
 type ReportScope = 'direct' | 'channel' | 'group' | 'unknown';
-type StatusFilter = 'all' | ReportStatus;
 
 type ReportDoc = {
   id: string;
@@ -91,32 +88,53 @@ function toDateSafe(v: any): Date | null {
 
 function statusLabel(s: ReportStatus) {
   switch (s) {
-    case 'new': return 'Neu';
-    case 'in_review': return 'In Prüfung';
-    case 'resolved': return 'Erledigt';
+    case 'new':
+      return 'Offen';
+    case 'in_review':
+      return 'In Bearbeitung';
+    case 'resolved':
+      return 'Erledigt';
   }
 }
 
 function scopeLabel(s: ReportScope) {
   switch (s) {
-    case 'direct': return 'Privat';
-    case 'channel': return 'Global';
-    case 'group': return 'Gruppe';
-    default: return '—';
+    case 'direct':
+      return 'Privat';
+    case 'channel':
+      return 'Global';
+    case 'group':
+      return 'Gruppe';
+    default:
+      return '—';
   }
 }
 
 function reasonLabel(cat?: string | null) {
   switch ((cat ?? '').toLowerCase()) {
-    case 'spam': return 'Spam / Werbung';
-    case 'harassment': return 'Belästigung / Mobbing';
-    case 'hate': return 'Hass / Hetze';
-    case 'misinfo': return 'Falsche Informationen';
-    case 'illegal': return 'Illegale Inhalte';
-    case 'other': return 'Sonstiges';
-    default: return cat ? String(cat) : '—';
+    case 'spam':
+      return 'Spam / Werbung';
+    case 'harassment':
+      return 'Belästigung / Mobbing';
+    case 'hate':
+      return 'Hass / Hetze';
+    case 'misinfo':
+      return 'Falsche Informationen';
+    case 'illegal':
+      return 'Illegale Inhalte';
+    case 'other':
+      return 'Sonstiges';
+    default:
+      return cat ? String(cat) : '—';
   }
 }
+
+type ReportsVm = {
+  open: ReportRow[];
+  inProgress: ReportRow[];
+  done: ReportRow[];
+  uid: string | null;
+};
 
 @Component({
   standalone: true,
@@ -126,11 +144,9 @@ function reasonLabel(cat?: string | null) {
     RouterLink,
     ReactiveFormsModule,
 
-    MatTableModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatChipsModule,
     MatButtonModule,
     MatDialogModule,
@@ -152,36 +168,29 @@ export class AdminReports {
   private userInfoCache = new Map<string, Observable<UserSummary>>();
 
   searchCtrl = new FormControl<string>('', { nonNullable: true });
-  statusCtrl = new FormControl<StatusFilter>('all', { nonNullable: true });
 
-  displayedColumns: string[] = [
-    'createdAt',
-    'scope',
-    'reporter',
-    'reported',
-    'message',
-    'reason',
-    'status',
-    'actions',
-  ];
+  uid$: Observable<string | null> = user(this.auth).pipe(
+    map((u) => u?.uid ?? null),
+    startWith(null),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
 
   private reportsRaw$: Observable<ReportDoc[]> = collectionData(
     query(collection(this.afs, 'reports'), orderBy('createdAt', 'desc'), limit(500)),
     { idField: 'id' }
   ) as Observable<ReportDoc[]>;
 
-  rows$: Observable<ReportRow[]> = combineLatest([
+  /** Reports (convert + search filter) */
+  private rowsFiltered$: Observable<ReportRow[]> = combineLatest([
     this.reportsRaw$,
     this.searchCtrl.valueChanges.pipe(startWith('')),
-    this.statusCtrl.valueChanges.pipe(startWith('all' as StatusFilter)),
   ]).pipe(
-    map(([docs, q, status]) => {
+    map(([docs, q]) => {
       const queryTxt = (q ?? '').trim().toLowerCase();
 
       const rows = docs.map((r) => {
         const inferredScope: ReportScope =
-          (r.scope as ReportScope) ??
-          (r.chatId === 'global' ? 'channel' : r.chatId ? 'direct' : 'unknown');
+          (r.scope as ReportScope) ?? (r.chatId === 'global' ? 'channel' : r.chatId ? 'direct' : 'unknown');
 
         const fixedStatus: ReportStatus = (r.status as ReportStatus) ?? 'new';
 
@@ -192,13 +201,12 @@ export class AdminReports {
           scopeFixed: inferredScope,
           statusLabel: statusLabel(fixedStatus),
           scopeLabel: scopeLabel(inferredScope),
-        };
+        } as ReportRow;
       });
 
-      return rows.filter((r) => {
-        if (status !== 'all' && r.statusFixed !== status) return false;
-        if (!queryTxt) return true;
+      if (!queryTxt) return rows;
 
+      return rows.filter((r) => {
         const hay = [
           r.reporterId,
           r.reportedId,
@@ -209,29 +217,47 @@ export class AdminReports {
           r.reasonText ?? '',
           r.statusFixed ?? '',
           r.assignedTo ?? '',
-        ].join(' ').toLowerCase();
+          r.resolutionNote ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
 
         return hay.includes(queryTxt);
       });
+    }),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+
+  /**
+   * VM für die Kanban-Ansicht:
+   * - Offen: status=new (und ggf. in_review ohne assignedTo)
+   * - In Bearbeitung: NUR die dem aktuellen Admin zugewiesenen (Ticket-System)
+   * - Erledigt: status=resolved
+   */
+  vm$: Observable<ReportsVm> = combineLatest([this.rowsFiltered$, this.uid$]).pipe(
+    map(([rows, uid]) => {
+      const open = rows.filter((r) => r.statusFixed === 'new' || (r.statusFixed === 'in_review' && !r.assignedTo));
+      const inProgress = uid ? rows.filter((r) => r.statusFixed === 'in_review' && r.assignedTo === uid) : [];
+      const done = rows.filter((r) => r.statusFixed === 'resolved');
+      return { open, inProgress, done, uid };
     })
   );
 
-  admins$: Observable<AdminItem[]> = collectionData(
-    collection(this.afs, 'admins'),
-    { idField: 'uid' }
-  ).pipe(
-    map((docs: any[]) => docs.map(d => String(d.uid)).filter(Boolean)),
+  admins$: Observable<AdminItem[]> = collectionData(collection(this.afs, 'admins'), { idField: 'uid' }).pipe(
+    map((docs: any[]) => docs.map((d) => String(d.uid)).filter(Boolean)),
     switchMap((uids: string[]) => {
       if (!uids.length) return of([] as AdminItem[]);
       return combineLatest(
-        uids.map(uid =>
-          this.userInfo$(uid).pipe(map(u => ({ uid: u.uid, name: u.name, email: u.email } as AdminItem)))
-        )
+        uids.map((uid) => this.userInfo$(uid).pipe(map((u) => ({ uid: u.uid, name: u.name, email: u.email } as AdminItem))))
       );
     }),
-    map(list => list.sort((a, b) => a.name.localeCompare(b.name))),
+    map((list) => list.sort((a, b) => a.name.localeCompare(b.name))),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  trackById(_: number, r: ReportRow) {
+    return r.id;
+  }
 
   shortId(id: string | null | undefined, start = 6, end = 4): string {
     const v = (id ?? '').toString();
@@ -255,8 +281,7 @@ export class AdminReports {
 
     const obs = combineLatest([profile$, user$]).pipe(
       map(([p, u]) => {
-        const name =
-          (p?.username || p?.displayName || u?.displayName || u?.email || '').toString().trim();
+        const name = (p?.username || p?.displayName || u?.displayName || u?.email || '').toString().trim();
         const email = (u?.email || null) ? String(u?.email) : null;
 
         return {
@@ -287,63 +312,85 @@ export class AdminReports {
   async markInReview(r: ReportRow) {
     if (r.statusFixed === 'resolved') return;
     const actorUid = await this.actorUid();
-    await this.safeUpdate(r, {
-      status: 'in_review',
-      assignedTo: r.assignedTo ?? actorUid,
-      assignedAt: serverTimestamp(),
-    } as any, 'Report auf "In Prüfung" gesetzt');
+    await this.safeUpdate(
+      r,
+      {
+        status: 'in_review',
+        assignedTo: r.assignedTo ?? actorUid,
+        assignedAt: serverTimestamp(),
+      } as any,
+      'Report auf "In Bearbeitung" gesetzt'
+    );
   }
 
   async assignToMe(r: ReportRow) {
     if (r.statusFixed === 'resolved') return;
     const actorUid = await this.actorUid();
-    await this.safeUpdate(r, {
-      assignedTo: actorUid,
-      assignedAt: serverTimestamp(),
-      status: 'in_review',
-    } as any, 'Report dir zugewiesen');
+    await this.safeUpdate(
+      r,
+      {
+        assignedTo: actorUid,
+        assignedAt: serverTimestamp(),
+        status: 'in_review',
+      } as any,
+      'Report dir zugewiesen'
+    );
   }
 
   async assignTo(r: ReportRow, adminUid: string) {
     if (!adminUid || r.statusFixed === 'resolved') return;
-    await this.safeUpdate(r, {
-      assignedTo: adminUid,
-      assignedAt: serverTimestamp(),
-      status: 'in_review',
-    } as any, 'Report zugewiesen');
+    await this.safeUpdate(
+      r,
+      {
+        assignedTo: adminUid,
+        assignedAt: serverTimestamp(),
+        status: 'in_review',
+      } as any,
+      'Report zugewiesen'
+    );
   }
 
   async resolve(r: ReportRow) {
     if (r.statusFixed === 'resolved') return;
 
     const res = await firstValueFrom(
-      this.dialog.open(ReasonDialogComponent, {
-        data: {
-          title: 'Report erledigen',
-          hint: 'Optional: Notiz / Ergebnis (z. B. "User verwarnt", "kein Verstoß").',
-          required: false,
-          confirmText: 'Erledigen',
-        },
-      }).afterClosed()
+      this.dialog
+        .open(ReasonDialogComponent, {
+          data: {
+            title: 'Report erledigen',
+            hint: 'Optional: Notiz / Ergebnis (z. B. "User verwarnt", "kein Verstoß").',
+            required: false,
+            confirmText: 'Erledigen',
+          },
+        })
+        .afterClosed()
     );
 
     const actorUid = await this.actorUid();
 
-    await this.safeUpdate(r, {
-      status: 'resolved',
-      resolvedBy: actorUid,
-      resolvedAt: serverTimestamp(),
-      resolutionNote: res?.reason?.trim?.() || null,
-    } as any, 'Report erledigt');
+    await this.safeUpdate(
+      r,
+      {
+        status: 'resolved',
+        resolvedBy: actorUid,
+        resolvedAt: serverTimestamp(),
+        resolutionNote: res?.reason?.trim?.() || null,
+      } as any,
+      'Report erledigt'
+    );
   }
 
   async reopen(r: ReportRow) {
-    await this.safeUpdate(r, {
-      status: 'new',
-      resolvedBy: null,
-      resolvedAt: null,
-      resolutionNote: null,
-    } as any, 'Report wieder geöffnet');
+    await this.safeUpdate(
+      r,
+      {
+        status: 'new',
+        resolvedBy: null,
+        resolvedAt: null,
+        resolutionNote: null,
+      } as any,
+      'Report wieder geöffnet'
+    );
   }
 
   private async actorUid(): Promise<string> {

@@ -1,174 +1,299 @@
 <div class="page">
   <div class="header">
-    <h2>Reports</h2>
-
-    <div class="filters">
-      <mat-form-field appearance="outline" class="search">
-        <mat-label>Suche (UID / Text / ChatId)</mat-label>
-        <input matInput [formControl]="searchCtrl" />
-        <button matSuffix mat-icon-button *ngIf="searchCtrl.value" (click)="searchCtrl.setValue('')">
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="status">
-        <mat-label>Status</mat-label>
-        <mat-select [formControl]="statusCtrl">
-          <mat-option value="all">Alle</mat-option>
-          <mat-option value="new">Neu</mat-option>
-          <mat-option value="in_review">In Prüfung</mat-option>
-          <mat-option value="resolved">Erledigt</mat-option>
-        </mat-select>
-      </mat-form-field>
+    <div class="title">
+      <h2>Reports</h2>
+      <div class="hint">In Bearbeitung zeigt nur die Reports, die dir zugewiesen wurden.</div>
     </div>
+
+    <mat-form-field appearance="outline" class="search">
+      <mat-label>Suche (UID / Text / ChatId)</mat-label>
+      <input matInput [formControl]="searchCtrl" />
+      <button matSuffix mat-icon-button *ngIf="searchCtrl.value" (click)="searchCtrl.setValue('')">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
   </div>
 
-  <div class="table-wrap">
-    <table mat-table [dataSource]="(rows$ | async) || []" class="table">
-
-      <ng-container matColumnDef="createdAt">
-        <th mat-header-cell *matHeaderCellDef>Datum</th>
-        <td mat-cell *matCellDef="let r">
-          {{ r.createdAtDate ? (r.createdAtDate | date:'dd.MM.yyyy, HH:mm') : '—' }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="scope">
-        <th mat-header-cell *matHeaderCellDef>Bereich</th>
-        <td mat-cell *matCellDef="let r">
-          <mat-chip class="chip">{{ r.scopeLabel }}</mat-chip>
-          <div class="sub" *ngIf="r.chatId">
-            <code [title]="r.chatId">{{ shortId(r.chatId, 10, 6) }}</code>
+  <ng-container *ngIf="vm$ | async as vm">
+    <div class="board">
+      <!-- OPEN ---------------------------------------------------------->
+      <section class="col col-open">
+        <div class="col-head">
+          <div class="col-title">
+            <span>Offen</span>
+            <mat-chip class="count chip chip-new">{{ vm.open.length }}</mat-chip>
           </div>
-        </td>
-      </ng-container>
+          <div class="col-sub">Neu / noch nicht übernommen</div>
+        </div>
 
-      <ng-container matColumnDef="reporter">
-        <th mat-header-cell *matHeaderCellDef>Reporter</th>
-        <td mat-cell *matCellDef="let r">
-          <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
-            <a [routerLink]="['/admin/users', r.reporterId]" class="user-link" [title]="r.reporterId">
-              <div class="user-name">{{ u.name }}</div>
-              <div class="user-email" *ngIf="u.email">{{ u.email }}</div>
-              <div class="sub"><code>{{ shortId(r.reporterId) }}</code></div>
-            </a>
+        <div class="col-body">
+          <ng-container *ngFor="let r of vm.open; trackBy: trackById">
+            <div class="report-card">
+              <div class="top">
+                <div class="meta">
+                  <span class="date">{{ r.createdAtDate ? (r.createdAtDate | date:'dd.MM.yyyy, HH:mm') : '—' }}</span>
+                  <mat-chip class="chip chip-scope">{{ r.scopeLabel }}</mat-chip>
+                  <mat-chip class="chip chip-new">{{ r.statusLabel }}</mat-chip>
+                </div>
+
+                <ng-container *ngIf="(admins$ | async) as admins">
+                  <button mat-icon-button [matMenuTriggerFor]="rowMenu" title="Aktionen">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+
+                  <mat-menu #rowMenu="matMenu">
+                    <button mat-menu-item (click)="assignToMe(r)" [disabled]="r.statusFixed === 'resolved'">
+                      <mat-icon>person</mat-icon>
+                      <span>Mir zuweisen</span>
+                    </button>
+
+                    <button mat-menu-item [matMenuTriggerFor]="assignMenu" [disabled]="r.statusFixed === 'resolved' || !admins.length">
+                      <mat-icon>person_add</mat-icon>
+                      <span>Anderem Admin zuweisen…</span>
+                    </button>
+
+                    <mat-divider></mat-divider>
+
+                    <button mat-menu-item (click)="markInReview(r)" [disabled]="r.statusFixed === 'resolved'">
+                      <mat-icon>rule</mat-icon>
+                      <span>In Bearbeitung</span>
+                    </button>
+
+                    <button mat-menu-item (click)="resolve(r)" [disabled]="r.statusFixed === 'resolved'">
+                      <mat-icon>done</mat-icon>
+                      <span>Erledigen</span>
+                    </button>
+
+                    <button mat-menu-item *ngIf="r.statusFixed === 'resolved'" (click)="reopen(r)">
+                      <mat-icon>restart_alt</mat-icon>
+                      <span>Wieder öffnen</span>
+                    </button>
+                  </mat-menu>
+
+                  <mat-menu #assignMenu="matMenu">
+                    <button mat-menu-item *ngFor="let a of admins" (click)="assignTo(r, a.uid)">
+                      <mat-icon>person</mat-icon>
+                      <span>{{ a.name }}<span *ngIf="a.email"> · {{ a.email }}</span></span>
+                    </button>
+                  </mat-menu>
+                </ng-container>
+              </div>
+
+              <div class="who">
+                <div class="who-item">
+                  <div class="lbl">Reporter</div>
+                  <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
+
+                <mat-icon class="arrow">arrow_right_alt</mat-icon>
+
+                <div class="who-item">
+                  <div class="lbl">Gemeldet</div>
+                  <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
+              </div>
+
+              <div class="reason">
+                <b>{{ reasonLabel(r.reasonCategory) }}</b>
+                <span class="sub" *ngIf="r.reasonText">· {{ r.reasonText }}</span>
+              </div>
+
+              <div class="msg" *ngIf="r.messageText" [title]="r.messageText">{{ r.messageText }}</div>
+
+              <div class="subline" *ngIf="r.chatId">
+                Chat: <code [title]="r.chatId">{{ shortId(r.chatId, 10, 6) }}</code>
+                <span *ngIf="r.messageId">· msg: <code [title]="r.messageId">{{ shortId(r.messageId, 8, 6) }}</code></span>
+              </div>
+            </div>
           </ng-container>
-        </td>
-      </ng-container>
 
-      <ng-container matColumnDef="reported">
-        <th mat-header-cell *matHeaderCellDef>Gemeldet</th>
-        <td mat-cell *matCellDef="let r">
-          <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
-            <a [routerLink]="['/admin/users', r.reportedId]" class="user-link" [title]="r.reportedId">
-              <div class="user-name">{{ u.name }}</div>
-              <div class="user-email" *ngIf="u.email">{{ u.email }}</div>
-              <div class="sub"><code>{{ shortId(r.reportedId) }}</code></div>
-            </a>
+          <div class="empty" *ngIf="vm.open.length === 0">
+            Keine offenen Reports.
+          </div>
+        </div>
+      </section>
+
+      <!-- IN PROGRESS (ONLY ASSIGNED TO ME) ----------------------------->
+      <section class="col col-progress">
+        <div class="col-head">
+          <div class="col-title">
+            <span>In Bearbeitung</span>
+            <mat-chip class="count chip chip-review">{{ vm.inProgress.length }}</mat-chip>
+          </div>
+          <div class="col-sub">Nur dir zugewiesen (Ticket-System)</div>
+        </div>
+
+        <div class="col-body">
+          <ng-container *ngFor="let r of vm.inProgress; trackBy: trackById">
+            <div class="report-card">
+              <div class="top">
+                <div class="meta">
+                  <span class="date">{{ r.createdAtDate ? (r.createdAtDate | date:'dd.MM.yyyy, HH:mm') : '—' }}</span>
+                  <mat-chip class="chip chip-scope">{{ r.scopeLabel }}</mat-chip>
+                  <mat-chip class="chip chip-review">{{ r.statusLabel }}</mat-chip>
+                </div>
+
+                <ng-container *ngIf="(admins$ | async) as admins">
+                  <button mat-icon-button [matMenuTriggerFor]="rowMenu" title="Aktionen">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+
+                  <mat-menu #rowMenu="matMenu">
+                    <button mat-menu-item (click)="assignToMe(r)" [disabled]="r.statusFixed === 'resolved'">
+                      <mat-icon>person</mat-icon>
+                      <span>Mir zuweisen</span>
+                    </button>
+
+                    <button mat-menu-item [matMenuTriggerFor]="assignMenu" [disabled]="r.statusFixed === 'resolved' || !admins.length">
+                      <mat-icon>person_add</mat-icon>
+                      <span>Anderem Admin zuweisen…</span>
+                    </button>
+
+                    <mat-divider></mat-divider>
+
+                    <button mat-menu-item (click)="resolve(r)" [disabled]="r.statusFixed === 'resolved'">
+                      <mat-icon>done</mat-icon>
+                      <span>Erledigen</span>
+                    </button>
+                  </mat-menu>
+
+                  <mat-menu #assignMenu="matMenu">
+                    <button mat-menu-item *ngFor="let a of admins" (click)="assignTo(r, a.uid)">
+                      <mat-icon>person</mat-icon>
+                      <span>{{ a.name }}<span *ngIf="a.email"> · {{ a.email }}</span></span>
+                    </button>
+                  </mat-menu>
+                </ng-container>
+              </div>
+
+              <div class="who">
+                <div class="who-item">
+                  <div class="lbl">Reporter</div>
+                  <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
+
+                <mat-icon class="arrow">arrow_right_alt</mat-icon>
+
+                <div class="who-item">
+                  <div class="lbl">Gemeldet</div>
+                  <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
+              </div>
+
+              <div class="reason">
+                <b>{{ reasonLabel(r.reasonCategory) }}</b>
+                <span class="sub" *ngIf="r.reasonText">· {{ r.reasonText }}</span>
+              </div>
+
+              <div class="msg" *ngIf="r.messageText" [title]="r.messageText">{{ r.messageText }}</div>
+
+              <div class="subline" *ngIf="r.assignedTo">
+                Zugewiesen: <code [title]="r.assignedTo">{{ shortId(r.assignedTo) }}</code>
+              </div>
+            </div>
           </ng-container>
-        </td>
-      </ng-container>
 
-      <ng-container matColumnDef="message">
-        <th mat-header-cell *matHeaderCellDef>Inhalt</th>
-        <td mat-cell *matCellDef="let r">
-          <div class="msg" [title]="r.messageText || ''">{{ r.messageText || '—' }}</div>
-
-          <div class="sub" *ngIf="r.messageId">
-            msgId: <code [title]="r.messageId">{{ shortId(r.messageId, 8, 6) }}</code>
+          <div class="empty" *ngIf="vm.inProgress.length === 0">
+            Keine Reports in Bearbeitung für dich.
           </div>
-        </td>
-      </ng-container>
+        </div>
+      </section>
 
-      <ng-container matColumnDef="reason">
-        <th mat-header-cell *matHeaderCellDef>Grund</th>
-        <td mat-cell *matCellDef="let r">
-          <div class="reason-main">
-            <b>{{ reasonLabel(r.reasonCategory) }}</b>
+      <!-- DONE ---------------------------------------------------------->
+      <section class="col col-done">
+        <div class="col-head">
+          <div class="col-title">
+            <span>Erledigt</span>
+            <mat-chip class="count chip chip-resolved">{{ vm.done.length }}</mat-chip>
           </div>
-          <div class="sub" *ngIf="r.reasonText">{{ r.reasonText }}</div>
-          <div class="sub" *ngIf="!r.reasonCategory && !r.reasonText">—</div>
-        </td>
-      </ng-container>
+          <div class="col-sub">Abgeschlossen</div>
+        </div>
 
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let r">
-          <mat-chip class="chip"
-            [class.chip-new]="r.statusFixed === 'new'"
-            [class.chip-review]="r.statusFixed === 'in_review'"
-            [class.chip-resolved]="r.statusFixed === 'resolved'">
-            {{ r.statusLabel }}
-          </mat-chip>
+        <div class="col-body">
+          <ng-container *ngFor="let r of vm.done; trackBy: trackById">
+            <div class="report-card">
+              <div class="top">
+                <div class="meta">
+                  <span class="date">{{ r.createdAtDate ? (r.createdAtDate | date:'dd.MM.yyyy, HH:mm') : '—' }}</span>
+                  <mat-chip class="chip chip-scope">{{ r.scopeLabel }}</mat-chip>
+                  <mat-chip class="chip chip-resolved">{{ r.statusLabel }}</mat-chip>
+                </div>
 
-          <div class="sub" *ngIf="r.assignedTo">
-            assigned:
-            <ng-container *ngIf="(userInfo$(r.assignedTo) | async) as a">
-              {{ a.name }}
-              <code [title]="r.assignedTo">{{ shortId(r.assignedTo) }}</code>
-            </ng-container>
-          </div>
-        </td>
-      </ng-container>
+                <ng-container *ngIf="(admins$ | async) as admins">
+                  <button mat-icon-button [matMenuTriggerFor]="rowMenu" title="Aktionen">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
 
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-        <td mat-cell *matCellDef="let r" class="actions">
-          <ng-container *ngIf="(admins$ | async) as admins">
+                  <mat-menu #rowMenu="matMenu">
+                    <button mat-menu-item (click)="reopen(r)">
+                      <mat-icon>restart_alt</mat-icon>
+                      <span>Wieder öffnen</span>
+                    </button>
+                  </mat-menu>
+                </ng-container>
+              </div>
 
-            <button mat-icon-button [matMenuTriggerFor]="rowMenu" title="Aktionen">
-              <mat-icon>more_vert</mat-icon>
-            </button>
+              <div class="who">
+                <div class="who-item">
+                  <div class="lbl">Reporter</div>
+                  <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
 
-            <mat-menu #rowMenu="matMenu">
-              <button mat-menu-item (click)="assignToMe(r)" [disabled]="r.statusFixed === 'resolved'">
-                <mat-icon>person</mat-icon>
-                <span>Mir zuweisen</span>
-              </button>
+                <mat-icon class="arrow">arrow_right_alt</mat-icon>
 
-              <button mat-menu-item [matMenuTriggerFor]="assignMenu" [disabled]="r.statusFixed === 'resolved' || !admins.length">
-                <mat-icon>person_add</mat-icon>
-                <span>Anderem Admin zuweisen…</span>
-              </button>
+                <div class="who-item">
+                  <div class="lbl">Gemeldet</div>
+                  <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
+                  </ng-container>
+                </div>
+              </div>
 
-              <mat-divider></mat-divider>
+              <div class="reason">
+                <b>{{ reasonLabel(r.reasonCategory) }}</b>
+                <span class="sub" *ngIf="r.reasonText">· {{ r.reasonText }}</span>
+              </div>
 
-              <button mat-menu-item (click)="markInReview(r)" [disabled]="r.statusFixed === 'resolved'">
-                <mat-icon>rule</mat-icon>
-                <span>In Prüfung</span>
-              </button>
-
-              <button mat-menu-item (click)="resolve(r)" [disabled]="r.statusFixed === 'resolved'">
-                <mat-icon>done</mat-icon>
-                <span>Erledigen</span>
-              </button>
-
-              <button mat-menu-item *ngIf="r.statusFixed === 'resolved'" (click)="reopen(r)">
-                <mat-icon>restart_alt</mat-icon>
-                <span>Wieder öffnen</span>
-              </button>
-            </mat-menu>
-
-            <mat-menu #assignMenu="matMenu">
-              <button mat-menu-item *ngFor="let a of admins" (click)="assignTo(r, a.uid)">
-                <mat-icon>person</mat-icon>
-                <span>{{ a.name }}<span *ngIf="a.email"> · {{ a.email }}</span></span>
-              </button>
-            </mat-menu>
-
+              <div class="subline" *ngIf="r.resolutionNote">
+                <b>Notiz:</b> {{ r.resolutionNote }}
+              </div>
+            </div>
           </ng-container>
-        </td>
-      </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-    </table>
-  </div>
-
-  <ng-container *ngIf="((rows$ | async) || []).length === 0">
-    <div class="empty">
-      <div class="empty-title">Keine Reports gefunden</div>
-      <div class="empty-sub">Passe Filter oder Suche an.</div>
+          <div class="empty" *ngIf="vm.done.length === 0">
+            Keine erledigten Reports.
+          </div>
+        </div>
+      </section>
     </div>
+
+    <ng-container *ngIf="vm.open.length + vm.inProgress.length + vm.done.length === 0">
+      <div class="empty-global">
+        <div class="empty-title">Keine Reports gefunden</div>
+        <div class="empty-sub">Passe Suche an.</div>
+      </div>
+    </ng-container>
   </ng-container>
 </div>
