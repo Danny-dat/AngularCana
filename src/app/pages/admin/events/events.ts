@@ -405,10 +405,72 @@ export class AdminEvents {
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Adresse</mat-label>
-        <input matInput [formControl]="form.controls.address" />
-      </mat-form-field>
+      @if (data?.mode !== 'edit') {
+        <div style="display:grid; grid-template-columns:1fr 120px 1fr auto; gap:12px; align-items:start;">
+          <mat-form-field appearance="outline">
+            <mat-label>Straße</mat-label>
+            <input matInput placeholder="Musterstraße 1" [formControl]="form.controls.street" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>PLZ</mat-label>
+            <input matInput inputmode="numeric" [formControl]="form.controls.zip" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Stadt</mat-label>
+            <input matInput placeholder="Berlin" [formControl]="form.controls.city" />
+          </mat-form-field>
+
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="checkAddress()"
+            [disabled]="geoBusy || !canCheckCreateAddress()"
+          >
+            <mat-icon>search</mat-icon>
+            Adresse prüfen
+          </button>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Adresse (Ergebnis)</mat-label>
+          <input matInput [formControl]="form.controls.address" />
+        </mat-form-field>
+      } @else {
+        <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Adresse</mat-label>
+            <input matInput [formControl]="form.controls.address" />
+          </mat-form-field>
+
+          <button mat-stroked-button type="button" (click)="checkAddress()" [disabled]="geoBusy || !form.controls.address.value">
+            <mat-icon>search</mat-icon>
+            Adresse prüfen
+          </button>
+        </div>
+      }
+
+      @if (geoError) {
+        <div style="color:#c62828; font-size:12px;">{{ geoError }}</div>
+      }
+
+      @if (geoResults.length > 0) {
+        <div style="display:grid; gap:8px;">
+          <div style="font-size:12px; opacity:0.75;">Meintest du…?</div>
+          <div style="display:grid; gap:8px;">
+            <button
+              mat-button
+              type="button"
+              *ngFor="let r of geoResults; let i = index"
+              (click)="pickGeo(i)"
+              style="text-align:left; justify-content:flex-start; white-space:normal;"
+            >
+              {{ r.label }}
+            </button>
+          </div>
+        </div>
+      }
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <mat-form-field appearance="outline">
@@ -454,10 +516,18 @@ export class EventEditDialogComponent {
   }
 
   ref = inject(MatDialogRef<EventEditDialogComponent, EventFormValue>);
+  private geo = inject(GeocodingService);
+
+  geoBusy = false;
+  geoResults: GeocodeResult[] = [];
+  geoError = '';
 
   form = new FormGroup({
     name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
     address: new FormControl<string>('', { nonNullable: true }),
+    street: new FormControl<string>('', { nonNullable: true }),
+    zip: new FormControl<string>('', { nonNullable: true }),
+    city: new FormControl<string>('', { nonNullable: true }),
     lat: new FormControl<number | null>(null, { validators: [Validators.required] }),
     lng: new FormControl<number | null>(null, { validators: [Validators.required] }),
     status: new FormControl<'active' | 'inactive'>('active', { nonNullable: true }),
@@ -496,12 +566,77 @@ export class EventEditDialogComponent {
     return `${hh}:${mm}`;
   }
 
+  canCheckCreateAddress(): boolean {
+    const street = (this.form.controls.street.value ?? '').trim();
+    const city = (this.form.controls.city.value ?? '').trim();
+    return !!street && !!city;
+  }
+
+  private buildCreateQuery(): string {
+    const street = (this.form.controls.street.value ?? '').trim();
+    const zip = (this.form.controls.zip.value ?? '').trim();
+    const city = (this.form.controls.city.value ?? '').trim();
+    return [street, zip, city].filter(Boolean).join(', ');
+  }
+
+  private buildGeoQuery(): string {
+    if (this.data?.mode !== 'edit') return this.buildCreateQuery();
+    return (this.form.controls.address.value ?? '').trim();
+  }
+
+  async checkAddress() {
+    const q = this.buildGeoQuery();
+    if (!q || q.length < 6) {
+      this.geoError = this.data?.mode !== 'edit'
+        ? 'Bitte gib mindestens Straße und Stadt an.'
+        : 'Bitte gib eine Adresse an.';
+      return;
+    }
+
+    this.geoBusy = true;
+    this.geoResults = [];
+    this.geoError = '';
+
+    try {
+      const res = await firstValueFrom(this.geo.geocode(q, 5));
+      this.geoResults = res ?? [];
+      if (!this.geoResults.length) {
+        this.geoError = 'Adresse nicht gefunden. Bitte präziser eingeben (z.B. mit PLZ).';
+      }
+    } catch (e) {
+      console.error('geocode failed', e);
+      this.geoError = 'Adresse konnte nicht geprüft werden.';
+      this.geoResults = [];
+    } finally {
+      this.geoBusy = false;
+    }
+  }
+
+  pickGeo(i: number) {
+    const r = this.geoResults[i];
+    if (!r) return;
+    this.form.patchValue({
+      address: r.label,
+      lat: r.lat,
+      lng: r.lng,
+    });
+    this.geoResults = [];
+    this.geoError = '';
+  }
+
   submit() {
     const v = this.form.getRawValue();
     const startAt = v.date ? EventEditDialogComponent.combineDateTime(v.date, v.time) : null;
+
+    const fallbackAddress = this.data?.mode !== 'edit'
+      ? [v.street, v.zip, v.city].map((x) => (x ?? '').trim()).filter(Boolean).join(', ')
+      : '';
+
+    const address = (v.address ?? '').trim() || fallbackAddress;
+
     this.ref.close({
       name: (v.name ?? '').trim(),
-      address: (v.address ?? '').trim(),
+      address,
       lat: Number(v.lat),
       lng: Number(v.lng),
       status: v.status,
