@@ -2,20 +2,6 @@
    CannaComponent Styles
    (Dropdown Tracker)
    =========================== */
-
-/* Fallback-Variablen, falls sie nicht von außen kommen */
-:host {
-  --surface-color: #ffffff;
-  --shadow-color: rgba(0,0,0,.35);
-  --text-color: #000000;
-  --muted-text: #252525;
-  --border-color: rgba(255,255,255,.08);
-  --primary-color: #2ea043;
-  --primary-color-600: #27923c;
-  --ok: #2ea043;
-  --err: #c62828;
-}
-
 /*
   Karten-Layout für den Tracker.
   Die Komponente ist jetzt selbst für ihr Aussehen als "Karte" verantwortlich.

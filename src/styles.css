@@ -17,7 +17,7 @@
   /* Default (light) – wird von body.theme-light überschrieben */
   --background-color: #f4f4f9;
   --surface-color: #ffffff;
-  --text-color: #333333;
+  --text-color: #2c2c2c;
   --text-muted-color: #888;
   --border-color: #e0e0e0;
   --shadow-color: rgba(0, 0, 0, 0.08);
@@ -36,7 +36,7 @@ body.theme-light {
 body.theme-dark {
   --background-color: #413636;
   --surface-color: #1e1e1e;
-  --text-color: #e0e0e0;
+  --text-color: #525252;
   --text-muted-color: #a0a0a0;
   --border-color: #333333;
   --shadow-color: rgba(0, 0, 0, 0.2);
