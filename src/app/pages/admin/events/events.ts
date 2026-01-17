@@ -7,7 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { combineLatest, Observable, firstValueFrom } from 'rxjs';
+import { combineLatest, Observable, firstValueFrom, timer } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 
 import { MatTableModule } from '@angular/material/table';
@@ -84,6 +84,9 @@ export class AdminEvents {
   // Data
   private events$ = this.eventsSvc.listen();
 
+  /** Triggert die automatische Umsortierung (Aktiv/Nicht aktiv) ohne Firestore-Writes */
+  private now$ = timer(0, 60_000).pipe(map(() => Date.now()));
+
   // Suggestions: split streams so tabs stay snappy and lists don't grow without bounds
   private sOpen$ = this.suggestSvc.listenByStatus('open', 200);
   private sAccepted$ = this.suggestSvc.listenByStatus('accepted', 200);
@@ -107,20 +110,26 @@ export class AdminEvents {
   );
 
   /** Admin: Events in Tabs (Aktiv / Nicht aktiv) */
-  eventsActive$: Observable<EventItem[]> = this.eventsFiltered$.pipe(
-    map((rows) =>
+  eventsActive$: Observable<EventItem[]> = combineLatest([
+    this.eventsFiltered$,
+    this.now$,
+  ]).pipe(
+    map(([rows, nowMs]) =>
       (rows || [])
-        .filter((e) => this.isEventActiveAdmin(e))
+        .filter((e) => this.isEventActiveAdmin(e, nowMs))
         .slice()
         // aktiv: bald zuerst (Events ohne Datum nach hinten)
         .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b))
     )
   );
 
-  eventsInactive$: Observable<EventItem[]> = this.eventsFiltered$.pipe(
-    map((rows) =>
+  eventsInactive$: Observable<EventItem[]> = combineLatest([
+    this.eventsFiltered$,
+    this.now$,
+  ]).pipe(
+    map(([rows, nowMs]) =>
       (rows || [])
-        .filter((e) => !this.isEventActiveAdmin(e))
+        .filter((e) => !this.isEventActiveAdmin(e, nowMs))
         .slice()
         // inaktiv: zuletzt zuerst
         .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a))
@@ -182,9 +191,20 @@ export class AdminEvents {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  isEventActiveAdmin(e: EventItem): boolean {
+  /**
+   * Admin-Logik:
+   * - manuell deaktiviert (status === 'inactive') bleibt immer nicht aktiv
+   * - sonst automatisch: wenn startAt in der Vergangenheit => nicht aktiv
+   * - ohne startAt => aktiv
+   */
+  isEventActiveAdmin(e: EventItem, nowMs: number): boolean {
     const status = String((e as any)?.status ?? 'active');
-    return status !== 'inactive';
+    if (status === 'inactive') return false;
+
+    const d = this.asMaybeDate((e as any)?.startAt);
+    if (!d) return true;
+
+    return d.getTime() > nowMs;
   }
 
   async setEventActive(e: EventItem, active: boolean) {
