@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { Auth } from '@angular/fire/auth';
-import { UserDataService } from '../../services/user-data.service';
-import { ThemeService } from '../../services/theme.service';
+import { UserBootstrapService } from '../../services/user-bootstrap.service';
 import { AdSlotComponent } from '../promo-slot/ad-slot.component';
 
 @Component({
@@ -27,9 +25,7 @@ export class LoginComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
-    private readonly auth: Auth,
-    private readonly userData: UserDataService,
-    private readonly theme: ThemeService
+    private readonly bootstrap: UserBootstrapService
   ) {}
 
   // Beim Anzeigen des Login-Views: alten Username sofort ausblenden
@@ -96,21 +92,8 @@ export class LoginComponent implements OnInit {
         localStorage.setItem('displayName', display);
       } catch {}
 
-      const u = this.auth.currentUser;
-      if (u?.uid) {
-        try {
-          const data = await this.userData.loadUserData(u.uid);
-
-          const t: 'light' | 'dark' =
-            ((data as any)?.personalization?.theme ?? (data as any)?.theme) === 'dark'
-              ? 'dark'
-              : 'light';
-
-          this.theme.setTheme(t);
-        } catch {
-          this.theme.setTheme(this.theme.getTheme());
-        }
-      }
+      // Neu: User-Daten + Settings beim Login einmalig ziehen (Theme, Sound, etc.)
+      await this.bootstrap.bootstrapNow(cred.user.uid);
 
       await this.router.navigate(['/dashboard'], { replaceUrl: true });
     } catch (err: unknown) {
