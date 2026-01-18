@@ -61,8 +61,16 @@ export class AppHeaderComponent {
         this.userDisplayName = 'User';
         this.unsubNoti?.();
         this.unsubNoti = undefined;
+
+        // optional: UI sauber halten
+        try {
+          this.noti.notifications$.next([]);
+          this.noti.unreadCount$.next(0);
+        } catch {}
+
         return;
       }
+
       this.applyLocalOrAuthName(u.displayName, u.email);
       this.unsubNoti?.();
       this.unsubNoti = this.noti.listen(u.uid);
@@ -194,7 +202,7 @@ export class AppHeaderComponent {
   }
 
   /**
-   * NEU: Öffnet je nach Notification-Typ das richtige Ziel.
+   * Öffnet je nach Notification-Typ das richtige Ziel.
    * - chat_message  -> /social?openChatWith=<senderId>
    * - friend_request -> /social?tab=requests
    * Markiert dabei die Notification als gelesen und schließt das Dropdown.
@@ -216,7 +224,6 @@ export class AppHeaderComponent {
             queryParams: { openChatWith: n.senderId }
           });
         } else {
-          // Fallback, falls senderId fehlt
           this.router.navigate(['/social']);
         }
         break;
@@ -233,7 +240,7 @@ export class AppHeaderComponent {
   }
 
   /**
-   * NEU: Löscht eine Benachrichtigung (ohne sie zu "öffnen").
+   * Löscht eine Benachrichtigung (ohne sie zu "öffnen").
    * stopPropagation verhindert, dass der Klick den Eintrag ebenfalls öffnet.
    */
   async deleteNotification(id: string, ev?: MouseEvent) {
@@ -245,18 +252,41 @@ export class AppHeaderComponent {
     }
   }
 
-  // (Optional weiter nutzbar) Einzelnes Lesen-Markieren
+  // Einzelnes Lesen-Markieren
   async markRead(id: string) {
     await this.noti.markAsRead(id);
   }
 
   async logout() {
+    // WICHTIG: Firestore Listener stoppen, bevor Auth auf null springt
+    try {
+      this.unsubNoti?.();
+    } catch {}
+    this.unsubNoti = undefined;
+
+    // Dropdown / Listener im Header auch weg
+    this.showNotifications = false;
+    this.docClickSub?.unsubscribe();
+    this.docClickSub = undefined;
+
+    // optional: UI sofort leeren (verhindert "alte" Notis nach Logout)
+    try {
+      this.noti.notifications$.next([]);
+      this.noti.unreadCount$.next(0);
+    } catch {}
+
     try {
       localStorage.removeItem('displayName');
       localStorage.removeItem('username'); // legacy
       window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
     } catch {}
-    await signOut(this.auth);
+
+    try {
+      await signOut(this.auth);
+    } catch (e) {
+      console.error('signOut failed', e);
+    }
+
     this.router.navigateByUrl('/login');
   }
 
@@ -267,7 +297,6 @@ export class AppHeaderComponent {
     this.subRoute?.unsubscribe();
     this.subStorage?.unsubscribe();
     this.subNameEvent?.unsubscribe();
-    // globalen Klick-Listener sauber entfernen
     this.docClickSub?.unsubscribe();
   }
 }
