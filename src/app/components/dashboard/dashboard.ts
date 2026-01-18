@@ -10,72 +10,59 @@ import {
   inject,
   runInInjectionContext,
   ChangeDetectorRef,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MapService } from '../../services/map.service';
-
-import { Auth } from '@angular/fire/auth';
-import { Firestore, addDoc, collection, serverTimestamp } from '@angular/fire/firestore';
-import { GeoPoint } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import {
+  Firestore,
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  getDoc,
+  GeoPoint,
+} from '@angular/fire/firestore';
 import { AdSlotComponent } from '../promo-slot/ad-slot.component';
 import { EventsService, EventItem } from '../../services/events.service';
+import { NotificationService } from '../../services/notification.service';
+// Der Pfad muss korrekt sein, damit CannaComponent gefunden wird
+import { CannaComponent, ConsumptionSelection } from '../canna/canna';
+import { geoCellE2, keyify } from '../../utils/analytics-utils';
 
-interface Consumable {
-  name: string;
-  img: string;
-}
 type Toast = { type: 'success' | 'error'; text: string };
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AdSlotComponent],
+  imports: [CommonModule, AdSlotComponent, CannaComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
-  // AngularFire + DI
   private readonly env = inject(EnvironmentInjector);
   private readonly firestore = inject(Firestore);
   private readonly auth = inject(Auth);
 
+  @ViewChild(CannaComponent) private cannaComponent?: CannaComponent;
+
   constructor(
     private readonly mapService: MapService,
     private readonly eventsSvc: EventsService,
+    private readonly notifications: NotificationService,
     @Inject(PLATFORM_ID) private readonly pid: Object,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
-  // Auswahl
-  products: Consumable[] = [
-    { name: 'Hash', img: 'assets/produkte/hash.png' },
-    { name: 'Blüte', img: 'assets/produkte/flower.png' },
-    { name: 'Öl / Harz', img: 'assets/produkte/resin1.png' },
-  ];
-  devices: Consumable[] = [
-    { name: 'Joint', img: 'assets/devices/joint.png' },
-    { name: 'Bong', img: 'assets/devices/bong.png' },
-    { name: 'Vaporizer', img: 'assets/devices/vaporizer.png' },
-    { name: 'Pfeife', img: 'assets/devices/pfeife.png' },
-  ];
-  selection = { product: null as string | null, device: null as string | null };
-
-  // UI-State
   isSaving = false;
   justSaved = false;
   savedAt: Date | null = null;
   toast: Toast | null = null;
+  
   private autoResetTimer?: any;
   private autoToastTimer?: any;
-
-  // Feature-Flags
-  private readonly USE_GEOLOCATION = true;
-  private readonly GEO_TIMEOUT_MS = 6000;
-
-  // Subs
   private authUnsub?: () => void;
   private eventsSub?: { unsubscribe: () => void };
 
@@ -87,34 +74,22 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.mapService.initializeMap('map-container');
     this.mapService.invalidateSizeSoon();
 
-    const SHOW_ALL_EVENTS_TEMP = false;
+    runInInjectionContext(this.env, () => {
+      this.authUnsub = onAuthStateChanged(this.auth, (user) => {
+        this.eventsSub?.unsubscribe?.();
 
-    this.authUnsub = onAuthStateChanged(this.auth, (u) => {
-      // alten Stream schließen
-      this.eventsSub?.unsubscribe?.();
+        if (!user?.uid) {
+          this.mapService.clearEvents();
+          return;
+        }
 
-      if (!u?.uid) {
-        this.mapService.clearEvents();
-        return; // <— hier gleich raus, kein Firestore-Stream ohne Login
-      }
-
-      this.eventsSub = this.eventsSvc.listen().subscribe((events: EventItem[]) => {
-        this.mapService.showLikedEvents(events, u.uid); // nur deine Likes
-        this.mapService.invalidateSizeSoon(100);
+        this.eventsSub = this.eventsSvc
+          .listen()
+          .subscribe((events: EventItem[]) => {
+            this.mapService.showLikedEvents(events, user.uid);
+            this.mapService.invalidateSizeSoon(100);
+          });
       });
-    });
-
-    // Events-Seite steuert die Karte
-    document.addEventListener('events:showOnMap', (ev: any) => {
-      const e: EventItem = ev.detail;
-      this.mapService.clearEvents();
-      this.mapService.addEventMarker(e, true);
-      this.mapService.focus(e.lat, e.lng);
-    });
-
-    document.addEventListener('events:routeTo', async (ev: any) => {
-      const e: EventItem = ev.detail;
-      this.mapService.focus(e.lat, e.lng);
     });
   }
 
@@ -124,32 +99,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.mapService.destroyMap();
     clearTimeout(this.autoResetTimer);
     clearTimeout(this.autoToastTimer);
-  }
-
-  // --- UI Helper -------------------------------------------------------------
-  selectProduct(name: string) {
-    this.selection.product = name;
-    this.cdr.markForCheck();
-  }
-  selectDevice(name: string) {
-    this.selection.device = name;
-    this.cdr.markForCheck();
-  }
-
-  private readonly placeholderSvg =
-    'data:image/svg+xml;utf8,' +
-    encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
-      <rect width="100%" height="100%" fill="#f0f0f0"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-            font-family="sans-serif" font-size="12" fill="#9aa0a6">kein Bild</text>
-    </svg>`);
-
-  onImgError(ev: Event, _kind: 'product' | 'device') {
-    const img = ev.target as HTMLImageElement;
-    if (img && img.src !== this.placeholderSvg) {
-      img.src = this.placeholderSvg;
-      img.alt = 'Platzhalter';
-    }
   }
 
   private showToast(type: Toast['type'], text: string, ms = 2200) {
@@ -169,9 +118,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private buttonSavedPulse() {
     this.justSaved = true;
     this.savedAt = new Date();
-    try {
-      (navigator as any).vibrate?.(25);
-    } catch {}
     this.cdr.markForCheck();
     clearTimeout(this.autoResetTimer);
     this.autoResetTimer = setTimeout(
@@ -184,86 +130,123 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  // Geolocation (optional) – wird nur fürs Speichern benutzt
-  private getPosition(timeoutMs = this.GEO_TIMEOUT_MS): Promise<GeolocationPosition | null> {
-    if (!('geolocation' in navigator)) return Promise.resolve(null);
-    return new Promise((resolve) => {
-      let done = false;
-      const timer = setTimeout(() => {
-        if (!done) {
-          done = true;
-          resolve(null);
-        }
-      }, timeoutMs);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!done) {
-            done = true;
-            clearTimeout(timer);
-            resolve(pos);
-          }
-        },
-        () => {
-          if (!done) {
-            done = true;
-            clearTimeout(timer);
-            resolve(null);
-          }
-        },
-        { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60_000 }
-      );
-    });
+  private getPosition(timeoutMs = 6000): Promise<GeolocationPosition | null> {
+    if (!isPlatformBrowser(this.pid) || !navigator.geolocation) {
+      return Promise.resolve(null);
+    }
+    return Promise.race([
+      new Promise<GeolocationPosition | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos),
+          () => resolve(null)
+        );
+      }),
+      new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), timeoutMs)
+      ),
+    ]);
   }
 
-  // --- Action: Konsum speichern (Marker werden NICHT gezeichnet) ---
-  async logConsumption() {
-    if (!this.selection.product || !this.selection.device) return;
+  async logConsumption(selection: ConsumptionSelection) {
+    if (
+      !selection.product ||
+      !selection.device ||
+      !selection.location
+    )
+      return;
 
-    const u = this.auth.currentUser;
-    if (!u?.uid) {
+    const user = this.auth.currentUser;
+    if (!user?.uid) {
       this.showToast('error', 'Bitte zuerst einloggen.');
       return;
     }
 
     this.isSaving = true;
     this.cdr.markForCheck();
+
     try {
-      let geo: GeoPoint | null = null;
-      if (this.USE_GEOLOCATION) {
-        const pos = await this.getPosition().catch(() => null);
-        if (pos) geo = new GeoPoint(pos.coords.latitude, pos.coords.longitude);
-      }
+      const pos = await this.getPosition();
+      const geo = pos
+        ? new GeoPoint(pos.coords.latitude, pos.coords.longitude)
+        : null;
+
+      // DisplayName einmal lesen (für Payload + Notification)
+      const userSnap = await runInInjectionContext(this.env, () =>
+        getDoc(doc(this.firestore, `users/${user.uid}`))
+      );
+      const displayName: string | null = userSnap.exists()
+        ? (userSnap.data() as any)['displayName'] ?? null
+        : null;
+
+      const productLabel = selection.product!;
+      const deviceLabel = selection.device!;
+      const locationLabel = selection.location!;
+
+      // stabile Keys für spätere Auswertungen
+      const productKey = keyify(productLabel);
+      const deviceKey = keyify(deviceLabel);
+      const locationKey = keyify(locationLabel);
+
+      // Privacy-friendly Geo Raster (optional)
+      const cell = geo ? geoCellE2(geo.latitude, geo.longitude) : null;
 
       const payload: any = {
-        userId: u.uid,
-        product: this.selection.product,
-        device: this.selection.device,
+        userId: user.uid,
+        userDisplayName: displayName,
+        product: productLabel,
+        device: deviceLabel,
+        location: locationLabel,
+
+        productKey,
+        deviceKey,
+        locationKey,
+
+        // Server-Zeit für Statistik/Queries
         timestamp: serverTimestamp(),
-        ...(geo ? { location: geo } : {}),
+
+        // Debug/Qualität: Clientzeit (nicht für Auswertung, nur hilfreich)
+        clientTimestampMs: Date.now(),
+        platform: 'web',
+
+        ...(geo && { locationGeo: geo, hasGeo: true }),
+        ...(cell && {
+          geoCellLatE2: cell.latE2,
+          geoCellLngE2: cell.lngE2,
+          geoCellId: cell.id,
+        }),
       };
 
-      await runInInjectionContext(this.env, async () => {
-        await addDoc(collection(this.firestore, 'consumptions'), payload);
+      await runInInjectionContext(this.env, () =>
+        addDoc(collection(this.firestore, 'consumptions'), payload)
+      );
+
+      await this.notifications.sendConsumptionToFriends({
+        userId: user.uid,
+        displayName,
+        product: selection.product!,
+        device: selection.device!,
+        location: selection.location!,
       });
 
       this.buttonSavedPulse();
-      this.showToast('success', geo ? 'Gespeichert (inkl. Standort).' : 'Gespeichert.');
+      this.showToast(
+        'success',
+        geo ? 'Gespeichert (inkl. Standort).' : 'Gespeichert.'
+      );
       this.mapService.invalidateSizeSoon();
     } catch (e: any) {
-      const code = e?.code || e?.name || 'unknown';
+      const code = e?.code || 'unknown';
       const msg =
         code === 'permission-denied'
           ? 'Keine Schreibrechte.'
-          : code === 'unauthenticated'
-          ? 'Session abgelaufen.'
-          : code === 'unavailable'
-          ? 'Netzwerk/Backend nicht erreichbar.'
           : 'Speichern fehlgeschlagen.';
       console.error('[logConsumption] FAILED:', code, e);
       this.showToast('error', msg);
     } finally {
       this.isSaving = false;
+      this.cannaComponent?.resetSelection(); 
       this.cdr.markForCheck();
     }
   }
 }
+

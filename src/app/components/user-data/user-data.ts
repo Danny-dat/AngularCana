@@ -8,6 +8,8 @@ import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs/operators'
 import { NotificationSoundService } from '../../services/notification-sound.service';
 import { ProfileService } from '../../services/profile.service';
 import { ThemeService, Theme } from '../../services/theme.service';
+import { AVATAR_PRESETS, AvatarPreset } from '../../utils/avatar-presets';
+import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../../utils/user-name';
 import {
   UserDataService,
   UserDataModel,
@@ -38,10 +40,87 @@ export class UserDataComponent implements OnInit, OnDestroy {
   uid: string | null = null;
 
   // Forms
-  profileForm = this.fb.group({
-    displayName: ['', [Validators.required, Validators.maxLength(50)]],
+  profileForm = this.fb.group({    // Name ist Anzeigename + Username zugleich
+    displayName: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)]],
+    firstName: ['', [Validators.maxLength(40)]],
+    lastName: ['', [Validators.maxLength(60)]],
+    email: [{ value: '', disabled: true }],
     phoneNumber: [''],
+    // Spark Plan: Avatar kommt aus Presets im /assets Ordner (kein Storage)
+    photoURL: ['', [Validators.maxLength(300)]],
+
+    bio: ['', [Validators.maxLength(280)]],
+    website: ['', [Validators.maxLength(200)]],
+    city: ['', [Validators.maxLength(80)]],
+    country: ['', [Validators.maxLength(80)]],
+    birthday: [''],
+    gender: ['unspecified'],
+
+    instagram: ['', [Validators.maxLength(60)]],
+    tiktok: ['', [Validators.maxLength(60)]],
+    youtube: ['', [Validators.maxLength(120)]],
+    discord: ['', [Validators.maxLength(60)]],
+    telegram: ['', [Validators.maxLength(60)]],
+
+    // Privacy / Public Sync
+    showBio: [true],
+    showWebsite: [true],
+    showLocation: [true],
+    showSocials: [true],
   });
+
+  // Avatar Presets (assets)
+  avatarPresets: AvatarPreset[] = AVATAR_PRESETS;
+
+  selectAvatar(path: string | null) {
+    // Wir speichern weiterhin in photoURL (legacy + public profile)
+    this.profileForm.controls.photoURL.setValue(path ?? '', { emitEvent: false });
+    this.profileForm.controls.photoURL.markAsDirty();
+    this.profileForm.markAsDirty();
+  }
+
+  isAvatarSelected(path: string | null): boolean {
+    return (this.profileForm.getRawValue().photoURL ?? '') === (path ?? '');
+  }
+  /** Live Vorschau: so landet es (inkl. Privacy) in profiles_public */
+  publicProfilePreview() {
+    const raw = this.profileForm.getRawValue();
+    const handle = normalizeUnifiedUserName((raw.displayName ?? '').toString());
+    const name = handle || 'unbekannt';
+
+    const city = (raw.city ?? '').trim();
+    const country = (raw.country ?? '').trim();
+    const locationText = [city, country].filter(Boolean).join(', ') || null;
+
+    const normUrl = (value: string) => {
+      const v = (value ?? '').trim();
+      if (!v) return null;
+      if (!/^https?:\/\//i.test(v)) return `https://${v}`;
+      return v;
+    };
+
+    const socials = {
+      instagram: (raw.instagram ?? '').trim() || null,
+      tiktok: (raw.tiktok ?? '').trim() || null,
+      youtube: (raw.youtube ?? '').trim() || null,
+      discord: (raw.discord ?? '').trim() || null,
+      telegram: (raw.telegram ?? '').trim() || null,
+    };
+
+    return {
+      displayName: name,
+      // zusammengelegt: Username wird nicht mehr separat angezeigt
+      username: null,
+      photoURL: (raw.photoURL ?? '').trim() || null,
+      bio: raw.showBio ? (raw.bio ?? '').trim() || null : null,
+      website: raw.showWebsite ? normUrl(raw.website ?? '') : null,
+      locationText: raw.showLocation ? locationText : null,
+      socials: raw.showSocials ? socials : null,
+    };
+  }
+
+
+  nameState = signal<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
 
   // Settings
   settingsForm = this.fb.group({
@@ -84,6 +163,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
   private subAuth?: Subscription;
   private subThemeChanges?: Subscription;
   private subLiveName?: Subscription;
+  private subNameChanges?: Subscription;
   private subVolumeChanges?: Subscription;
   private subSoundToggle?: Subscription;
   private subThresholdChanges?: Subscription;
@@ -103,21 +183,65 @@ export class UserDataComponent implements OnInit, OnDestroy {
     // Live: Anzeigename -> localStorage + Event + verzögert persistieren
     this.subLiveName = this.profileForm.controls.displayName.valueChanges
       .pipe(
-        map((v) => (v ?? '').trim()),
+        map((v) => normalizeUnifiedUserName((v ?? '').toString())),
         debounceTime(300),
         distinctUntilChanged(),
         filter(() => !!this.uid)
       )
-      .subscribe((name) => {
+      .subscribe((handle) => {
         try {
-          localStorage.setItem('displayName', name);
+          localStorage.setItem('displayName', handle);
         } catch {}
         try {
-          window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name }));
+          window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: handle }));
         } catch {}
         clearTimeout(this.saveNameTimer);
-        this.saveNameTimer = setTimeout(() => this.persistDisplayName(name), 15000);
+        this.saveNameTimer = setTimeout(() => this.persistDisplayName(handle), 15000);
       });
+
+    // Name-Availability (gegen profiles_public.username) – Name ist jetzt Username
+    this.subNameChanges = this.profileForm.controls.displayName.valueChanges
+      .pipe(
+        map((v) => normalizeUnifiedUserName((v ?? '').toString())),
+        debounceTime(450),
+        distinctUntilChanged(),
+        filter(() => !!this.uid)
+      )
+      .subscribe(async (handle) => {
+        const ctrl = this.profileForm.controls.displayName;
+
+        // leer -> idle
+        if (!handle) {
+          this.nameState.set('idle');
+          const errs = { ...(ctrl.errors ?? {}) };
+          delete (errs as any).taken;
+          ctrl.setErrors(Object.keys(errs).length ? errs : null);
+          return;
+        }
+
+        // Validatoren zuerst
+        if (ctrl.invalid) {
+          this.nameState.set('invalid');
+          return;
+        }
+
+        this.nameState.set('checking');
+        try {
+          const ok = await this.svc.isUsernameAvailable(handle, this.uid!);
+          if (ok) {
+            this.nameState.set('ok');
+            const errs = { ...(ctrl.errors ?? {}) };
+            delete (errs as any).taken;
+            ctrl.setErrors(Object.keys(errs).length ? errs : null);
+          } else {
+            this.nameState.set('taken');
+            ctrl.setErrors({ ...(ctrl.errors ?? {}), taken: true });
+          }
+        } catch {
+          this.nameState.set('idle');
+        }
+      });
+
 
     // User + Daten laden
     this.subAuth = user(this.auth).subscribe(async (u) => {
@@ -130,11 +254,53 @@ export class UserDataComponent implements OnInit, OnDestroy {
       try {
         const data = await this.svc.loadUserData(this.uid);
         const settings = await this.svc.loadUserSettings(this.uid);
+        // Profilfelder (Anzeigename + Username zusammengelegt)
+        const authEmail = u?.email ?? data.email ?? '';
+        const baseName = (
+          (data.username ?? '').toString().trim() ||
+          (data.displayName ?? '').toString().trim() ||
+          (u?.displayName ?? '').toString().trim() ||
+          (authEmail ? authEmail.split('@')[0] : '')
+        ).trim();
+        const handle = normalizeUnifiedUserName(baseName);
+        const displayName = handle || baseName || 'user';
 
-        // Profilfelder
-        const displayName = (data.displayName ?? '').trim();
         const phoneNumber = data.phoneNumber ?? '';
-        this.profileForm.reset({ displayName, phoneNumber });
+
+        this.profileForm.reset(
+          {
+            displayName,
+            firstName: data.firstName ?? '',
+            lastName: data.lastName ?? '',
+            email: authEmail,
+            phoneNumber,
+            photoURL: data.photoURL ?? '',
+            bio: data.bio ?? '',
+            website: data.website ?? '',
+            city: data.city ?? '',
+            country: data.country ?? '',
+            birthday: data.birthday ?? '',
+            gender: data.gender ?? 'unspecified',
+            instagram: data.socials?.instagram ?? '',
+            tiktok: data.socials?.tiktok ?? '',
+            youtube: data.socials?.youtube ?? '',
+            discord: data.socials?.discord ?? '',
+            telegram: data.socials?.telegram ?? '',
+            showBio: data.visibility?.showBio ?? true,
+            showWebsite: data.visibility?.showWebsite ?? true,
+            showLocation: data.visibility?.showLocation ?? true,
+            showSocials: data.visibility?.showSocials ?? true,
+          },
+          { emitEvent: false }
+        );
+
+        // UI-Status für Name
+        this.nameState.set(displayName ? 'ok' : 'idle');
+
+        // Email-Snapshot (für Admin-Ansicht) aktuell halten
+        try {
+          if (authEmail) await this.svc.saveUserData(this.uid, { email: authEmail });
+        } catch {}
         try {
           localStorage.setItem('displayName', displayName);
         } catch {}
@@ -260,12 +426,30 @@ export class UserDataComponent implements OnInit, OnDestroy {
   // Anzeigename sofort speichern (Blur)
   async persistDisplayName(name: string) {
     if (!this.uid) return;
+
+    const handle = normalizeUnifiedUserName((name ?? '').toString());
+    const key = normalizeUnifiedUserNameKey(handle);
+    if (!handle) return;
+
+    // Form-Wert normalisieren (z.B. Großbuchstaben/Leerzeichen)
+    if (this.profileForm.controls.displayName.value !== handle) {
+      this.profileForm.controls.displayName.setValue(handle, { emitEvent: false });
+    }
+
     try {
-      await this.svc.saveUserData(this.uid, { displayName: name } as Partial<UserDataModel>);
-      await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
-      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
+      const raw = this.profileForm.getRawValue();
+      await this.svc.saveUserData(this.uid, { displayName: handle, username: handle, usernameKey: key } as Partial<UserDataModel>);
+      await this.profileSvc.updatePublicProfile(this.uid, { displayName: handle, username: handle, usernameKey: key });
+      if (this.auth.currentUser)
+        await updateProfile(this.auth.currentUser, {
+          displayName: handle,
+          photoURL: (raw.photoURL ?? '').trim() || null,
+        });
       try {
-        window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name }));
+        localStorage.setItem('displayName', handle);
+      } catch {}
+      try {
+        window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: handle }));
       } catch {}
     } catch {
       /* silent */
@@ -278,23 +462,99 @@ export class UserDataComponent implements OnInit, OnDestroy {
     this.savingProfile.set(true);
     this.errorMsg.set(null);
 
-    const name = (this.profileForm.value.displayName ?? '').trim();
-    const phoneNumber = this.profileForm.value.phoneNumber ?? '';
+    const raw = this.profileForm.getRawValue();
+    const phoneNumber = raw.phoneNumber ?? '';
+    const handle = normalizeUnifiedUserName((raw.displayName ?? '').toString());
+    const key = normalizeUnifiedUserNameKey(handle);
+    if (!handle) {
+      this.errorMsg.set('Bitte einen gültigen Namen wählen (3–20 Zeichen, A–Z/a–z, 0–9, _).');
+      this.savingProfile.set(false);
+      return;
+    }
+
+    // Unique-Check (Name ist jetzt Username)
+    try {
+      const ok = await this.svc.isUsernameAvailable(handle, this.uid);
+      if (!ok) {
+        this.profileForm.controls.displayName.setErrors({ ...(this.profileForm.controls.displayName.errors ?? {}), taken: true });
+        this.nameState.set('taken');
+        this.errorMsg.set('Dieser Name ist bereits vergeben.');
+        this.savingProfile.set(false);
+        return;
+      }
+    } catch {}
+    const city = (raw.city ?? '').trim();
+    const country = (raw.country ?? '').trim();
+
+    const locationText = [city, country].filter(Boolean).join(', ') || null;
+
+    const normUrl = (value: string) => {
+      const v = (value ?? '').trim();
+      if (!v) return null;
+      // sehr einfache Normalisierung: wenn kein Schema -> https://
+      if (!/^https?:\/\//i.test(v)) return `https://${v}`;
+      return v;
+    };
 
     try {
       clearTimeout(this.saveNameTimer);
       await this.svc.saveUserData(this.uid, {
-        displayName: name,
-        phoneNumber,
+        displayName: handle,
+        username: handle,
+        usernameKey: key,
+        firstName: (raw.firstName ?? '').trim() || null,
+        lastName: (raw.lastName ?? '').trim() || null,
+        email: (raw.email ?? '').trim() || null,
+        phoneNumber: phoneNumber || null,
+        photoURL: (raw.photoURL ?? '').trim() || null,
+        bio: (raw.bio ?? '').trim() || null,
+        website: normUrl(raw.website ?? ''),
+        city: city || null,
+        country: country || null,
+        birthday: (raw.birthday ?? '').trim() || null,
+        gender: (raw.gender as any) ?? 'unspecified',
+        socials: {
+          instagram: (raw.instagram ?? '').trim() || null,
+          tiktok: (raw.tiktok ?? '').trim() || null,
+          youtube: (raw.youtube ?? '').trim() || null,
+          discord: (raw.discord ?? '').trim() || null,
+          telegram: (raw.telegram ?? '').trim() || null,
+        },
+        visibility: {
+          showBio: !!raw.showBio,
+          showWebsite: !!raw.showWebsite,
+          showLocation: !!raw.showLocation,
+          showSocials: !!raw.showSocials,
+        },
       } as Partial<UserDataModel>);
-      await this.profileSvc.updatePublicProfile(this.uid, { displayName: name });
-      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: name });
+
+      // Public profile synchronisieren (nur "öffentliche" Felder)
+      await this.profileSvc.updatePublicProfile(this.uid, {
+        displayName: handle,
+        username: handle,
+        usernameKey: key,
+        photoURL: (raw.photoURL ?? '').trim() || null,
+        bio: raw.showBio ? (raw.bio ?? '').trim() || null : null,
+        website: raw.showWebsite ? normUrl(raw.website ?? '') : null,
+        locationText: raw.showLocation ? locationText : null,
+        socials: raw.showSocials
+          ? {
+              instagram: (raw.instagram ?? '').trim() || null,
+              tiktok: (raw.tiktok ?? '').trim() || null,
+              youtube: (raw.youtube ?? '').trim() || null,
+              discord: (raw.discord ?? '').trim() || null,
+              telegram: (raw.telegram ?? '').trim() || null,
+            }
+          : null,
+      });
+
+      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: handle });
 
       try {
-        localStorage.setItem('displayName', name);
+        localStorage.setItem('displayName', handle);
       } catch {}
       try {
-        window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: name }));
+        window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: handle }));
       } catch {}
 
       this.profileForm.markAsPristine();

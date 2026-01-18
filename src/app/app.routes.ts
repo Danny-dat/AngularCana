@@ -41,7 +41,11 @@ export const routes: Routes = [
       },
     ],
   },
-
+  {
+    path: 'account-blocked',
+    loadComponent: () =>
+      import('./pages/admin/dialogs/account-blocked').then(m => m.AccountBlockedComponent),
+  },
   // --- App-Layout: mit Header ---
   {
     path: '',
@@ -100,7 +104,7 @@ export const routes: Routes = [
         canActivate: [authGuard, adminGuard], // doppelt sicher
         loadComponent: () => import('./pages/admin/admin').then((m) => m.AdminPage),
         loadChildren: () =>import('./pages/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-        data: { title: 'Admin Bereich' },
+        data: { title: 'Admin Bereich'},
       },
 
       // Öffentlich, aber mit Header:

@@ -17,23 +17,36 @@
     <div id="chatMessages" class="messages">
       @for (m of messages; track m.id ?? $index) {
         <div class="bubble" [class.sent]="isSent(m)">
-          @if (showSender) {
+
+          <!-- meta-row jetzt auch im Privat-Chat (showSender=false) sichtbar,
+               sobald es NICHT deine eigene Nachricht ist -->
+          @if (showSender || (myUid && m.senderId !== myUid)) {
             <div class="meta-row">
               <small class="from" [class.me]="myUid && m.senderId === myUid">
-                {{ displayNameFor(m) }}
-                <span class="time"> · {{ m.createdAt | date:'dd.MM.yyyy, HH:mm' }}</span>
+                @if (showSender) {
+                  {{ displayNameFor(m) }}
+                  <span class="time"> · {{ m.createdAt | date:'dd.MM.yyyy, HH:mm' }}</span>
+                } @else {
+                  <span class="time">{{ m.createdAt | date:'dd.MM.yyyy, HH:mm' }}</span>
+                }
               </small>
 
               @if (myUid && m.senderId !== myUid) {
                 <div class="actions">
-                  <button type="button" class="icon" title="Als Freund hinzufügen" (click)="onAddFriend(m)">
-                    <!-- user-plus -->
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M15 14a5 5 0 1 0-6 0 8 8 0 0 0-6 7h2a6 6 0 0 1 12 0h2a8 8 0 0 0-6-7zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
-                      <path d="M19 8v-2h-2v-2h2V2h2v2h2v2h-2v2h-2z"/>
-                    </svg>
-                  </button>
-                  <button type="button" class="icon danger" title="Nachricht melden" (click)="onReport(m)">
+
+                  <!-- AddFriend nur im Global-Chat: showSender=true und kein partner -->
+                  @if (showSender && !partner) {
+                    <button type="button" class="icon" title="Als Freund hinzufügen" (click)="onAddFriend(m)">
+                      <!-- user-plus -->
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M15 14a5 5 0 1 0-6 0 8 8 0 0 0-6 7h2a6 6 0 0 1 12 0h2a8 8 0 0 0-6-7zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                        <path d="M19 8v-2h-2v-2h2V2h2v2h2v2h-2v2h-2z"/>
+                      </svg>
+                    </button>
+                  }
+
+                  <!-- Report: öffnet jetzt Modal -->
+                  <button type="button" class="icon danger" title="Nachricht melden" (click)="openReport(m)">
                     <!-- flag -->
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M6 3v18M6 4h10l-1 3h3l-1 3h3l-1 3H6"/>
@@ -70,3 +83,48 @@
     </div>
   </div>
 </div>
+
+<!-- Report Modal -->
+@if (reportOpen) {
+  <div class="overlay" (click)="cancelReport()">
+    <div class="window" (click)="$event.stopPropagation()">
+      <header>
+        <h3>Nachricht melden</h3>
+        <button class="x" (click)="cancelReport()">&times;</button>
+      </header>
+
+      <div class="report-body">
+        <p class="muted" style="margin: 0 0 10px;">
+          Bitte wähle einen Grund aus. Optional kannst du eine kurze Notiz hinzufügen.
+        </p>
+
+        <label class="report-label">Grund (Pflicht)</label>
+        <select class="select" [(ngModel)]="reportReason">
+          @for (r of reportReasons; track r.id) {
+            <option [value]="r.id">{{ r.label }}</option>
+          }
+        </select>
+
+        <label class="report-label" style="margin-top:10px;">
+          Zusatz (optional, bei „Sonstiges“ Pflicht) – max. 300 Zeichen
+        </label>
+        <textarea
+          class="input"
+          [(ngModel)]="reportNote"
+          rows="3"
+          maxlength="300"
+          placeholder="Kurze Beschreibung…"
+        ></textarea>
+
+        @if (reportError) {
+          <div class="report-error">{{ reportError }}</div>
+        }
+
+        <div class="report-actions">
+          <button class="btn" (click)="cancelReport()">Abbrechen</button>
+          <button class="btn btn-primary" (click)="confirmReport()">Melden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

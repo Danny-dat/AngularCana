@@ -9,6 +9,10 @@ import {
   runTransaction,
   arrayUnion,
   arrayRemove,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
 } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 
@@ -18,6 +22,8 @@ export interface EventItem {
   address?: string;
   lat: number;
   lng: number;
+  /** Admin-controlled visibility/status. Missing => treated as 'active'. */
+  status?: 'active' | 'inactive';
   upvotes?: string[];
   downvotes?: string[];
   [key: string]: any; // weitere Felder erlaubt
@@ -71,16 +77,62 @@ export class EventsService {
     });
   }
 
+  // ─────────────────────────────────────────────
+  // Admin: CRUD
+  // ─────────────────────────────────────────────
+
+  async createEvent(params: { name: string; address?: string | null; lat: number; lng: number; [k: string]: any }) {
+    const name = (params.name ?? '').trim();
+    if (!name) throw new Error('NAME_REQUIRED');
+
+    const lat = Number(params.lat);
+    const lng = Number(params.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('COORDS_REQUIRED');
+
+    const payload: any = {
+      name,
+      address: (params.address ?? '').toString().trim() || null,
+      lat,
+      lng,
+      status: 'active',
+      upvotes: [],
+      downvotes: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // optionale zusätzliche Felder
+    for (const k of Object.keys(params)) {
+      if (['name', 'address', 'lat', 'lng'].includes(k)) continue;
+      payload[k] = (params as any)[k];
+    }
+
+    const ref = await addDoc(this.col, payload);
+    return ref.id;
+  }
+
+  async updateEvent(eventId: string, patch: Partial<EventItem>) {
+    const ref = doc(this.fs, 'events', eventId);
+    await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() } as any);
+  }
+
+  async deleteEvent(eventId: string) {
+    await deleteDoc(doc(this.fs, 'events', eventId));
+  }
+
   // ---------- Helpers ----------
 
   private normalizeEvent(doc: any): EventItem {
     const { lat, lng } = this.extractLatLng(doc);
+    const statusRaw = String(doc?.status ?? doc?.state ?? 'active');
+    const status: 'active' | 'inactive' = statusRaw === 'inactive' ? 'inactive' : 'active';
     return {
       id: doc.id,
       name: doc.name ?? '(ohne Name)',
       address: doc.address ?? '',
       lat,
       lng,
+      status,
       upvotes: Array.isArray(doc.upvotes) ? doc.upvotes.map(String) : [],
       downvotes: Array.isArray(doc.downvotes) ? doc.downvotes.map(String) : [],
       ...doc,

@@ -12,16 +12,226 @@
     <div class="card">
       <h3>Profil</h3>
 
-      <div class="setting-item">
-        <label for="displayName">Anzeigename</label>
-        <input id="displayName" type="text"
-               [formControl]="profileForm.controls.displayName"
-               (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
+      <div class="profile-layout">
+        <div class="profile-edit">
+      <div class="grid-2">
+        <div class="setting-item">
+          <label for="displayName">Name (Anzeigename/Username)</label>
+          <input id="displayName" type="text" placeholder="z.B. canna_ole"
+                 [formControl]="profileForm.controls.displayName"
+                 (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
+
+          <div class="field-hint">
+            @if (profileForm.controls.displayName.hasError('pattern')) {
+              <span class="hint err">nur A–Z/a–z, 0–9, _ (3–20)</span>
+            } @else if (profileForm.controls.displayName.hasError('taken')) {
+              <span class="hint err">bereits vergeben</span>
+            } @else if (nameState() === 'checking') {
+              <span class="hint">prüfe…</span>
+            } @else if (nameState() === 'ok') {
+              <span class="hint ok">verfügbar</span>
+            } @else if (nameState() === 'invalid') {
+              <span class="hint err">nur A–Z/a–z, 0–9, _ (3–20)</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="setting-item">
+          <label for="firstName">Vorname</label>
+          <input id="firstName" type="text" [formControl]="profileForm.controls.firstName" />
+        </div>
+
+        <div class="setting-item">
+          <label for="lastName">Nachname</label>
+          <input id="lastName" type="text" [formControl]="profileForm.controls.lastName" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="setting-item">
+          <label for="email">E-Mail</label>
+          <input id="email" type="email" [formControl]="profileForm.controls.email" readonly />
+          <div class="field-hint">
+            <span class="hint">Hinweis: Login-E-Mail kann nur der User selbst ändern.</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label for="phoneNumber">Telefonnummer</label>
+          <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="setting-item">
+          <label for="birthday">Geburtstag</label>
+          <input id="birthday" type="date" [formControl]="profileForm.controls.birthday" />
+        </div>
+
+        <div class="setting-item">
+          <label for="gender">Geschlecht</label>
+          <select id="gender" [formControl]="profileForm.controls.gender">
+            <option value="unspecified">Keine Angabe</option>
+            <option value="male">Männlich</option>
+            <option value="female">Weiblich</option>
+            <option value="diverse">Divers</option>
+          </select>
+        </div>
       </div>
 
       <div class="setting-item">
-        <label for="phoneNumber">Telefonnummer</label>
-        <input id="phoneNumber" type="tel" [formControl]="profileForm.controls.phoneNumber" />
+        <label>Avatar</label>
+
+        <div class="avatar-grid">
+          <button type="button"
+                  class="avatar-tile"
+                  [class.active]="isAvatarSelected(null)"
+                  (click)="selectAvatar(null)"
+                  aria-label="Kein Avatar">
+            <span class="avatar-none">—</span>
+          </button>
+
+          @for (a of avatarPresets; track a.id) {
+            <button type="button"
+                    class="avatar-tile"
+                    [class.active]="isAvatarSelected(a.path)"
+                    (click)="selectAvatar(a.path)"
+                    [attr.aria-label]="a.label">
+              <img [src]="a.path" alt="" loading="lazy" />
+            </button>
+          }
+        </div>
+
+        <div class="field-hint">
+          <span class="hint">Spark Plan: kein Storage – Avatar wird aus Presets (assets) gewählt.</span>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <label for="bio">Bio</label>
+        <textarea id="bio" rows="4" maxlength="280" [formControl]="profileForm.controls.bio"></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="setting-item">
+          <label for="website">Website</label>
+          <input id="website" type="url" placeholder="deine-seite.de"
+                 [formControl]="profileForm.controls.website" />
+        </div>
+        <div class="setting-item">
+          <label for="city">Stadt</label>
+          <input id="city" type="text" [formControl]="profileForm.controls.city" />
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <label for="country">Land</label>
+        <input id="country" type="text" [formControl]="profileForm.controls.country" />
+      </div>
+
+      <details class="details">
+        <summary>Social Links</summary>
+        <div class="grid-2">
+          <div class="setting-item">
+            <label for="instagram">Instagram</label>
+            <input id="instagram" type="text" placeholder="@name oder link" [formControl]="profileForm.controls.instagram" />
+          </div>
+          <div class="setting-item">
+            <label for="tiktok">TikTok</label>
+            <input id="tiktok" type="text" placeholder="@name oder link" [formControl]="profileForm.controls.tiktok" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="setting-item">
+            <label for="youtube">YouTube</label>
+            <input id="youtube" type="text" placeholder="Kanal oder link" [formControl]="profileForm.controls.youtube" />
+          </div>
+          <div class="setting-item">
+            <label for="discord">Discord</label>
+            <input id="discord" type="text" placeholder="name#1234" [formControl]="profileForm.controls.discord" />
+          </div>
+        </div>
+        <div class="setting-item">
+          <label for="telegram">Telegram</label>
+          <input id="telegram" type="text" placeholder="@name" [formControl]="profileForm.controls.telegram" />
+        </div>
+      </details>
+
+      <details class="details">
+        <summary>Privatsphäre (öffentliche Ansicht)</summary>
+        <div class="checklist">
+          <label class="check">
+            <input type="checkbox" [formControl]="profileForm.controls.showBio" />
+            <span>Bio anzeigen</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formControl]="profileForm.controls.showWebsite" />
+            <span>Website anzeigen</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formControl]="profileForm.controls.showLocation" />
+            <span>Ort anzeigen</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formControl]="profileForm.controls.showSocials" />
+            <span>Social Links anzeigen</span>
+          </label>
+        </div>
+        <div class="field-hint">
+          <span class="hint">Nur diese Felder werden in <code>profiles_public</code> gespiegelt.</span>
+        </div>
+      </details>
+
+        </div>
+
+        <div class="profile-preview">
+          <h4>So sehen andere dich</h4>
+
+          @let p = publicProfilePreview();
+
+          <div class="preview-header">
+            @if (p.photoURL) {
+              <img class="preview-avatar" [src]="p.photoURL" alt="avatar" loading="lazy" />
+            } @else {
+              <div class="preview-avatar placeholder">?</div>
+            }
+
+            <div class="preview-title">
+              <div class="preview-name">{{ p.displayName }}</div>
+</div>
+          </div>
+
+          @if (p.bio) {
+            <p class="preview-bio">{{ p.bio }}</p>
+          }
+
+          <div class="preview-meta">
+            @if (p.locationText) {
+              <div class="preview-row">
+                <mat-icon fontSet="material-icons-outlined">place</mat-icon>
+                <span>{{ p.locationText }}</span>
+              </div>
+            }
+            @if (p.website) {
+              <div class="preview-row">
+                <mat-icon fontSet="material-icons-outlined">link</mat-icon>
+                <a [href]="p.website" target="_blank" rel="noopener">{{ p.website }}</a>
+              </div>
+            }
+          </div>
+
+          @if (p.socials) {
+            <div class="preview-socials">
+              @if (p.socials.instagram) { <div class="preview-row"><span class="chip">Instagram</span><span>{{ p.socials.instagram }}</span></div> }
+              @if (p.socials.tiktok) { <div class="preview-row"><span class="chip">TikTok</span><span>{{ p.socials.tiktok }}</span></div> }
+              @if (p.socials.youtube) { <div class="preview-row"><span class="chip">YouTube</span><span>{{ p.socials.youtube }}</span></div> }
+              @if (p.socials.discord) { <div class="preview-row"><span class="chip">Discord</span><span>{{ p.socials.discord }}</span></div> }
+              @if (p.socials.telegram) { <div class="preview-row"><span class="chip">Telegram</span><span>{{ p.socials.telegram }}</span></div> }
+            </div>
+          }
+        </div>
       </div>
 
       <!-- Profil speichern -->

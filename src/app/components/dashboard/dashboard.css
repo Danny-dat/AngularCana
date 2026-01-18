@@ -1,8 +1,8 @@
 /* ===========================
-   DASHBOARD – Schwarzes Layout (Overrides)
+   DASHBOARD – Layout & Theme
    =========================== */
 
-/* -------- Fallback-Variablen (werden von deinem Theme überschrieben) -------- */
+/* -------- Globale Theme-Variablen -------- */
 :root {
   --surface-color: #1f1e20;
   --shadow-color: rgba(0,0,0,.35);
@@ -15,11 +15,19 @@
   --err: #c62828;
 }
 
-/* Karten (Tracker + Map): zentriert, rund, mit Schatten */
-.tracker-container.card,
+/*
+  Layout für die direkten Kinder des Dashboards.
+  Wir definieren hier nur noch die Position und Breite, nicht das Aussehen.
+*/
+app-canna,
 .map-container.card {
+  display: block; /* Wichtig für die <app-canna> Komponente */
   max-width: 680px;
   margin: 18px auto;
+}
+
+/* Karten-Styling nur noch für Elemente, die direkt im Dashboard sind (z.B. Map) */
+.map-container.card {
   padding: 16px 18px;
   border-radius: 14px;
   background: var(--surface-color);
@@ -27,8 +35,7 @@
   color: var(--text-color);
 }
 
-/* Überschriften: eigenen Divider */
-.tracker-container h3,
+/* Überschriften-Layout nur noch für die Map-Karte */
 .map-container h3 {
   border-bottom: none !important;
   padding-bottom: 0 !important;
@@ -36,146 +43,6 @@
   font-size: 20px;
   font-weight: 800;
   line-height: 1.1;
-}
-.tracker-container h3::after {
-  content: "";
-  display: block;
-  height: 1px;
-  background: var(--border-color);
-  opacity: .6;
-  margin-top: 10px;
-}
-
-/* ================= Kachel-Grid – Basis ================= */
-.selection {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr);
-  column-gap: 72px;
-  row-gap: 36px;
-  padding: 6px 6px 20px;
-  justify-items: center;
-  align-items: start;
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-/* erste Reihe (Produkte) – 3 Spalten */
-.tracker-container > .selection:first-of-type {
-  grid-template-columns: repeat(3, 1fr);
-  max-width: 560px;
-}
-
-/* zweite Reihe (Devices) – 4 Spalten */
-.tracker-container > .selection:nth-of-type(2) {
-  grid-template-columns: repeat(4, 1fr);
-  column-gap: 48px;
-  row-gap: 36px;
-  max-width: 680px;
-}
-
-/* Sehr schmale Phones: beide Reihen auf 2 Spalten */
-@media (max-width: 480px) {
-  .tracker-container > .selection:first-of-type,
-  .tracker-container > .selection:nth-of-type(2) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .tracker-container > .selection:nth-of-type(2) { column-gap: 28px; }
-}
-
-/* Kachel-Item */
-.selection > div {
-  cursor: pointer;
-  text-align: center;
-  padding: 4px;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  transition: transform .08s ease-in-out, border-color .2s, box-shadow .2s, background .2s;
-  background: transparent;
-}
-.selection > div:hover {
-  background: rgba(255,255,255,.03);
-}
-.selection > div:active { transform: scale(.98); }
-
-/* Weißes Thumbnail mit Schatten */
-.selection img {
-  width: 64px;
-  height: 64px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(0,0,0,.18);
-  object-fit: cover;
-  display: block;
-  margin: 0 auto 10px;
-}
-
-/* Label */
-.selection p {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--text-color);
-  letter-spacing: .2px;
-}
-
-/* Auswahlzustand – grüne Kontur + dezenter Glow */
-.selection .selected {
-  border-color: var(--primary-color);
-  box-shadow: inset 0 0 0 4px rgba(46,160,67,.10), 0 6px 16px rgba(0,0,0,.18);
-  border-radius: 12px;
-  padding: 2px; /* Außenmaß bleibt gleich trotz 2px Rand */
-}
-
-/* Tastaturfokus sichtbar */
-.selection > div:focus-visible {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
-  border-radius: 12px;
-}
-
-/* ================= Primärer Action-Button & Status ================= */
-.actions { margin-top: 6px; }
-.actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .6rem;
-  width: 100%;
-  min-height: 48px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 800;
-  border: 0;
-  color: #fff;
-  background: var(--primary-color);
-  box-shadow: 0 8px 22px rgba(0,0,0,.20);
-  transition: background .2s ease, opacity .2s ease, box-shadow .2s ease, transform .06s ease;
-}
-.actions button:hover { background: var(--primary-color-600); }
-.actions button:active { transform: translateY(1px); }
-.actions button:disabled {
-  opacity: .65;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-.actions button.loading { cursor: progress; opacity: .9; }
-.actions button.success { background: var(--ok) !important; }
-
-/* Spinner im Button */
-.btn-spinner {
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid currentColor; border-right-color: transparent;
-  display: inline-block; animation: btnspin .6s linear infinite;
-}
-@keyframes btnspin { to { transform: rotate(1turn); } }
-
-/* Zuletzt gespeichert */
-.saved-stamp {
-  margin-top: .5rem;
-  color: var(--muted-text);
-  font-size: .9rem;
 }
 
 /* ================= Map-Container ================= */
@@ -186,7 +53,8 @@
   overflow: hidden;
 }
 
-/* ================= Toast ================= */
+
+/* ================= Toast-Benachrichtigungen ================= */
 .toast {
   position: fixed;
   right: 16px;
@@ -202,9 +70,10 @@
   animation: toast-in .18s ease-out;
 }
 .toast.success { background: var(--ok); }
-.toast.error   { background: var(--err); }
+.toast.error { background: var(--err); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
+

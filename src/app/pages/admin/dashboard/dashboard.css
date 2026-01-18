@@ -1,9 +1,135 @@
-.grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; margin-bottom:16px; }
-.kpi { cursor:pointer; }
-.kpi-row { display:flex; align-items:center; gap:12px; }
-.kpi mat-icon { font-size:36px; height:36px; width:36px; }
-.kpi .val { font-size:24px; font-weight:700; line-height:1.2; }
-.kpi .lbl { opacity:.7; }
-.actions { padding:12px; }
-.quick { display:flex; flex-wrap:wrap; gap:12px; }
-.quick a mat-icon { margin-right:6px; }
+/* ==========================================================================
+   Admin Dashboard – Layout
+   ========================================================================== */
+
+/* KPI-Grid (Users / Reports / Events / Promos / Conversion) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+
+  /* spacing between blocks */
+  margin: 16px 0;
+}
+
+/* Quick Actions Card (Schnellaktionen) */
+.actions {
+  padding: 12px;
+}
+
+/* Buttons inside Schnellaktionen */
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.quick a mat-icon {
+  margin-right: 6px;
+}
+
+
+/* ==========================================================================
+   KPI Cards
+   ========================================================================== */
+
+.kpi {
+  cursor: pointer;
+}
+
+/* icon + numbers in one row */
+.kpi-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kpi-icon {
+  width: 44px;          /* ggf. 48px wenn du mehr Luft willst */
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi mat-icon {
+  font-size: 36px;
+  height: 36px;
+  width: 36px;
+}
+
+.kpi .val {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.kpi .lbl {
+  opacity: 0.7;
+}
+
+
+/* ==========================================================================
+   Widgets (Inbox / Neueste Reports / Letzte Aktivitäten)
+   ========================================================================== */
+
+.widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+
+  /* spacing from KPI section */
+  margin-top: 16px;
+}
+
+.widget {
+  padding: 12px;
+}
+
+/* Widget title row: left title + right action ("Alle") */
+.widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+
+/* ==========================================================================
+   List Rows (shared row style inside widgets)
+   ========================================================================== */
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.title {
+  font-weight: 600;
+}
+
+.meta {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+
+/* ==========================================================================
+   Pills / Counters (right side badges in Inbox)
+   ========================================================================== */
+
+.pill {
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+}

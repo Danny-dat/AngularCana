@@ -54,7 +54,7 @@ export class FriendsService {
     if (!fromUid || !toUid) throw new Error('UID fehlt.');
     if (fromUid === toUid) throw new Error('Du kannst dich nicht selbst hinzufügen.');
 
-    // Pending-Duplikate vermeiden (in beide Richtungen prüfen)
+    // Duplikat-Prüfungen...
     const pendingFromTo = await getDocs(
       query(
         this.friendRequestsCollection,
@@ -73,7 +73,6 @@ export class FriendsService {
     );
     if (!pendingFromTo.empty || !pendingToFrom.empty) return;
 
-    // bereits accepted?
     const acceptedFromTo = await getDocs(
       query(
         this.friendRequestsCollection,
@@ -92,6 +91,7 @@ export class FriendsService {
     );
     if (!acceptedFromTo.empty || !acceptedToFrom.empty) return;
 
+    // Anfrage und Benachrichtigung erstellen...
     const newRequestRef = await addDoc(this.friendRequestsCollection, {
       fromUid,
       toUid,
@@ -117,6 +117,9 @@ export class FriendsService {
 
   /** Live-Listener für eingehende pending-Requests */
   listenIncoming(myUid: UID, callback: (reqs: FriendRequest[]) => void) {
+    // ▼▼▼ SICHERHEITSPRÜFUNG HINZUGEFÜGT ▼▼▼
+    if (!myUid) return () => {}; // Beendet die Funktion sicher, wenn keine UID vorhanden ist.
+
     const requestsQuery = query(
       this.friendRequestsCollection,
       where('participants', 'array-contains', myUid)
@@ -130,6 +133,7 @@ export class FriendsService {
   }
 
   async fetchIncoming(myUid: UID): Promise<FriendRequest[]> {
+    if (!myUid) return []; // Zusätzliche Sicherheitsprüfung
     const requestsSnapshot = await getDocs(
       query(this.friendRequestsCollection, where('participants', 'array-contains', myUid))
     );
@@ -140,6 +144,9 @@ export class FriendsService {
 
   /** Live-Listener für akzeptierte Freunde inkl. Public Profile */
   listenFriends(myUid: UID, callback: (friends: FriendPublicProfile[]) => void) {
+    // ▼▼▼ SICHERHEITSPRÜFUNG HINZUGEFÜGT ▼▼▼
+    if (!myUid) return () => {};
+
     const requestsQuery = query(
       this.friendRequestsCollection,
       where('participants', 'array-contains', myUid)
@@ -159,6 +166,8 @@ export class FriendsService {
 
       const profileSnapshots = await Promise.all(
         friendIds.map(async (friendId: string) => {
+          // Die Prüfung hier drin ist wichtig, falls ein Profil gelöscht wurde
+          if (!friendId) return null;
           const profileRef = doc(this.publicProfilesCollection, friendId);
           try {
             const profileDoc = await getDoc(profileRef);
@@ -281,6 +290,9 @@ export class FriendsService {
 
   /** Live-Listener für blockierte Nutzer */
   listenBlocked(myUid: string, callback: (ids: string[]) => void) {
+    // ▼▼▼ SICHERHEITSPRÜFUNG HINZUGEFÜGT ▼▼▼
+    if (!myUid) return () => {};
+
     const requestsQuery = query(
       this.friendRequestsCollection,
       where('participants', 'array-contains', myUid)
@@ -310,6 +322,9 @@ export class FriendsService {
 
   /** Blockierte als Profile zurückgeben (statt nur IDs) */
   listenBlockedProfiles(myUid: string, callback: (list: FriendPublicProfile[]) => void) {
+    // ▼▼▼ SICHERHEITSPRÜFUNG HINZUGEFÜGT ▼▼▼
+    if (!myUid) return () => {};
+
     const q = query(this.friendRequestsCollection, where('participants', 'array-contains', myUid));
     return onSnapshot(q, async (snap) => {
       const idSet = new Set<string>();
@@ -325,6 +340,7 @@ export class FriendsService {
 
       const profiles = await Promise.all(
         ids.map(async (id) => {
+          if (!id) return null; // Zusätzliche Sicherheit
           const ref = doc(this.publicProfilesCollection, id);
           const s = await getDoc(ref);
           const p = s.exists() ? (s.data() as any) : {};
@@ -341,8 +357,23 @@ export class FriendsService {
           return profile;
         })
       );
-
-      callback(profiles);
+      // Filtere eventuelle null-Werte heraus
+      callback(profiles.filter((p) => p !== null) as FriendPublicProfile[]);
     });
+  }
+
+  async getAcceptedFriendIds(myUid: string): Promise<string[]> {
+    const snap = await getDocs(
+      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid))
+    );
+    const ids = new Set<string>();
+    snap.docs.forEach((d) => {
+      const data = d.data() as any;
+      if (data.status === 'accepted') {
+        const other = data.fromUid === myUid ? data.toUid : data.fromUid;
+        if (other) ids.add(other);
+      }
+    });
+    return [...ids];
   }
 }

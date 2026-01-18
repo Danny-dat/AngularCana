@@ -29,7 +29,9 @@
       name="displayName"
       type="text"
       autocomplete="nickname"
-      placeholder="Anzeigename"
+      placeholder="Name (Anzeigename/Username)"
+      maxlength="20"
+      pattern="^[A-Za-z0-9_]{3,20}$"
       required
       [disabled]="isLoading"
     />

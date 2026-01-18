@@ -13,6 +13,14 @@ import {
 } from '@angular/fire/firestore';
 import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
 
+type ReportEvent = {
+  userId: string;
+  messageId?: string | null;
+  text: string;
+  reasonCategory: string;
+  reasonText?: string | null;
+};
+
 @Component({
   standalone: true,
   selector: 'app-global-chat-page',
@@ -30,7 +38,7 @@ export class GlobalChatPage implements AfterViewInit, OnDestroy {
 
   // Auth / User
   uid = signal<string>('');
-  displayName = signal<string>('');   // wird an sendGroup() übergeben
+  displayName = signal<string>(''); // wird an sendGroup() übergeben
   email = signal<string>('');
 
   // Chat
@@ -49,7 +57,7 @@ export class GlobalChatPage implements AfterViewInit, OnDestroy {
       this.uid.set(u?.uid ?? '');
       this.email.set(u?.email ?? '');
       // Fallbacks: displayName > email > uid
-      this.displayName.set(u?.displayName ?? u?.email ?? (u?.uid ?? ''));
+      this.displayName.set(u?.displayName ?? u?.email ?? u?.uid ?? '');
     });
   }
 
@@ -74,35 +82,37 @@ export class GlobalChatPage implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.unlisten?.(); this.unlisten = null;
-    this.offAuth?.(); this.offAuth = null;
+    this.unlisten?.();
+    this.unlisten = null;
+    this.offAuth?.();
+    this.offAuth = null;
   }
 
   // ---- Senden --------------------------------------------------------------
 
-async onSend(text: string) {
-  const body = (text || '').trim();
-  const me = this.uid();
-  if (!body || !me) return;
+  async onSend(text: string) {
+    const body = (text || '').trim();
+    const me = this.uid();
+    if (!body || !me) return;
 
-  try {
-    await this.chat.sendGroup({
-      fromUid: me,
-      chatId: this.channelId,
-      text: body,
-      senderName: this.displayName(),
-    });
-    this.text.set(''); // Eingabefeld leeren
-  } catch (e: any) {
-    if (e?.code === 'permission-denied') {
-      // Spam-Limit o.ä.
-      alert('Du schreibst zu schnell. Bitte warte kurz.');
-    } else {
-      console.error('Senden fehlgeschlagen:', e);
-      alert('Senden fehlgeschlagen. Bitte später erneut versuchen.');
+    try {
+      await this.chat.sendGroup({
+        fromUid: me,
+        chatId: this.channelId,
+        text: body,
+        senderName: this.displayName(),
+      });
+      this.text.set(''); // Eingabefeld leeren
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') {
+        // Spam-Limit o.ä.
+        alert('Du schreibst zu schnell. Bitte warte kurz.');
+      } else {
+        console.error('Senden fehlgeschlagen:', e);
+        alert('Senden fehlgeschlagen. Bitte später erneut versuchen.');
+      }
     }
   }
-}
 
   // ---- Overlay-Aktionen ----------------------------------------------------
 
@@ -118,21 +128,43 @@ async onSend(text: string) {
     });
   }
 
-  async onReport(evt: { userId: string; messageId?: string; text: string }) {
+  // Report enthält jetzt Kategorie + optionalen Text
+  async onReport(evt: ReportEvent) {
     const me = this.uid();
     if (!me) return;
-    await addDoc(collection(this.afs, 'reports'), {
-      type: 'chat_message',
-      chatId: this.channelId,
-      reporterId: me,
-      reportedId: evt.userId,
-      messageId: evt.messageId ?? null,
-      messageText: evt.text,
-      createdAt: serverTimestamp(),
-    });
+
+    // Guard / Normalisierung
+    const cat = (evt.reasonCategory || '').trim();
+    const note = (evt.reasonText ?? '').toString().trim();
+    if (!cat) return;
+
+    try {
+      await addDoc(collection(this.afs, 'reports'), {
+        type: 'chat_message',
+        scope: 'channel',
+        status: 'new',
+        chatId: this.channelId,
+
+        reporterId: me,
+        reportedId: evt.userId,
+
+        messageId: evt.messageId ?? null,
+        messageText: evt.text ?? '',
+
+        reasonCategory: cat,
+        reasonText: note ? note : null,
+
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error('Report fehlgeschlagen', e);
+      alert('Melden hat nicht funktioniert.');
+    }
   }
 
-  close() { history.back(); }
+  close() {
+    history.back();
+  }
 
   // ---- Namen ergänzen für alte Nachrichten --------------------------------
 
@@ -162,7 +194,8 @@ async onSend(text: string) {
           const ref = doc(this.afs, 'profiles_public', uid);
           const snap = await getDoc(ref);
           const name =
-            (snap.exists() && ((snap.data() as any).displayName || (snap.data() as any).username)) ||
+            (snap.exists() &&
+              ((snap.data() as any).displayName || (snap.data() as any).username)) ||
             uid;
           this.nameCache.set(uid, name);
         } catch {

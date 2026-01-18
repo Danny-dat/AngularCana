@@ -9,7 +9,7 @@ export class AdService {
   private http = inject(HttpClient);
 
   /** Debug-Schalter */
-  private readonly DEBUG = false;
+  private readonly DEBUG = true;
 
   /** Schutz gegen Doppel-Init */
   private initialized = false;

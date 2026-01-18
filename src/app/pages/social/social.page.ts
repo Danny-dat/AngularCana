@@ -2,11 +2,22 @@ import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Firestore, addDoc, collection, serverTimestamp, doc, getDoc } from '@angular/fire/firestore';
+
 import { FriendRequest, FriendPublicProfile } from '../../models/social.models';
 import { ChatService } from '../../services/chat.services';
 import { FriendsService } from '../../services/friends.services';
 import { PresenceService } from '../../services/presence.service';
 import { ChatOverlayComponent } from '../../feature/chat-overlay/chat-overlay.component';
+
+type ReportEvent = {
+  userId: string;
+  messageId?: string | null;
+  text: string;
+  reasonCategory: string;
+  reasonText?: string | null;
+};
 
 @Component({
   standalone: true,
@@ -21,6 +32,9 @@ export class SocialPage implements OnDestroy {
   private chat = inject(ChatService);
   private auth = inject(Auth);
   private presence = inject(PresenceService); // nur zum Lesen (listen), Heartbeat läuft global
+  private afs = inject(Firestore);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // Subscriptions/Listener
   private subs: Array<() => void> = [];
@@ -57,7 +71,30 @@ export class SocialPage implements OnDestroy {
   messages = signal<any[]>([]);
   chatInput = signal('');
 
+  // wichtig für Reports im Direct-Chat
+  private currentChatId = signal<string | null>(null);
+
+  // QueryParam: /social?openChatWith=<uid>
+  private pendingOpenUid = signal<string | null>(null);
+
   constructor() {
+    // QueryParams (Notifications -> Direkt-Chat öffnen)
+    this.route.queryParams.subscribe((qp) => {
+      const open = (qp?.['openChatWith'] ?? '').toString().trim();
+      const tab = (qp?.['tab'] ?? '').toString().trim();
+
+      if (tab) {
+        if (tab === 'requests' || tab === 'blocked' || tab === 'add' || tab === 'code') {
+          this.activeTab.set(tab as any);
+        }
+      }
+      if (open) {
+        this.pendingOpenUid.set(open);
+        // falls User schon eingeloggt ist -> direkt öffnen
+        this.tryOpenFromQuery();
+      }
+    });
+
     onAuthStateChanged(this.auth, (u: User | null) => {
       // bestehende Listener sauber beenden
       this.subs.forEach((fn) => fn?.());
@@ -75,6 +112,8 @@ export class SocialPage implements OnDestroy {
         this.showChat.set(false);
         this.partner.set(null);
         this.messages.set([]);
+        this.chatInput.set('');
+        this.currentChatId.set(null);
         return;
       }
 
@@ -86,6 +125,9 @@ export class SocialPage implements OnDestroy {
       });
 
       const myUid = u.uid;
+
+      // wenn wir via Notification reinkommen
+      this.tryOpenFromQuery();
 
       // 1) Offene Anfragen
       const offIncoming = this.friends.listenIncoming(myUid, (reqs) => this.incoming.set(reqs));
@@ -109,6 +151,56 @@ export class SocialPage implements OnDestroy {
       });
       this.subs.push(offBlocked);
     });
+  }
+
+  private async tryOpenFromQuery() {
+    const targetUid = this.pendingOpenUid();
+    const me = this.user().uid;
+    if (!targetUid || !me) return;
+    // nicht selbst
+    if (targetUid === me) {
+      this.pendingOpenUid.set(null);
+      return;
+    }
+
+    try {
+      // Public Profile holen (damit Header schön aussieht)
+      const snap = await getDoc(doc(this.afs, 'profiles_public', targetUid));
+      const data: any = snap.exists() ? snap.data() : {};
+      const label = data?.username || data?.displayName || `${targetUid.slice(0, 6)}…`;
+
+      const partner: FriendPublicProfile = {
+        id: targetUid,
+        label,
+        displayName: data?.displayName ?? null,
+        username: data?.username ?? null,
+        photoURL: data?.photoURL ?? null,
+        lastLocation: data?.lastLocation ?? null,
+        _action: '',
+      };
+
+      this.openChat(partner);
+    } catch (e) {
+      // auch ohne Profil starten
+      this.openChat({
+        id: targetUid,
+        label: `${targetUid.slice(0, 6)}…`,
+        displayName: null,
+        username: null,
+        photoURL: null,
+        lastLocation: null,
+        _action: '',
+      });
+    } finally {
+      this.pendingOpenUid.set(null);
+      // Param entfernen, damit es nicht bei jeder Navigation wieder aufgeht
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { openChatWith: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   // Anzeige-Code
@@ -233,8 +325,9 @@ export class SocialPage implements OnDestroy {
 
     this.partner.set(friend);
 
-    // NEU: Chat-ID über den Service berechnen
+    // Chat-ID über den Service berechnen
     const cid = this.chat.getDirectChatId(this.user().uid, friend.id);
+    this.currentChatId.set(cid);
 
     // sicherstellen, dass der Chat existiert
     this.chat.ensureChatExists(this.user().uid, friend.id);
@@ -262,7 +355,7 @@ export class SocialPage implements OnDestroy {
     const p = this.partner();
     if (!txt || !p || !this.user().uid) return;
 
-    // ✅ NEU: vereinheitlicht über Service (Direct)
+    // vereinheitlicht über Service (Direct)
     await this.chat.sendDirect({
       fromUid: this.user().uid,
       toUid: p.id,
@@ -278,7 +371,48 @@ export class SocialPage implements OnDestroy {
     this.showChat.set(false);
     this.partner.set(null);
     this.messages.set([]);
+    this.chatInput.set('');
+    this.currentChatId.set(null);
   }
+
+  // Report aus dem ChatOverlay
+async onReport(evt: ReportEvent) {
+  const me = this.user().uid;
+  const cid = this.currentChatId();
+  if (!me || !cid) return;
+
+  // Guard / Normalisierung (sicherer)
+  const cat = (evt.reasonCategory || '').trim();
+  const note = (evt.reasonText ?? '').toString().trim();
+  if (!cat) return;
+
+  try {
+    await addDoc(collection(this.afs, 'reports'), {
+      type: 'chat_message',
+      scope: 'direct',
+      chatId: cid,
+
+      reporterId: me,
+      reportedId: evt.userId,
+
+      messageId: evt.messageId ?? null,
+      messageText: evt.text ?? '',
+
+      // hier die normalisierten Werte nutzen
+      reasonCategory: cat,
+      reasonText: note ? note : null,
+
+      status: 'new',
+      createdAt: serverTimestamp(),
+    });
+
+    alert('Danke! Die Nachricht wurde gemeldet.');
+  } catch (e) {
+    console.error('Report fehlgeschlagen', e);
+    alert('Melden hat nicht funktioniert.');
+  }
+}
+
 
   // Cleanup
   ngOnDestroy() {

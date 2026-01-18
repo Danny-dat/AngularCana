@@ -1,24 +1,30 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, CanMatchFn, Router, UrlTree } from '@angular/router';
+import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { Auth, user } from '@angular/fire/auth';
-import { map } from 'rxjs/operators';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { from } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
-// hier deine Admin-UIDs eintragen:
-const ADMIN_UIDS = new Set<string>([
-  'ZAz0Bnde5zYIS8qCDT86aOvEDX52',
-  // '87654321-uuid-admin'
-]);
+// Optional: Owner-Notbremse (falls Firestore mal klemmt)
+const OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
 
 function checkAdmin() {
   const auth = inject(Auth);
+  const firestore = inject(Firestore);
   const router = inject(Router);
 
   return user(auth).pipe(
-    map(u => {
-      if (!u) {
-        return router.createUrlTree(['/login']);
-      }
-      return ADMIN_UIDS.has(u.uid) ? true : router.createUrlTree(['/dashboard']);
+    switchMap(u => {
+      if (!u) return from([router.createUrlTree(['/login'])]);
+
+      // Owner darf immer rein (optional)
+      if (u.uid === OWNER_UID) return from([true]);
+
+      // Admin = admins/{uid} existiert
+      const ref = doc(firestore, 'admins', u.uid);
+      return from(getDoc(ref)).pipe(
+        map(snap => (snap.exists() ? true : router.createUrlTree(['/dashboard'])))
+      );
     })
   );
 }

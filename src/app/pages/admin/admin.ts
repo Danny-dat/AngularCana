@@ -1,38 +1,75 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatBadgeModule } from '@angular/material/badge';
 
-type NavItem = { label: string; icon: string; link: string; };
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+type AdminNavItem = {
+  label: string;
+  link: string;
+  icon: string;
+};
 
 @Component({
-  selector: 'app-adminPage',
+  selector: 'app-admin-page',
   standalone: true,
   imports: [
-    RouterOutlet,         // <router-outlet>
-    RouterLink,           // [routerLink]
-    RouterLinkActive,     // routerLinkActive
+    CommonModule,
+
+    // Router
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
 
     // Material
-    MatSidenavModule, MatToolbarModule, MatIconModule,
-    MatListModule, MatButtonModule, MatDividerModule, MatBadgeModule
+    MatSidenavModule,
+    MatListModule,
+    MatIconModule,
+    MatButtonModule,
+    MatToolbarModule,
+    MatTooltipModule,
   ],
   templateUrl: './admin.html',
-  styleUrl: './admin.css'
+  styleUrl: './admin.css',
 })
 export class AdminPage {
-  collapsed = false;
-  nav: NavItem[] = [
-    { label: 'Dashboard',  icon: 'dashboard',   link: 'dashboard' },
-    { label: 'Users',      icon: 'group',       link: 'users' },
-    { label: 'Reports',    icon: 'description', link: 'reports' },
-    { label: 'Events',     icon: 'event',       link: 'events' },
-    { label: 'Promo',      icon: 'local_offer', link: 'promo' },
-    { label: 'Statistics', icon: 'insights',    link: 'statistics' },
+  // Sidebar state
+  collapsed = this.loadCollapsed();
+
+  // Sidebar navigation
+  nav: AdminNavItem[] = [
+    { label: 'Dashboard',  link: '/admin/dashboard',  icon: 'dashboard' },
+    { label: 'Admins',     link: '/admin/admins',     icon: 'admin_panel_settings' },
+    { label: 'Users',      link: '/admin/users',      icon: 'group' },
+    { label: 'Reports',    link: '/admin/reports',    icon: 'description' },
+    { label: 'Events',     link: '/admin/events',     icon: 'event' },
+    { label: 'Promo',      link: '/admin/promo',      icon: 'local_offer' },
+    { label: 'Statistics', link: '/admin/statistics', icon: 'insights' },
   ];
+
+  toggleCollapsed(): void {
+    this.collapsed = !this.collapsed;
+    this.saveCollapsed(this.collapsed);
+  }
+
+  private loadCollapsed(): boolean {
+    try {
+      return localStorage.getItem('admin.sidebar.collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private saveCollapsed(value: boolean): void {
+    try {
+      localStorage.setItem('admin.sidebar.collapsed', String(value));
+    } catch {
+      // ignore (z.B. private mode)
+    }
+  }
 }

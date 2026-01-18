@@ -1,0 +1,102 @@
+ .page {
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.muted {
+  margin: 4px 0 0;
+  opacity: 0.75;
+}
+
+.card {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search {
+  min-width: 260px;
+  max-width: 520px;
+  flex: 1;
+}
+
+.table {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.cell-title { font-weight: 600; }
+.cell-sub { font-size: 12px; opacity: 0.75; }
+.cell-note { font-size: 12px; opacity: 0.85; margin-top: 6px; white-space: pre-wrap; }
+
+.actions {
+  width: 170px;
+  text-align: right;
+}
+
+.status-select {
+  width: 100%;
+  font-size: 12px;
+}
+
+.status-field {
+  width: 160px;
+}
+
+:host ::ng-deep .table .mat-mdc-form-field {
+  margin: 0;
+}
+
+:host ::ng-deep .table .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.status {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.status[data-status="open"] { opacity: 1; }
+.status[data-status="accepted"] { opacity: 0.9; }
+.status[data-status="resolved"] { opacity: 0.8; }
+.status[data-status="rejected"] { opacity: 0.7; }
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+code { font-size: 12px; opacity: 0.85; }

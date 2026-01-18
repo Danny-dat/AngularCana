@@ -22,8 +22,30 @@
     @if (uid()) {
       <div class="ev-stats"><span class="badge">Meine Likes: {{ likedCount() }}</span></div>
     }
+
+    <button class="btn primary" (click)="openSuggest()" title="Event vorschlagen">
+      + Vorschlagen
+    </button>
   </div>
 </header>
+
+<nav class="ev-tabs" aria-label="Event-Status">
+  <button
+    type="button"
+    class="tab"
+    [class.active]="tab() === 'active'"
+    (click)="tab.set('active')">
+    Aktiv <span class="pill">{{ activeCount() }}</span>
+  </button>
+
+  <button
+    type="button"
+    class="tab"
+    [class.active]="tab() === 'inactive'"
+    (click)="tab.set('inactive')">
+    Nicht aktiv <span class="pill">{{ inactiveCount() }}</span>
+  </button>
+</nav>
 
 @if (filtered().length) {
   <ul class="ev-list">
@@ -32,6 +54,10 @@
         <div class="ev-main">
           <div class="ev-title">{{ e.name }}</div>
           <div class="ev-sub">{{ e.address }}</div>
+
+          @if (formatStart(e)) {
+            <div class="ev-when">🗓️ {{ formatStart(e) }}</div>
+          }
 
           <div class="ev-counters">
             <span class="chip chip-up" [class.me]="isUpvoted(e)">👍 {{ e.upvotes?.length || 0 }}</span>
@@ -61,8 +87,148 @@
   </ul>
 } @else {
   <div class="ev-empty">
-    <div>Keine passenden Events gefunden.</div>
+    <div>
+      @if (tab() === 'active') { Keine aktiven Events gefunden. }
+      @else { Keine nicht aktiven Events gefunden. }
+    </div>
     <small>Tipp: Filter deaktivieren oder Suchbegriff ändern.</small>
+  </div>
+}
+
+<!-- === Vorschlag-Modal === -->
+@if (suggestOpen()) {
+  <div class="modal-backdrop" (click)="cancelSuggest()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">Event vorschlagen</div>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Gib Adresse + Datum/Uhrzeit an – wir holen automatisch die Koordinaten dazu.
+        </p>
+
+        <div class="form-grid">
+          <label>
+            <span>Event-Name *</span>
+            <input
+              type="text"
+              [value]="sName()"
+              (input)="sName.set($any($event.target).value)"
+              placeholder="z.B. Smoke Session am See" />
+          </label>
+
+          <label>
+            <span>Straße *</span>
+            <input
+              type="text"
+              [value]="sStreet()"
+              (input)="sStreet.set($any($event.target).value)"
+              placeholder="z.B. Hauptstraße 12" />
+          </label>
+
+          <div class="two">
+            <label>
+              <span>PLZ (optional)</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                [value]="sZip()"
+                (input)="sZip.set($any($event.target).value)"
+                placeholder="z.B. 10115" />
+            </label>
+
+            <label>
+              <span>Stadt *</span>
+              <input
+                type="text"
+                [value]="sCity()"
+                (input)="sCity.set($any($event.target).value)"
+                placeholder="z.B. Berlin" />
+            </label>
+          </div>
+
+          <div class="two">
+            <label>
+              <span>Datum *</span>
+              <input
+                type="date"
+                [value]="sDate()"
+                (input)="sDate.set($any($event.target).value)" />
+            </label>
+
+            <label>
+              <span>Uhrzeit *</span>
+              <input
+                type="time"
+                [value]="sTime()"
+                (input)="sTime.set($any($event.target).value)" />
+            </label>
+          </div>
+
+          <div class="geo-tools">
+            <button
+              class="btn outline"
+              type="button"
+              (click)="checkAddress()"
+              [disabled]="geoBusy() || suggestBusy()">
+              @if (geoBusy()) { Suche… } @else { Adresse prüfen }
+            </button>
+
+            @if (geoError()) {
+              <small class="geo-error">{{ geoError() }}</small>
+            }
+          </div>
+
+          @if (geoResults().length === 1) {
+            <div class="geo-ok">
+              ✅ Adresse gefunden: <strong>{{ geoResults()[0].label }}</strong>
+              <div class="geo-sub"><code>{{ geoResults()[0].lat }}, {{ geoResults()[0].lng }}</code></div>
+            </div>
+          }
+
+          @if (geoResults().length > 1) {
+            <div class="geo-results">
+              <div class="geo-title">Meintest du …?</div>
+              <div class="geo-list">
+                @for (r of geoResults(); track $index) {
+                  <label class="geo-item">
+                    <input
+                      type="radio"
+                      name="geoPick"
+                      [checked]="geoSelected() === $index"
+                      (change)="pickGeo($index)" />
+                    <span>{{ r.label }}</span>
+                  </label>
+                }
+              </div>
+
+              @if (geoSelected() >= 0) {
+                <div class="geo-sub">
+                  Ausgewählt: <code>{{ geoResults()[geoSelected()].lat }}, {{ geoResults()[geoSelected()].lng }}</code>
+                </div>
+              }
+            </div>
+          }
+
+          <label>
+            <span>Notiz</span>
+            <textarea
+              rows="4"
+              [value]="sNote()"
+              (input)="sNote.set($any($event.target).value)"
+              placeholder="Optional: Infos zum Ablauf / Details"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn outline" (click)="cancelSuggest()" [disabled]="suggestBusy()">Abbrechen</button>
+        <button class="btn primary" (click)="submitSuggest()" [disabled]="suggestBusy()">
+          @if (suggestBusy()) { Sende… } @else { Abschicken }
+        </button>
+      </div>
+    </div>
   </div>
 }
 
