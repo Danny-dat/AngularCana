@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { RegisterData, AuthService } from '../../services/auth.service';
+import { normalizeUnifiedUserName } from '../../utils/user-name';
 import { ThemeService } from '../../services/theme.service'; // 👈 neu
 
 @Component({
@@ -33,7 +34,9 @@ export class RegisterComponent {
         try { localStorage.setItem('pref-theme', this.selectedTheme); } catch {}
       }
 
-      await this.authService.register(this.form);
+      this.form.displayName = normalizeUnifiedUserName(this.form.displayName);
+
+            await this.authService.register(this.form);
 
       // sofort visuell setzen, damit das Dashboard direkt dunkel ist
       let t: 'light' | 'dark' = 'light';

@@ -34,6 +34,7 @@ import { AdminModerationService } from '../../services/admin-moderation.service'
 import { UserDataService, UserDataModel } from '../../../../services/user-data.service';
 import { ProfileService } from '../../../../services/profile.service';
 import { AVATAR_PRESETS, AvatarPreset } from '../../../../utils/avatar-presets';
+import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../../../../utils/user-name';
 import { BanDialogComponent } from '../../dialogs/ban-dialog';
 import { LockDialogComponent } from '../../dialogs/lock-dialog';
 import { ReasonDialogComponent } from '../../dialogs/reason-dialog';
@@ -138,8 +139,8 @@ export class AdminUserDetailComponent {
   savingProfile = signal(false);
 
   editForm = this.fb.group({
-    displayName: ['', [Validators.required, Validators.maxLength(50)]],
-    username: ['', [Validators.maxLength(20), Validators.pattern(/^[a-z0-9_]{3,20}$/)]],
+    // Name ist Anzeigename + Username zugleich
+    displayName: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)]],
     firstName: ['', [Validators.maxLength(40)]],
     lastName: ['', [Validators.maxLength(60)]],
     email: [{ value: '', disabled: true }],
@@ -185,16 +186,20 @@ export class AdminUserDetailComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([uid, userDoc, pub]) => {
         if (!uid) return;
-        const displayName =
-          pub?.displayName?.trim() ||
-          userDoc?.profile?.displayName?.trim() ||
-          (userDoc?.displayName ?? '').trim() ||
-          uid;
+        const baseName = (
+          (pub?.username ?? '').toString().trim() ||
+          (pub?.displayName ?? '').toString().trim() ||
+          (userDoc?.profile?.username ?? '').toString().trim() ||
+          (userDoc?.profile?.displayName ?? '').toString().trim() ||
+          (userDoc?.displayName ?? '').toString().trim() ||
+          uid
+        ).trim();
+        const handle = normalizeUnifiedUserName(baseName);
+        const displayName = handle || baseName || uid;
 
         this.editForm.reset(
           {
             displayName,
-            username: (pub?.username ?? userDoc?.profile?.username ?? '').toString(),
             firstName: userDoc?.profile?.firstName ?? '',
             lastName: userDoc?.profile?.lastName ?? '',
             email: userDoc?.email ?? '',
@@ -299,16 +304,20 @@ export class AdminUserDetailComponent {
         statusLabel = 'Gesperrt';
       }
 
-      const displayName =
-        profile?.displayName?.trim() ||
-        userDoc?.profile?.displayName?.trim() ||
-        (profile?.username ? `@${profile.username}` : '') ||
-        uid;
+      const baseName = (
+        (profile?.username ?? '').toString().trim() ||
+        (profile?.displayName ?? '').toString().trim() ||
+        (userDoc?.profile?.username ?? '').toString().trim() ||
+        (userDoc?.profile?.displayName ?? '').toString().trim() ||
+        uid
+      ).trim();
+
+      const displayName = normalizeUnifiedUserName(baseName) || baseName || uid;
 
       return {
         uid,
         displayName,
-        username: profile?.username ? `@${profile.username}` : '',
+        username: (profile?.username ?? '').toString(),
         photoURL: profile?.photoURL ?? null,
 
         roleLabel: isAdmin ? 'admin' : 'user',
@@ -334,8 +343,21 @@ export class AdminUserDetailComponent {
     this.savingProfile.set(true);
 
     const raw = this.editForm.getRawValue();
-    const displayName = (raw.displayName ?? '').trim();
-    const username = (raw.username ?? '').trim().toLowerCase();
+
+    const handle = normalizeUnifiedUserName((raw.displayName ?? '').toString());
+    const key = normalizeUnifiedUserNameKey(handle);
+    if (!handle) {
+      this.snack.open('Bitte einen gültigen Namen wählen (3–20 Zeichen, A–Z/a–z, 0–9, _).', 'OK', { duration: 3500 });
+      this.savingProfile.set(false);
+      return;
+    }
+
+    // Form-Wert normalisieren
+    if (this.editForm.controls.displayName.value !== handle) {
+      this.editForm.controls.displayName.setValue(handle, { emitEvent: false });
+    }
+
+    const displayName = handle;
 
     const normUrl = (value: string) => {
       const v = (value ?? '').trim();
@@ -349,19 +371,19 @@ export class AdminUserDetailComponent {
     const locationText = [city, country].filter(Boolean).join(', ') || null;
 
     try {
-      // Username uniqueness check (optional)
-      if (username) {
-        const ok = await this.userDataSvc.isUsernameAvailable(username, uid);
-        if (!ok) {
-          this.editForm.controls.username.setErrors({ ...(this.editForm.controls.username.errors ?? {}), taken: true });
-          this.snack.open('Username ist bereits vergeben.', 'OK', { duration: 3000 });
-          return;
-        }
+
+      // Unique-Check (Name ist Username)
+      const ok = await this.userDataSvc.isUsernameAvailable(handle, uid);
+      if (!ok) {
+        this.editForm.controls.displayName.setErrors({ ...(this.editForm.controls.displayName.errors ?? {}), taken: true });
+        this.snack.open('Name ist bereits vergeben.', 'OK', { duration: 3000 });
+        return;
       }
 
       const payload: Partial<UserDataModel> = {
         displayName,
-        username: username || null,
+        username: handle,
+        usernameKey: key,
         firstName: (raw.firstName ?? '').trim() || null,
         lastName: (raw.lastName ?? '').trim() || null,
         phoneNumber: (raw.phoneNumber ?? '').trim() || null,
@@ -391,7 +413,8 @@ export class AdminUserDetailComponent {
 
       await this.profileSvc.updatePublicProfile(uid, {
         displayName,
-        username: username || null,
+        username: handle,
+        usernameKey: key,
         photoURL: (raw.photoURL ?? '').trim() || null,
         bio: raw.showBio ? (raw.bio ?? '').trim() || null : null,
         website: raw.showWebsite ? normUrl(raw.website ?? '') : null,

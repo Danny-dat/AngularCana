@@ -7,6 +7,7 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../../../utils/user-name';
 
 @Injectable({ providedIn: 'root' })
 export class AdminUserProvisioningService {
@@ -21,7 +22,7 @@ export class AdminUserProvisioningService {
     actorUid: string;
   }): Promise<{ uid: string }> {
     const email = params.email.trim().toLowerCase();
-    const displayName = (params.displayName ?? '').trim();
+    const rawName = (params.displayName ?? '').trim();
     const sendReset = params.sendPasswordReset ?? true;
 
     const secondary = initializeApp(this.primaryApp.options, `secondary-${Date.now()}`);
@@ -33,9 +34,13 @@ export class AdminUserProvisioningService {
       const cred = await createUserWithEmailAndPassword(auth2, email, password);
       const uid = cred.user.uid;
 
+      const baseName = rawName || (email.split('@')[0] ?? '').toString();
+      const displayName = normalizeUnifiedUserName(baseName) || `user_${uid.slice(0, 6)}`;
+      const usernameKey = normalizeUnifiedUserNameKey(displayName);
+
       // /users/{uid} (als der neue User selbst -> Rules passen)
       await setDoc(doc(fs2, 'users', uid), {
-        profile: { displayName },
+        profile: { displayName, username: displayName, usernameKey },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -43,6 +48,8 @@ export class AdminUserProvisioningService {
       // /profiles_public/{uid} (optional, aber nice fürs Admin-Listing)
       await setDoc(doc(fs2, 'profiles_public', uid), {
         displayName,
+        username: displayName,
+        usernameKey,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });

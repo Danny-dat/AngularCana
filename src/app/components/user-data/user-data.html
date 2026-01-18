@@ -14,29 +14,24 @@
 
       <div class="profile-layout">
         <div class="profile-edit">
-
       <div class="grid-2">
         <div class="setting-item">
-          <label for="displayName">Anzeigename</label>
-          <input id="displayName" type="text"
+          <label for="displayName">Name (Anzeigename/Username)</label>
+          <input id="displayName" type="text" placeholder="z.B. canna_ole"
                  [formControl]="profileForm.controls.displayName"
                  (blur)="(profileForm.value.displayName ?? '').trim() && persistDisplayName((profileForm.value.displayName ?? '').trim())" />
-        </div>
-
-        <div class="setting-item">
-          <label for="username">Username</label>
-          <input id="username" type="text" placeholder="z.B. canna_ole"
-                 [formControl]="profileForm.controls.username" />
 
           <div class="field-hint">
-            @if (usernameState() === 'checking') {
-              <span class="hint">prüfe…</span>
-            } @else if (usernameState() === 'ok') {
-              <span class="hint ok">verfügbar</span>
-            } @else if (usernameState() === 'taken') {
+            @if (profileForm.controls.displayName.hasError('pattern')) {
+              <span class="hint err">nur A–Z/a–z, 0–9, _ (3–20)</span>
+            } @else if (profileForm.controls.displayName.hasError('taken')) {
               <span class="hint err">bereits vergeben</span>
-            } @else if (usernameState() === 'invalid') {
-              <span class="hint err">nur a-z, 0-9, _ (3–20)</span>
+            } @else if (nameState() === 'checking') {
+              <span class="hint">prüfe…</span>
+            } @else if (nameState() === 'ok') {
+              <span class="hint ok">verfügbar</span>
+            } @else if (nameState() === 'invalid') {
+              <span class="hint err">nur A–Z/a–z, 0–9, _ (3–20)</span>
             }
           </div>
         </div>
@@ -205,10 +200,7 @@
 
             <div class="preview-title">
               <div class="preview-name">{{ p.displayName }}</div>
-              @if (p.username) {
-                <div class="preview-username">{{ p.username }}</div>
-              }
-            </div>
+</div>
           </div>
 
           @if (p.bio) {

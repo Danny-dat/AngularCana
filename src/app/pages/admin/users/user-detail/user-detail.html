@@ -24,7 +24,7 @@
           <div class="name">{{ vm.displayName }}</div>
 
           <div class="sub">
-            @if (vm.username) {
+            @if (vm.username && vm.username !== vm.displayName) {
               <span>{{ vm.username }}</span>
             }
             <code>{{ vm.uid }}</code>
@@ -70,19 +70,14 @@
 
       <div class="form" [formGroup]="editForm">
         <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Anzeigename</mat-label>
-            <input matInput formControlName="displayName" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Username</mat-label>
-            <input matInput formControlName="username" placeholder="z.B. canna_ole" />
-            @if (editForm.controls.username.hasError('pattern')) {
-              <mat-error>Nur a-z, 0-9 und _ (3–20)</mat-error>
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Name (Anzeigename/Username)</mat-label>
+            <input matInput formControlName="displayName" placeholder="z.B. canna_ole" />
+            @if (editForm.controls.displayName.hasError('pattern')) {
+              <mat-error>Nur A–Z/a–z, 0–9 und _ (3–20)</mat-error>
             }
-            @if (editForm.controls.username.hasError('taken')) {
-              <mat-error>Username ist bereits vergeben</mat-error>
+            @if (editForm.controls.displayName.hasError('taken')) {
+              <mat-error>Name ist bereits vergeben</mat-error>
             }
           </mat-form-field>
         </div>

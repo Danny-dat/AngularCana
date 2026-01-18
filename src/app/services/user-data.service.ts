@@ -28,6 +28,8 @@ export interface UserDataModel {
   email?: string | null;
   displayName: string;
   username?: string | null;
+  /** Case-insensitive Key (für eindeutige Checks/Queries) */
+  usernameKey?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   phoneNumber?: string | null;
@@ -105,6 +107,7 @@ export class UserDataService {
 
         displayName: (p.displayName ?? data.displayName ?? '').toString(),
         username: (p.username ?? data.username ?? null) as string | null,
+        usernameKey: (p.usernameKey ?? data.usernameKey ?? null) as string | null,
         firstName: (p.firstName ?? data.firstName ?? null) as string | null,
         lastName: (p.lastName ?? data.lastName ?? null) as string | null,
         phoneNumber: (p.phoneNumber ?? data.phoneNumber ?? null) as string | null,
@@ -220,6 +223,7 @@ export class UserDataService {
       // Root + profile (abwärtskompatibel)
       setRootAndProfile('displayName', payload.displayName);
       setRootAndProfile('username', payload.username);
+      setRootAndProfile('usernameKey', payload.usernameKey);
       setRootAndProfile('firstName', payload.firstName);
       setRootAndProfile('lastName', payload.lastName);
       setRootAndProfile('phoneNumber', payload.phoneNumber);
@@ -302,18 +306,23 @@ export class UserDataService {
   /** Username Check gegen profiles_public (einfacher Availability-Check). */
   async isUsernameAvailable(username: string, myUid: string): Promise<boolean> {
     return runInInjectionContext(this.env, async () => {
-      const u = (username ?? '').trim().toLowerCase();
-      if (!u) return true;
+      const key = (username ?? '').toString().trim().toLowerCase();
+      if (!key) return true;
 
-      const snap = await getDocs(
-        query(collection(this.db as any, 'profiles_public'), where('username', '==', u))
+      // 1) Neu (case-insensitive): usernameKey
+      const snapKey = await getDocs(
+        query(collection(this.db as any, 'profiles_public'), where('usernameKey', '==', key))
       );
+      if (!snapKey.empty) {
+        return snapKey.docs.every((d) => d.id === myUid);
+      }
 
-      // kein Treffer => frei
-      if (snap.empty) return true;
-
-      // Treffer nur auf mich selbst => frei
-      return snap.docs.every((d) => d.id === myUid);
+      // 2) Legacy-Fallback: alte Doks hatten username meist schon lowercase
+      const snapLegacy = await getDocs(
+        query(collection(this.db as any, 'profiles_public'), where('username', '==', key))
+      );
+      if (snapLegacy.empty) return true;
+      return snapLegacy.docs.every((d) => d.id === myUid);
     });
   }
 

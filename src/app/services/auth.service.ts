@@ -20,6 +20,7 @@ import {
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../utils/user-name';
 
 export interface RegisterData {
   email: string;
@@ -54,9 +55,15 @@ export class AuthService {
   async register({ email, password, displayName, phoneNumber }: RegisterData): Promise<User> {
     const cred = await createUserWithEmailAndPassword(this.auth, email, password);
 
-    if (displayName?.trim()) {
-      await updateProfile(cred.user, { displayName: displayName.trim() });
+    // Anzeigename + Username sind zusammengelegt (ein Handle)
+    const baseName = (displayName ?? '').trim() || ((email.split('@')[0] ?? '').toString());
+    let safeName = normalizeUnifiedUserName(baseName);
+    if (!safeName) {
+      // Fallback (sollte selten passieren)
+      safeName = `user_${cred.user.uid.slice(0, 6)}`;
     }
+    const safeKey = normalizeUnifiedUserNameKey(safeName);
+    await updateProfile(cred.user, { displayName: safeName });
 
     let initialTheme: 'light' | 'dark' = 'light';
     try {
@@ -69,7 +76,6 @@ export class AuthService {
     } catch {}
 
     const userDocRef = doc(this.firestore, `users/${cred.user.uid}`);
-    const safeName = displayName?.trim() || null;
     await setDoc(userDocRef, {
       email,
       // legacy / compatibility:
@@ -79,7 +85,8 @@ export class AuthService {
       // neues Profil-Objekt (für „Social Media Profil“)
       profile: {
         displayName: safeName,
-        username: null,
+        username: safeName,
+        usernameKey: safeKey,
         firstName: null,
         lastName: null,
         phoneNumber: phoneNumber || null,
@@ -104,7 +111,8 @@ export class AuthService {
     const publicDocRef = doc(this.firestore, `profiles_public/${cred.user.uid}`);
     await setDoc(publicDocRef, {
       displayName: safeName,
-      username: null,
+      username: safeName,
+      usernameKey: safeKey,
       photoURL: null,
       bio: null,
       website: null,

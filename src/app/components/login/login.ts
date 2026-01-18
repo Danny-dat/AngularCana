@@ -93,7 +93,7 @@ export class LoginComponent implements OnInit {
       // Frischen Namen für Header/Nav setzen (falls du ihn nutzt)
       try {
         const display = cred.user.displayName ?? cred.user.email ?? 'User';
-        localStorage.setItem('username', display);
+        localStorage.setItem('displayName', display);
       } catch {}
 
       const u = this.auth.currentUser;
