@@ -1,8 +1,13 @@
 <div class="landing-form card">
   <img class="logo" src="assets/logo.png" alt="Logo" />
   <h2>Registrieren</h2>
+  <p class="hint">
+    Alles was du hier angibst, kannst du später unter <strong>Meine Daten</strong> jederzeit ändern.
+  </p>
 
   <form (ngSubmit)="doRegister()" #f="ngForm" novalidate>
+    <div class="section-title">Konto</div>
+
     <input
       [(ngModel)]="form.email"
       name="email"
@@ -41,22 +46,258 @@
       name="phoneNumber"
       type="tel"
       autocomplete="tel"
-      placeholder="Telefonnummer"
+      placeholder="Telefonnummer (optional)"
       [disabled]="isLoading"
     />
 
+    <div class="section-title">Design</div>
+
     <div class="theme-selector" role="group" aria-label="Theme wählen">
-  <button type="button"
-          [class.active]="selectedTheme==='light'"
-          (click)="selectTheme('light')">
-    Hell
-  </button>
-  <button type="button"
-          [class.active]="selectedTheme==='dark'"
-          (click)="selectTheme('dark')">
-    Dunkel
-  </button>
-</div>
+      <button
+        type="button"
+        [class.active]="selectedTheme==='light'"
+        (click)="selectTheme('light')"
+        [disabled]="isLoading"
+      >
+        Hell
+      </button>
+      <button
+        type="button"
+        [class.active]="selectedTheme==='dark'"
+        (click)="selectTheme('dark')"
+        [disabled]="isLoading"
+      >
+        Dunkel
+      </button>
+    </div>
+
+    <details class="opt-section" open>
+      <summary>Profil (optional)</summary>
+
+      <div class="two-col">
+        <input
+          [(ngModel)]="form.firstName"
+          name="firstName"
+          type="text"
+          placeholder="Vorname (optional)"
+          maxlength="40"
+          [disabled]="isLoading"
+        />
+
+        <input
+          [(ngModel)]="form.lastName"
+          name="lastName"
+          type="text"
+          placeholder="Nachname (optional)"
+          maxlength="60"
+          [disabled]="isLoading"
+        />
+      </div>
+
+      <div class="avatar-block">
+        <div class="label">Avatar (optional)</div>
+
+        <div class="avatar-grid">
+          @for (a of avatarPresets; track a.id) {
+            <button
+              type="button"
+              class="avatar-item"
+              [class.selected]="isAvatarSelected(a.path)"
+              (click)="selectAvatar(a.path)"
+              [disabled]="isLoading"
+              [attr.aria-label]="a.label"
+            >
+              <img [src]="a.path" [alt]="a.label" />
+            </button>
+          }
+
+          <button
+            type="button"
+            class="avatar-item clear"
+            [class.selected]="!form.photoURL"
+            (click)="selectAvatar('')"
+            [disabled]="isLoading"
+          >
+            Kein
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        [(ngModel)]="form.bio"
+        name="bio"
+        rows="3"
+        placeholder="Bio (optional, max. 280 Zeichen)"
+        maxlength="280"
+        [disabled]="isLoading"
+      ></textarea>
+
+      <input
+        [(ngModel)]="form.website"
+        name="website"
+        type="url"
+        autocomplete="url"
+        placeholder="Webseite (optional)"
+        [disabled]="isLoading"
+      />
+
+      <div class="two-col">
+        <input
+          [(ngModel)]="form.city"
+          name="city"
+          type="text"
+          placeholder="Stadt (optional)"
+          maxlength="80"
+          [disabled]="isLoading"
+        />
+
+        <input
+          [(ngModel)]="form.country"
+          name="country"
+          type="text"
+          placeholder="Land (optional)"
+          maxlength="80"
+          [disabled]="isLoading"
+        />
+      </div>
+
+      <div class="two-col">
+        <input
+          [(ngModel)]="form.birthday"
+          name="birthday"
+          type="date"
+          placeholder="Geburtstag"
+          [disabled]="isLoading"
+        />
+
+        <select [(ngModel)]="form.gender" name="gender" [disabled]="isLoading">
+          <option value="unspecified">Geschlecht (keine Angabe)</option>
+          <option value="male">männlich</option>
+          <option value="female">weiblich</option>
+          <option value="diverse">divers</option>
+        </select>
+      </div>
+    </details>
+
+    <details class="opt-section">
+      <summary>Socials (optional)</summary>
+
+      <input
+        [(ngModel)]="form.instagram"
+        name="instagram"
+        type="text"
+        placeholder="Instagram (optional)"
+        maxlength="60"
+        [disabled]="isLoading"
+      />
+
+      <input
+        [(ngModel)]="form.tiktok"
+        name="tiktok"
+        type="text"
+        placeholder="TikTok (optional)"
+        maxlength="60"
+        [disabled]="isLoading"
+      />
+
+      <input
+        [(ngModel)]="form.youtube"
+        name="youtube"
+        type="text"
+        placeholder="YouTube (optional)"
+        maxlength="120"
+        [disabled]="isLoading"
+      />
+
+      <input
+        [(ngModel)]="form.discord"
+        name="discord"
+        type="text"
+        placeholder="Discord (optional)"
+        maxlength="60"
+        [disabled]="isLoading"
+      />
+
+      <input
+        [(ngModel)]="form.telegram"
+        name="telegram"
+        type="text"
+        placeholder="Telegram (optional)"
+        maxlength="60"
+        [disabled]="isLoading"
+      />
+    </details>
+
+    <details class="opt-section">
+      <summary>Privatsphäre (Public Profil)</summary>
+
+      <label class="check-row">
+        <input [(ngModel)]="form.showBio" name="showBio" type="checkbox" [disabled]="isLoading" />
+        <span>Bio öffentlich anzeigen</span>
+      </label>
+
+      <label class="check-row">
+        <input [(ngModel)]="form.showWebsite" name="showWebsite" type="checkbox" [disabled]="isLoading" />
+        <span>Webseite öffentlich anzeigen</span>
+      </label>
+
+      <label class="check-row">
+        <input [(ngModel)]="form.showLocation" name="showLocation" type="checkbox" [disabled]="isLoading" />
+        <span>Ort öffentlich anzeigen</span>
+      </label>
+
+      <label class="check-row">
+        <input [(ngModel)]="form.showSocials" name="showSocials" type="checkbox" [disabled]="isLoading" />
+        <span>Socials öffentlich anzeigen</span>
+      </label>
+
+      <p class="muted">
+        Hinweis: Diese Einstellungen steuern, was in <em>profiles_public</em> landet.
+      </p>
+    </details>
+
+    <details class="opt-section">
+      <summary>Benachrichtigungen & Limits</summary>
+
+      <label class="field-label">Konsum-Limit (0–20)</label>
+      <input
+        [(ngModel)]="form.consumptionThreshold"
+        name="consumptionThreshold"
+        type="number"
+        min="0"
+        max="20"
+        inputmode="numeric"
+        placeholder="z.B. 3"
+        [disabled]="isLoading"
+      />
+
+      <label class="check-row">
+        <input [(ngModel)]="form.notificationSound" name="notificationSound" type="checkbox" [disabled]="isLoading" />
+        <span>Sound bei Benachrichtigungen</span>
+      </label>
+
+      <label class="field-label">Lautstärke (0–100)</label>
+      <div class="two-col volume-row">
+        <input
+          [(ngModel)]="form.notificationVolumePct"
+          name="notificationVolumePct"
+          type="range"
+          min="0"
+          max="100"
+          [disabled]="isLoading"
+        />
+
+        <input
+          [(ngModel)]="form.notificationVolumePct"
+          name="notificationVolumePctNumber"
+          type="number"
+          min="0"
+          max="100"
+          inputmode="numeric"
+          [disabled]="isLoading"
+        />
+      </div>
+    </details>
 
     <button type="submit" [disabled]="isLoading || !f.form.valid">
       {{ isLoading ? 'Registriere…' : 'Registrieren' }}
