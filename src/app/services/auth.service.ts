@@ -27,6 +27,36 @@ export interface RegisterData {
   password: string;
   displayName: string;
   phoneNumber: string;
+
+  // Profil (optional – entspricht „Meine Daten“)
+  firstName?: string;
+  lastName?: string;
+  photoURL?: string;
+  bio?: string;
+  website?: string;
+  city?: string;
+  country?: string;
+  birthday?: string; // YYYY-MM-DD
+  gender?: 'unspecified' | 'male' | 'female' | 'diverse';
+
+  instagram?: string;
+  tiktok?: string;
+  youtube?: string;
+  discord?: string;
+  telegram?: string;
+
+  // Privacy (Public Profile Sync)
+  showBio?: boolean;
+  showWebsite?: boolean;
+  showLocation?: boolean;
+  showSocials?: boolean;
+
+  // Settings
+  theme?: 'light' | 'dark';
+  consumptionThreshold?: number;
+  notificationSound?: boolean;
+  /** 0–100 (UI), wird intern zu 0..1 gespeichert */
+  notificationVolumePct?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,7 +82,36 @@ export class AuthService {
     this.lastAccessCheckMs = 0;
   }
 
-  async register({ email, password, displayName, phoneNumber }: RegisterData): Promise<User> {
+  async register(data: RegisterData): Promise<User> {
+    const {
+      email,
+      password,
+      displayName,
+      phoneNumber,
+      firstName,
+      lastName,
+      photoURL,
+      bio,
+      website,
+      city,
+      country,
+      birthday,
+      gender,
+      instagram,
+      tiktok,
+      youtube,
+      discord,
+      telegram,
+      showBio,
+      showWebsite,
+      showLocation,
+      showSocials,
+      theme,
+      consumptionThreshold,
+      notificationSound,
+      notificationVolumePct,
+    } = data;
+
     const cred = await createUserWithEmailAndPassword(this.auth, email, password);
 
     // Anzeigename + Username sind zusammengelegt (ein Handle)
@@ -63,17 +122,58 @@ export class AuthService {
       safeName = `user_${cred.user.uid.slice(0, 6)}`;
     }
     const safeKey = normalizeUnifiedUserNameKey(safeName);
-    await updateProfile(cred.user, { displayName: safeName });
+    // optional: Avatar gleich mit setzen, damit Header/Chat/Public Profile sofort passt
+    const safePhoto = (photoURL ?? '').toString().trim() || null;
+    await updateProfile(cred.user, { displayName: safeName, photoURL: safePhoto });
 
     let initialTheme: 'light' | 'dark' = 'light';
-    try {
-      const local = (localStorage.getItem('pref-theme') || '').toLowerCase();
-      if (local === 'dark' || local === 'light') {
-        initialTheme = local as any;
-      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        initialTheme = 'dark';
-      }
-    } catch {}
+    // 1) explizit aus Register-Form
+    if (theme === 'dark' || theme === 'light') {
+      initialTheme = theme;
+    } else {
+      // 2) Fallback: localStorage / System
+      try {
+        const local = (localStorage.getItem('pref-theme') || '').toLowerCase();
+        if (local === 'dark' || local === 'light') {
+          initialTheme = local as any;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          initialTheme = 'dark';
+        }
+      } catch {}
+    }
+
+    const normStr = (v: any) => {
+      const s = (v ?? '').toString().trim();
+      return s.length ? s : null;
+    };
+    const normUrl = (v: any) => {
+      const raw = (v ?? '').toString().trim();
+      if (!raw) return null;
+      return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    };
+    const clampInt = (n: any, min: number, max: number, fallback: number) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return fallback;
+      return Math.max(min, Math.min(max, Math.trunc(x)));
+    };
+    const clamp01 = (n: any, fallback: number) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return fallback;
+      return Math.max(0, Math.min(1, x));
+    };
+
+    const vis = {
+      showBio: showBio !== false,
+      showWebsite: showWebsite !== false,
+      showLocation: showLocation !== false,
+      showSocials: showSocials !== false,
+    };
+
+    const settings = {
+      consumptionThreshold: clampInt(consumptionThreshold, 0, 20, 3),
+      notificationSound: notificationSound !== false,
+      notificationVolume: clamp01((notificationVolumePct ?? 30) / 100, 0.3),
+    };
 
     const userDocRef = doc(this.firestore, `users/${cred.user.uid}`);
     await setDoc(userDocRef, {
@@ -87,21 +187,29 @@ export class AuthService {
         displayName: safeName,
         username: safeName,
         usernameKey: safeKey,
-        firstName: null,
-        lastName: null,
-        phoneNumber: phoneNumber || null,
-        photoURL: null,
-        bio: null,
-        website: null,
-        location: { city: null, country: null },
-        birthday: null,
-        gender: 'unspecified',
-        socials: { instagram: null, tiktok: null, youtube: null, discord: null, telegram: null },
-        visibility: { showBio: true, showWebsite: true, showLocation: true, showSocials: true },
+
+        firstName: normStr(firstName),
+        lastName: normStr(lastName),
+        phoneNumber: normStr(phoneNumber),
+        photoURL: safePhoto,
+
+        bio: normStr(bio),
+        website: normUrl(website),
+        location: { city: normStr(city), country: normStr(country) },
+        birthday: normStr(birthday),
+        gender: (gender === 'male' || gender === 'female' || gender === 'diverse') ? gender : 'unspecified',
+        socials: {
+          instagram: normStr(instagram),
+          tiktok: normStr(tiktok),
+          youtube: normStr(youtube),
+          discord: normStr(discord),
+          telegram: normStr(telegram),
+        },
+        visibility: vis,
       },
 
       friends: [],
-      settings: { consumptionThreshold: 3 },
+      settings,
       personalization: { theme: initialTheme },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -109,15 +217,29 @@ export class AuthService {
     });
 
     const publicDocRef = doc(this.firestore, `profiles_public/${cred.user.uid}`);
+
+    const locationText = vis.showLocation
+      ? [normStr(city), normStr(country)].filter(Boolean).join(', ') || null
+      : null;
+
+    const publicSocialsRaw = {
+      instagram: normStr(instagram),
+      tiktok: normStr(tiktok),
+      youtube: normStr(youtube),
+      discord: normStr(discord),
+      telegram: normStr(telegram),
+    };
+    const hasAnySocial = Object.values(publicSocialsRaw).some((v) => !!v);
+
     await setDoc(publicDocRef, {
       displayName: safeName,
       username: safeName,
       usernameKey: safeKey,
-      photoURL: null,
-      bio: null,
-      website: null,
-      locationText: null,
-      socials: null,
+      photoURL: safePhoto,
+      bio: vis.showBio ? normStr(bio) : null,
+      website: vis.showWebsite ? normUrl(website) : null,
+      locationText,
+      socials: vis.showSocials && hasAnySocial ? publicSocialsRaw : null,
       lastLocation: null,
       lastActiveAt: serverTimestamp(),
       createdAt: serverTimestamp(),

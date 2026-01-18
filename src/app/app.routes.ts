@@ -70,6 +70,13 @@ export const routes: Routes = [
         data: { title: 'Freunde & Soziales' },
       },
       {
+        path: 'u/:uid',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./pages/public-profile/public-profile.page').then((m) => m.PublicProfilePage),
+        data: { title: 'Profil' },
+      },
+      {
         path: 'events',
         canActivate: [authGuard],
         loadComponent: () =>
