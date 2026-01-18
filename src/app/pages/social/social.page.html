@@ -1,88 +1,67 @@
-<div class="card social-page">
-  <h3>Freunde & Soziales</h3>
-
-  <!-- Tabs -->
-  <nav class="tabs">
-    <button [class.active]="activeTab() === 'code'" (click)="activeTab.set('code')">
-      Mein Freunde
-    </button>
-
-    <button [class.active]="activeTab() === 'add'" (click)="activeTab.set('add')">
-      Freund hinzufügen
-    </button>
-
-    <button [class.active]="activeTab() === 'requests'" (click)="activeTab.set('requests')">
-      Anfragen
-      @if (incoming().length) { <span class="badge">{{ incoming().length }}</span> }
-    </button>
-
-    <button [class.active]="activeTab() === 'blocked'" (click)="activeTab.set('blocked')">
-      Blockierte
-      @if (blockedProfiles().length) { <span class="badge">{{ blockedProfiles().length }}</span> }
-    </button>
-  </nav>
-
-  <!-- TAB: Mein Freunde -->
-  @if (activeTab() === 'code') {
-    <section class="tab-content">
-      <h4>Dein Freundschaftscode</h4>
-
-      <div class="code-card">
-        <div class="code-line">
-          <code class="mono">{{ myCode }}</code>
-          <div class="code-actions">
-            <button class="btn sm" (click)="shareCopy()">📋 Kopieren</button>
-            <button class="btn sm" (click)="shareNative()">📤 Teilen</button>
-            <button class="btn sm" (click)="shareQR()">🔳 QR</button>
-            <button class="btn sm ghost" (click)="toggleShareHelp()">❓</button>
+<div class="social-shell">
+  <!-- LEFT: Freunde -->
+  <div class="col">
+    <div class="card social-card">
+      <div class="card-head">
+        <div class="title">
+          <h3>Freunde</h3>
+          <div class="meta muted">
+            <span>{{ filteredFriends().length }} gesamt</span>
+            <span class="dot">•</span>
+            <span>{{ onlineCount() }} online</span>
           </div>
         </div>
 
-        @if (shareHelpOpen()) {
-          <div class="code-help">
-            Teile deinen Code mit Freund:innen.
-            <b>Kopieren</b> legt ihn in die Zwischenablage,
-            <b>Teilen</b> nutzt die Web-Share API,
-            <b>QR</b> zeigt ihn als QR-Code an.
+        <div class="search">
+          <input
+            class="input"
+            [(ngModel)]="friendSearch"
+            placeholder="Freunde suchen (Name oder ID)"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      @if (!filteredFriends().length) {
+        <div class="empty">
+          Noch keine Freunde.
+          <div class="muted" style="margin-top:6px; font-size:13px;">
+            Nutze rechts „Freund hinzufügen“ und sende deinen Code.
           </div>
-        }
-      </div>
-
-      <h4 class="mt-lg">Deine Freunde</h4>
-      <div class="legend muted" style="font-size:12px; display:flex; gap:12px; align-items:center; margin:4px 0 6px;">
-        <span style="display:inline-flex; gap:6px; align-items:center;">
-          <span class="status-dot online" style="position:static;"></span> online
-        </span>
-        <span style="display:inline-flex; gap:6px; align-items:center;">
-          <span class="status-dot" style="position:static;"></span> offline
-        </span>
-      </div>
-
-      @if (!list().length) {
-        <div class="empty">Noch keine Freunde.</div>
+        </div>
       } @else {
         <div class="friends-list">
-          @for (f of list(); track f.id) {
+          @for (f of filteredFriends(); track f.id) {
             <div class="friend-row">
-              <div class="left" (click)="openChat(f)">
-                <div class="avatar">
+              <div class="left" (click)="openChat(f)" role="button" tabindex="0">
+                <div class="avatar" [class.online]="isOnline(f.id)">
                   @if (f.photoURL) {
                     <img [src]="f.photoURL" alt="" />
                   } @else {
                     <div class="avatar-fallback">
-                      {{ (f.username || f.displayName || f.label || f.id).slice(0,1) }}
+                      {{ (f.username || f.displayName || f.label || f.id).slice(0, 1) }}
                     </div>
                   }
                   <span class="status-dot" [class.online]="isOnline(f.id)"></span>
                 </div>
+
                 <div class="names">
-                  <div class="name">{{ f.username || f.displayName || f.label || f.id }}</div>
+                  <div class="name">
+                    {{ f.username || f.displayName || f.label || f.id }}
+                    @if (isOnline(f.id)) {
+                      <span class="chip online">online</span>
+                    } @else {
+                      <span class="chip">offline</span>
+                    }
+                  </div>
                   <div class="sub muted">ID: {{ f.id }}</div>
                 </div>
               </div>
 
-              <div class="right">
-                <button class="btn" (click)="openChat(f)">Chat</button>
+              <div class="right" (click)="$event.stopPropagation()">
+                <button class="btn sm" (click)="goToProfile(f.id)">Profil</button>
+                <button class="btn sm primary" (click)="openChat(f)">Chat</button>
+
                 <select class="select" [(ngModel)]="f._action" (change)="handleAction(f)">
                   <option value="">Aktion…</option>
                   <option value="remove">Entfernen</option>
@@ -93,86 +72,149 @@
           }
         </div>
       }
-    </section>
-  }
+    </div>
+  </div>
 
-  <!-- TAB: Freund hinzufügen -->
-  @if (activeTab() === 'add') {
-    <section class="tab-content">
-      <h4>Freund hinzufügen</h4>
-      <div class="input-group">
-        <span class="input-icon" aria-hidden="true">👤</span>
-        <input
-          [(ngModel)]="friendCodeInput"
-          (keyup.enter)="sendRequest()"
-          class="input"
-          placeholder="Freundschaftscode eingeben"
-          autocomplete="off"
-          inputmode="text"
-          aria-label="Freundschaftscode"
-        />
-        <button class="btn btn-primary" (click)="sendRequest()" [disabled]="!friendCodeInput().trim()">
-          Senden
-        </button>
+  <!-- RIGHT: Schnellaktionen / Anfragen / Blockierte -->
+  <div class="col">
+    <div class="card social-card">
+      <h3>Schnellaktionen</h3>
+
+      <!-- My Code -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Dein Freundschaftscode</div>
+            <div class="muted" style="font-size:13px;">Teile ihn mit Freund:innen</div>
+          </div>
+          <button class="btn sm ghost" (click)="toggleShareHelp()">?</button>
+        </div>
+
+        <div class="code-card">
+          <code class="mono">{{ myCode }}</code>
+          <div class="code-actions">
+            <button class="btn sm" (click)="shareCopy($event)">Kopieren</button>
+            <button class="btn sm" (click)="shareNative()">Teilen</button>
+            <button class="btn sm" (click)="shareQR()">QR</button>
+          </div>
+        </div>
+
+        @if (shareHelpOpen()) {
+          <div class="hint-box">
+            <b>Kopieren</b> legt den Code in die Zwischenablage.
+            <b>Teilen</b> nutzt die Web-Share API.
+            <b>QR</b> zeigt deinen Code als QR-Code.
+          </div>
+        }
       </div>
-      <p class="hint">
-        Tipp: Deinen eigenen Code findest du im Tab <strong>„Mein Freunde</strong>. Du kannst ihn auch teilen oder kopieren.
-      </p>
-    </section>
-  }
 
-  <!-- TAB: Offene Anfragen -->
-  @if (activeTab() === 'requests') {
-    <section class="tab-content">
-      <h4>Offene Anfragen</h4>
+      <!-- Add Friend -->
+      <div class="section">
+        <div class="section-title">Freund hinzufügen</div>
+        <div class="input-group">
+          <input
+            class="input"
+            [(ngModel)]="friendCodeInput"
+            (keyup.enter)="sendRequest()"
+            placeholder="Freundschaftscode eingeben"
+            autocomplete="off"
+            inputmode="text"
+          />
+          <button class="btn sm primary" (click)="sendRequest()" [disabled]="!friendCodeInput().trim()">
+            Senden
+          </button>
+        </div>
+        <div class="muted" style="margin-top:6px; font-size:13px;">
+          Tipp: Der Code ist einfach die UID. Du findest deinen Code oben.
+        </div>
+      </div>
+    </div>
+
+    <!-- Requests -->
+    <div class="card social-card">
+      <div class="card-head">
+        <div class="title">
+          <h3>Anfragen</h3>
+          <div class="meta muted">
+            <span>{{ incoming().length }} offen</span>
+          </div>
+        </div>
+      </div>
+
       @if (!incoming().length) {
         <div class="empty">Keine offenen Anfragen.</div>
-      }
-      @for (r of incoming(); track r.id) {  <!-- ⬅️ track by Doc-ID -->
-        <div class="request">
-          <div>{{ r.fromDisplayName || r.fromEmail || r.fromUid }}</div>
-          <div class="actions">
-            <button class="btn success" (click)="accept(r)">Annehmen</button>
-            <button class="btn danger" (click)="decline(r)">Ablehnen</button>
-          </div>
-        </div>
-      }
-    </section>
-  }
-
-  <!-- TAB: Blockierte -->
-  @if (activeTab() === 'blocked') {
-    <section class="tab-content">
-      <h4>Blockierte Freunde</h4>
-
-      @if (!blockedProfiles().length) {
-        <div class="empty">Noch keine blockierten Freunde.</div>
-      }
-
-      @for (p of blockedProfiles(); track p.id) {
-        <div class="friend blocked">
-          <div class="main">
-            @if (p.photoURL) {
-              <img [src]="p.photoURL" alt="" />
-            } @else {
-              <div class="avatar-fallback">
-                {{ (p.username || p.displayName || p.label || p.id).slice(0,1) }}
+      } @else {
+        <div class="requests-list">
+          @for (r of incoming(); track r.id) {
+            <div class="request-row">
+              <div class="request-main">
+                <div class="name">{{ r.fromDisplayName || r.fromEmail || r.fromUid }}</div>
+                <div class="sub muted">ID: {{ r.fromUid }}</div>
               </div>
-            }
-            <div class="names">
-              <strong>{{ p.username || p.displayName || p.label || p.id }}</strong>
-              <div class="sub muted">ID: {{ p.id }}</div>
+              <div class="actions">
+                <button class="btn sm" (click)="goToProfile(r.fromUid)">Profil</button>
+                <button class="btn sm success" (click)="accept(r)">Annehmen</button>
+                <button class="btn sm danger" (click)="decline(r)">Ablehnen</button>
+              </div>
             </div>
-          </div>
-
-          <div class="actions">
-            <button class="btn success" (click)="unblockDirectProfile(p)">Entblocken</button>
-            <button class="btn danger"  (click)="deleteBlockedProfile(p)">Löschen</button>
-          </div>
+          }
         </div>
       }
-    </section>
-  }
+    </div>
+
+    <!-- Blocked -->
+    <div class="card social-card">
+      <div class="card-head">
+        <div class="title">
+          <h3>Blockiert</h3>
+          <div class="meta muted">
+            <span>{{ filteredBlocked().length }} Nutzer</span>
+          </div>
+        </div>
+
+        <div class="search">
+          <input
+            class="input"
+            [(ngModel)]="blockedSearch"
+            placeholder="Blockierte suchen (Name oder ID)"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      @if (!filteredBlocked().length) {
+        <div class="empty">Noch keine blockierten Freunde.</div>
+      } @else {
+        <div class="blocked-list">
+          @for (p of filteredBlocked(); track p.id) {
+            <div class="blocked-row">
+              <div class="left">
+                <div class="avatar">
+                  @if (p.photoURL) {
+                    <img [src]="p.photoURL" alt="" />
+                  } @else {
+                    <div class="avatar-fallback">
+                      {{ (p.username || p.displayName || p.label || p.id).slice(0, 1) }}
+                    </div>
+                  }
+                </div>
+                <div class="names">
+                  <div class="name">{{ p.username || p.displayName || p.label || p.id }}</div>
+                  <div class="sub muted">ID: {{ p.id }}</div>
+                </div>
+              </div>
+
+              <div class="right">
+                <button class="btn sm" (click)="goToProfile(p.id)">Profil</button>
+                <button class="btn sm success" (click)="unblockDirectProfile(p)">Entblocken</button>
+                <button class="btn sm danger" (click)="deleteBlockedProfile(p)">Löschen</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
 </div>
 
 <!-- QR-Overlay -->
@@ -184,8 +226,8 @@
         <img [src]="qrDataUrl()!" alt="QR-Code" class="qr-img" />
       }
       <div class="qr-actions">
-        <button class="btn" (click)="downloadQR()">Download</button>
-        <button class="btn" (click)="closeQR()">Schließen</button>
+        <button class="btn sm" (click)="downloadQR()">Download</button>
+        <button class="btn sm" (click)="closeQR()">Schließen</button>
       </div>
     </div>
   </div>
@@ -196,11 +238,10 @@
   <app-chat-overlay
     [partner]="partner()"
     [messages]="messages()"
-    [text]="chatInput()" (textChange)="chatInput.set($event)"
-
+    [text]="chatInput()"
+    (textChange)="chatInput.set($event)"
     [myUid]="user().uid"
     (report)="onReport($event)"
-
     (close)="closeChat()"
     (send)="sendMsg($event)"
   ></app-chat-overlay>

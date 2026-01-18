@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
@@ -39,23 +39,58 @@ export class SocialPage implements OnDestroy {
   // Subscriptions/Listener
   private subs: Array<() => void> = [];
   private unlisten: (() => void) | null = null;
+  private offPresence: (() => void) | null = null;
 
   // User
   user = signal<{ uid: string; email?: string; displayName?: string | null }>({ uid: '' });
 
-  // Tabs
-  activeTab = signal<'code' | 'add' | 'requests' | 'blocked'>('code');
-
   // State
   friendCodeInput = signal('');
+  friendSearch = signal('');
+  blockedSearch = signal('');
   incoming = signal<FriendRequest[]>([]);
   list = signal<FriendPublicProfile[]>([]);
   blockedProfiles = signal<FriendPublicProfile[]>([]);
 
+  readonly onlineCount = computed(() => {
+    const ids = this.onlineIds();
+    return this.list().reduce((acc, f) => acc + (ids.has(f.id) ? 1 : 0), 0);
+  });
+
+  readonly filteredFriends = computed(() => {
+    const q = (this.friendSearch() ?? '').toString().trim().toLowerCase();
+    const ids = this.onlineIds();
+    const items = [...this.list()];
+
+    // online zuerst, dann alphabetisch
+    items.sort((a, b) => {
+      const ao = ids.has(a.id) ? 0 : 1;
+      const bo = ids.has(b.id) ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      const an = (a.username || a.displayName || a.label || a.id).toString().toLowerCase();
+      const bn = (b.username || b.displayName || b.label || b.id).toString().toLowerCase();
+      return an.localeCompare(bn);
+    });
+
+    if (!q) return items;
+    return items.filter((f) => {
+      const name = (f.username || f.displayName || f.label || '').toString().toLowerCase();
+      return name.includes(q) || f.id.toLowerCase().includes(q);
+    });
+  });
+
+  readonly filteredBlocked = computed(() => {
+    const q = (this.blockedSearch() ?? '').toString().trim().toLowerCase();
+    const items = [...this.blockedProfiles()];
+    if (!q) return items;
+    return items.filter((f) => {
+      const name = (f.username || f.displayName || f.label || '').toString().toLowerCase();
+      return name.includes(q) || f.id.toLowerCase().includes(q);
+    });
+  });
+
   // Share/QR
-  shareMenuOpen = signal(false);
   shareHelpOpen = signal(false);
-  toggleShareMenu = () => this.shareMenuOpen.set(!this.shareMenuOpen());
   toggleShareHelp = () => this.shareHelpOpen.set(!this.shareHelpOpen());
   copied = signal(false);
   qrOpen = signal(false);
@@ -81,13 +116,6 @@ export class SocialPage implements OnDestroy {
     // QueryParams (Notifications -> Direkt-Chat öffnen)
     this.route.queryParams.subscribe((qp) => {
       const open = (qp?.['openChatWith'] ?? '').toString().trim();
-      const tab = (qp?.['tab'] ?? '').toString().trim();
-
-      if (tab) {
-        if (tab === 'requests' || tab === 'blocked' || tab === 'add' || tab === 'code') {
-          this.activeTab.set(tab as any);
-        }
-      }
       if (open) {
         this.pendingOpenUid.set(open);
         // falls User schon eingeloggt ist -> direkt öffnen
@@ -101,6 +129,8 @@ export class SocialPage implements OnDestroy {
       this.subs = [];
       this.unlisten?.();
       this.unlisten = null;
+      this.offPresence?.();
+      this.offPresence = null;
 
       if (!u) {
         // ausgeloggt → State zurücksetzen
@@ -138,10 +168,11 @@ export class SocialPage implements OnDestroy {
         this.list.set(friends);
 
         const ids = friends.map((x) => x.id);
-        const offPresence = this.presence.listen(ids, (online: string[]) => {
+        // Presence-Listener wechseln (sonst sammelt sich das bei Updates)
+        this.offPresence?.();
+        this.offPresence = this.presence.listen(ids, (online: string[]) => {
           this.onlineIds.set(new Set(online));
         });
-        this.subs.push(offPresence);
       });
       this.subs.push(offFriends);
 
@@ -224,7 +255,6 @@ export class SocialPage implements OnDestroy {
     } catch {
       prompt('Code zum Kopieren:', this.myCode);
     }
-    this.shareMenuOpen.set(false);
   }
 
   async shareNative() {
@@ -236,7 +266,6 @@ export class SocialPage implements OnDestroy {
     } catch {
       await this.shareCopy();
     }
-    this.shareMenuOpen.set(false);
   }
 
   async shareQR() {
@@ -305,6 +334,13 @@ export class SocialPage implements OnDestroy {
         break;
     }
     friend._action = '';
+  }
+
+  goToProfile(uid: string, evt?: Event) {
+    evt?.stopPropagation();
+    const id = (uid ?? '').toString().trim();
+    if (!id) return;
+    this.router.navigate(['/u', id]);
   }
 
   // Blockierte-Tab Buttons
@@ -417,6 +453,8 @@ async onReport(evt: ReportEvent) {
   // Cleanup
   ngOnDestroy() {
     this.unlisten?.();
+    this.offPresence?.();
+    this.offPresence = null;
     this.subs.forEach((fn) => fn?.());
     this.subs = [];
     // KEIN presence.stop() mehr hier – Heartbeat wird global verwaltet

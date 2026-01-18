@@ -1,0 +1,71 @@
+<div class="card profile-card">
+  <div class="top">
+    <button class="btn sm ghost" (click)="back()">← Zurück</button>
+
+    <div class="actions">
+      <button class="btn sm" (click)="copyUid()">{{ copied() ? 'Kopiert' : 'Code kopieren' }}</button>
+      <button class="btn sm primary" (click)="openChat()" [disabled]="!uid()">Chat öffnen</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="state">Lade Profil…</div>
+  } @else if (errorMsg()) {
+    <div class="state err">{{ errorMsg() }}</div>
+  } @else if (!profile()) {
+    <div class="state">Profil nicht gefunden oder nicht verfügbar.</div>
+  } @else {
+    @let p = profile()!;
+
+    <div class="header">
+      <div class="avatar">
+        @if (p.photoURL) {
+          <img [src]="p.photoURL" alt="" />
+        } @else {
+          <div class="fallback">{{ (p.username || p.displayName || p.id).slice(0, 1) }}</div>
+        }
+      </div>
+
+      <div class="identity">
+        <div class="name">{{ p.username || p.displayName || ('User ' + p.id.slice(0, 6) + '…') }}</div>
+        <div class="uid muted">ID: {{ p.id }}</div>
+      </div>
+    </div>
+
+    @if (p.bio) {
+      <div class="section">
+        <div class="label">Bio</div>
+        <p class="bio">{{ p.bio }}</p>
+      </div>
+    }
+
+    @if (p.locationText || p.website) {
+      <div class="section">
+        <div class="label">Info</div>
+
+        @if (p.locationText) {
+          <div class="row"><span class="k">Ort</span><span class="v">{{ p.locationText }}</span></div>
+        }
+        @if (p.website) {
+          <div class="row"><span class="k">Website</span><a class="v" [href]="p.website" target="_blank" rel="noopener">{{ p.website }}</a></div>
+        }
+      </div>
+    }
+
+    @if (p.socials) {
+      <div class="section">
+        <div class="label">Social</div>
+
+        @if (p.socials.instagram) { <div class="row"><span class="k">Instagram</span><span class="v">{{ p.socials.instagram }}</span></div> }
+        @if (p.socials.tiktok) { <div class="row"><span class="k">TikTok</span><span class="v">{{ p.socials.tiktok }}</span></div> }
+        @if (p.socials.youtube) { <div class="row"><span class="k">YouTube</span><span class="v">{{ p.socials.youtube }}</span></div> }
+        @if (p.socials.discord) { <div class="row"><span class="k">Discord</span><span class="v">{{ p.socials.discord }}</span></div> }
+        @if (p.socials.telegram) { <div class="row"><span class="k">Telegram</span><span class="v">{{ p.socials.telegram }}</span></div> }
+
+        @if (!p.socials.instagram && !p.socials.tiktok && !p.socials.youtube && !p.socials.discord && !p.socials.telegram) {
+          <div class="muted" style="font-size:13px;">Keine Social Links hinterlegt.</div>
+        }
+      </div>
+    }
+  }
+</div>
