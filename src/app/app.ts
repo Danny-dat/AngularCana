@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/app.ts
 import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';

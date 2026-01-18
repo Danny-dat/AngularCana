@@ -2,11 +2,12 @@
   "name": "cannatrack-angular",
   "version": "0.0.0",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build --configuration production --base-href /",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
+    "ng": "node ./node_modules/@angular/cli/bin/ng.js",
+    "start": "node ./node_modules/@angular/cli/bin/ng.js serve",
+    "build": "node ./node_modules/@angular/cli/bin/ng.js build --configuration production --base-href /",
+    "watch": "node ./node_modules/@angular/cli/bin/ng.js build --watch --configuration development",
+    "test": "node ./node_modules/@angular/cli/bin/ng.js test --watch=false --code-coverage",
+    "test:ci": "node ./node_modules/@angular/cli/bin/ng.js test --watch=false --code-coverage",
     "serve:ssr:cannatrack-angular": "node dist/cannatrack-angular/server/server.mjs"
   },
   "prettier": {

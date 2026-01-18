@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/services/ad.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';

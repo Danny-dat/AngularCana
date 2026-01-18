@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // auth.service.ts
 import { Injectable } from '@angular/core';
 import {

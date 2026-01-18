@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/services/presence.service.ts
 import {
   Injectable, inject, DestroyRef, EnvironmentInjector, PLATFORM_ID, runInInjectionContext

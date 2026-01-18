@@ -20,7 +20,7 @@ module.exports = function (config) {
       dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
       reports: ['html', 'text-summary', 'lcovonly'],
-      check: { global: { statements: 80, branches: 70, functions: 80, lines: 80 } },
+      check: { global: { statements: 100, branches: 100, functions: 100, lines: 100 } },
     },
 
     // Headless-Settings

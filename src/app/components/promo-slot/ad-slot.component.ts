@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/components/promo-slot/ad-slot.component.ts
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';

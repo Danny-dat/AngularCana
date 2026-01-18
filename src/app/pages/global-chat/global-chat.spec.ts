@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { GlobalChat } from './global-chat';
+import { GlobalChatPage } from './global-chat';
 
 describe('GlobalChat', () => {
-  let component: GlobalChat;
-  let fixture: ComponentFixture<GlobalChat>;
+  let component: GlobalChatPage;
+  let fixture: ComponentFixture<GlobalChatPage>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GlobalChat]
+      imports: [GlobalChatPage]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(GlobalChat);
+    fixture = TestBed.createComponent(GlobalChatPage);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

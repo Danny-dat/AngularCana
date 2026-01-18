@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import {

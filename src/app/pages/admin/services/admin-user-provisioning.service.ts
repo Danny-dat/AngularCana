@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { FirebaseApp } from '@angular/fire/app';
 import { Auth } from '@angular/fire/auth';

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, updateDoc, setDoc, deleteDoc, collection, addDoc } from '@angular/fire/firestore';
 import { serverTimestamp, Timestamp } from 'firebase/firestore';

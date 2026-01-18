@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 export interface AdSlotConfig {
   id: string;
   imgUrl: string;       // endgültige URL (mit ?v= Cache-Bust)

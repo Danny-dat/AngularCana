@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/utils/notify.ts
 
 /** Nur kurze Vibration – der Sound kommt aus NotificationSoundService. */

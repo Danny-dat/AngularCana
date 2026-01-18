@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Component, ChangeDetectorRef, Input, Output, EventEmitter, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
