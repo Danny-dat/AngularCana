@@ -43,14 +43,21 @@ export class AdminDashboardComponent {
   private afs = inject(Firestore);
   private nf = new Intl.NumberFormat('de-DE');
 
-  /** KPIs live (Promo bleibt Placeholder bis Feature fertig ist) */
+  /** KPIs live */
   kpis$: Observable<Kpi[]> = combineLatest([
     this.stats.usersCount$,
     this.stats.reportsOpenCount$,
     this.stats.eventsCount$,
+    this.stats.promoSlotsActiveCount$,
+    this.stats.promoSlotsCount$,
     this.stats.onlineNowCount$,
   ]).pipe(
-    map(([users, openReports, events, onlineNow]) => [
+    map(([users, openReports, events, promoActive, promoTotal, onlineNow]) => {
+      const promoValue = promoTotal > 0
+        ? `${this.nf.format(promoActive)}/${this.nf.format(promoTotal)}`
+        : this.nf.format(promoActive);
+
+      return [
       { label: 'Users', value: this.nf.format(users), icon: 'group', link: '/admin/users' },
       {
         label: 'Offene Reports',
@@ -59,20 +66,20 @@ export class AdminDashboardComponent {
         link: '/admin/reports',
       },
       { label: 'Events', value: this.nf.format(events), icon: 'event', link: '/admin/events' },
-      // Placeholder bis Promo fertig ist
-      { label: 'Promo', value: '—', icon: 'local_offer', link: '/admin/promo' },
+      { label: 'Promo Slots', value: promoValue, icon: 'local_offer', link: '/admin/promo' },
       {
         label: 'Online jetzt',
         value: this.nf.format(onlineNow),
         icon: 'wifi',
         link: '/admin/statistics',
       },
-    ]),
+    ];
+    }),
     startWith([
       { label: 'Users', value: '…', icon: 'group', link: '/admin/users' },
       { label: 'Offene Reports', value: '…', icon: 'rule', link: '/admin/reports' },
       { label: 'Events', value: '…', icon: 'event', link: '/admin/events' },
-      { label: 'Promo', value: '—', icon: 'local_offer', link: '/admin/promo' },
+      { label: 'Promo Slots', value: '…', icon: 'local_offer', link: '/admin/promo' },
       { label: 'Online jetzt', value: '…', icon: 'wifi', link: '/admin/statistics' },
     ]),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -88,7 +95,7 @@ export class AdminDashboardComponent {
     { text: 'Neuen User anlegen', icon: 'person_add', link: '/admin/users', queryParams: { create: 1 } },
     { text: 'Reports prüfen', icon: 'rule', link: '/admin/reports' },
     { text: 'Events verwalten', icon: 'event', link: '/admin/events' },
-    { text: 'Promo (coming soon)', icon: 'campaign', link: '/admin/promo' },
+    { text: 'Promo verwalten', icon: 'local_offer', link: '/admin/promo' },
   ];
 
   /** Inbox: Counts live */
