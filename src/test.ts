@@ -1,3 +1,5 @@
+/// <reference types="jasmine" />
+
 import 'zone.js/testing';
 import { getTestBed, TestBed } from '@angular/core/testing';
 import {
@@ -5,10 +7,10 @@ import {
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
 
-import { RouterTestingModule } from '@angular/router/testing';
+// Router providers are configured via provideRouter below.
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { provideFirebaseApp } from '@angular/fire/app';
@@ -17,8 +19,6 @@ import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
 import { disableNetwork } from 'firebase/firestore';
-import { beforeEach } from 'node:test';
-
 declare const jasmine: any;
 
 // ✅ löscht gespeicherte Jasmine-UI-Optionen (damit Checkbox nicht direkt wieder an ist)
@@ -70,8 +70,10 @@ beforeEach(() => {
   } catch {}
 
   TestBed.configureTestingModule({
-    imports: [RouterTestingModule, HttpClientTestingModule],
+        imports: [HttpClientTestingModule],
     providers: [
+      // Router ist in vielen Komponenten/Services benötigt
+      provideRouter([]),
       {
         provide: ActivatedRoute,
         useValue: {
