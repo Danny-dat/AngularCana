@@ -7,18 +7,19 @@ import {
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
 
-// Router providers are configured via provideRouter below.
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 
-import { provideFirebaseApp } from '@angular/fire/app';
-import { provideAuth, getAuth } from '@angular/fire/auth';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { FirebaseApp } from '@angular/fire/app';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
-import { disableNetwork } from 'firebase/firestore';
+import { disableNetwork, getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 declare const jasmine: any;
 
 // ✅ löscht gespeicherte Jasmine-UI-Optionen (damit Checkbox nicht direkt wieder an ist)
@@ -46,6 +47,10 @@ const firebaseTestConfig = {
 };
 
 const app = getApps().length ? getApp() : initializeFirebaseApp(firebaseTestConfig);
+const auth = getAuth(app);
+const fs = getFirestore(app);
+// keine echten Netzwerk-Calls in Unit-Tests
+disableNetwork(fs).catch(() => void 0);
 
 getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
@@ -70,10 +75,8 @@ beforeEach(() => {
   } catch {}
 
   TestBed.configureTestingModule({
-        imports: [HttpClientTestingModule],
+    imports: [HttpClientTestingModule, RouterTestingModule],
     providers: [
-      // Router ist in vielen Komponenten/Services benötigt
-      provideRouter([]),
       {
         provide: ActivatedRoute,
         useValue: {
@@ -84,14 +87,22 @@ beforeEach(() => {
         },
       },
 
-      provideFirebaseApp(() => app),
-      provideAuth(() => getAuth(app)),
-      provideFirestore(() => {
-        const fs = getFirestore(app);
-        // keine echten Netzwerk-Calls in Unit-Tests
-        disableNetwork(fs).catch(() => void 0);
-        return fs;
-      }),
+      // Direkt als DI-Token bereitstellen (robuster als EnvironmentProviders in TestBed)
+      { provide: FirebaseApp, useValue: app as any },
+      { provide: Auth, useValue: auth },
+      { provide: Firestore, useValue: fs },
     ],
   });
+});
+
+// verhindert echte Reloads/Redirects in Karma (einige Flows nutzen window.location.*)
+beforeAll(() => {
+  try {
+    // Karma darf nicht neu laden/redirecten – das wuerde den Test-Runner abbrechen.
+    spyOn(window.location, 'reload').and.callFake(() => void 0);
+    spyOn(window.location, 'assign').and.callFake(() => void 0);
+    spyOn(window.location, 'replace').and.callFake(() => void 0);
+  } catch {
+    // manche Browser blocken location mocking – dann muessen einzelne Specs gezielt stubben
+  }
 });

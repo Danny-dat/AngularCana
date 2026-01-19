@@ -7,7 +7,7 @@
     "build": "node ./node_modules/@angular/cli/bin/ng.js build --configuration production --base-href /",
     "watch": "node ./node_modules/@angular/cli/bin/ng.js build --watch --configuration development",
     "test": "node ./node_modules/@angular/cli/bin/ng.js test",
-    "test:ci": "node ./node_modules/@angular/cli/bin/ng.js test --watch=false --code-coverage",
+    "test:ci": "node ./node_modules/@angular/cli/bin/ng.js test --no-watch --no-progress --browsers=ChromeHeadless --coverage",
     "serve:ssr:cannatrack-angular": "node dist/cannatrack-angular/server/server.mjs"
   },
   "prettier": {
