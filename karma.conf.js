@@ -1,4 +1,6 @@
 module.exports = function (config) {
+  const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
+
   config.set({
     basePath: '',
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
@@ -24,7 +26,9 @@ module.exports = function (config) {
     },
 
     // Headless-Settings
-    browsers: ['ChromeHeadlessCI'],
+    // Local dev: run with a real Chrome window.
+    // CI: run headless (more reliable + works without a display).
+    browsers: [isCI ? 'ChromeHeadlessCI' : 'Chrome'],
     customLaunchers: {
       ChromeHeadlessCI: {
         base: 'ChromeHeadless',
