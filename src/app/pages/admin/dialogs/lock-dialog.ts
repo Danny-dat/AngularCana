@@ -78,7 +78,7 @@ export type LockDialogResult = { reason: string; until: Date };
     </div>
   `,
   styles: [`
-    :host{ display:block; width:360px; max-width:92vw; }
+    :host{ display:block; }
 
     .content{ display:grid; gap:14px; padding-top:8px; }
     .full{ width:100%; }
