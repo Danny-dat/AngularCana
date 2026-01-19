@@ -42,7 +42,7 @@ module.exports = function (config) {
     },
 
     // Für CI oft sinnvoll:
-    singleRun: true,
-    restartOnFileChange: false,
+    singleRun: isCI,
+    restartOnFileChange: !isCI,
   });
 };
