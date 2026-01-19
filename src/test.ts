@@ -17,6 +17,7 @@ import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
 import { disableNetwork } from 'firebase/firestore';
+import { beforeEach } from 'node:test';
 
 declare const jasmine: any;
 
@@ -58,25 +59,37 @@ getTestBed().initTestEnvironment(
 forceNoRandom();
 setTimeout(forceNoRandom, 0);
 
-TestBed.configureTestingModule({
-  imports: [RouterTestingModule, HttpClientTestingModule],
-  providers: [
-    {
-      provide: ActivatedRoute,
-      useValue: {
-        snapshot: { params: {}, data: {}, paramMap: convertToParamMap({}) },
-        params: of({}),
-        data: of({}),
-        paramMap: of(convertToParamMap({})),
-      },
-    },
+// IMPORTANT:
+// Angular resets the TestBed between tests (and many specs also call TestBed.configureTestingModule themselves).
+// A one-time TestBed.configureTestingModule() here is NOT enough.
+// We must re-register the common providers for every test.
+beforeEach(() => {
+  // erlaubt mehrfaches spyOn() (nützlich bei vielen Specs)
+  try {
+    jasmine.getEnv().allowRespy(true);
+  } catch {}
 
-    provideFirebaseApp(() => app),
-    provideAuth(() => getAuth(app)),
-    provideFirestore(() => {
-      const fs = getFirestore(app);
-      disableNetwork(fs).catch(() => void 0);
-      return fs;
-    }),
-  ],
+  TestBed.configureTestingModule({
+    imports: [RouterTestingModule, HttpClientTestingModule],
+    providers: [
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          snapshot: { params: {}, data: {}, paramMap: convertToParamMap({}) },
+          params: of({}),
+          data: of({}),
+          paramMap: of(convertToParamMap({})),
+        },
+      },
+
+      provideFirebaseApp(() => app),
+      provideAuth(() => getAuth(app)),
+      provideFirestore(() => {
+        const fs = getFirestore(app);
+        // keine echten Netzwerk-Calls in Unit-Tests
+        disableNetwork(fs).catch(() => void 0);
+        return fs;
+      }),
+    ],
+  });
 });
