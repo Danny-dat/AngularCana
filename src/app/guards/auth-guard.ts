@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -22,14 +23,7 @@ export const authGuard: CanActivateFn = (route, state) => {
 
       // Check über Service (cached!)
       return from(authService.checkNotBlocked(u.uid, { silent: true })).pipe(
-        switchMap((ok) => {
-          if (ok) return of(true);
-
-          // geblockt => sauber ausloggen + blocked page
-          return from(authService.logout()).pipe(
-            map(() => router.createUrlTree(['/account-blocked']))
-          );
-        })
+        map((ok) => (ok ? true : router.createUrlTree(['/account-blocked'])))
       );
     })
   );

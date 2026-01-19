@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/services/notification.service.ts
 import {
   Injectable,

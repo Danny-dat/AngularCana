@@ -2,7 +2,7 @@
   <div class="head">
     <div>
       <h2>Admins</h2>
-      <p class="hint">Owner kann Admins hinzufügen/entfernen. Admins sehen den Admin-Bereich.</p>
+      <p class="hint">Admins können hier weitere Admins hinzufügen/entfernen.</p>
     </div>
 
     <button mat-flat-button color="primary" (click)="addAdmin()">
@@ -27,11 +27,7 @@
                   <code>{{ r.uid }}</code>
                 </div>
                 <div class="meta">
-                  @if (r.isOwner) {
-                    <span class="badge owner">OWNER</span>
-                  } @else {
-                    <span class="badge admin">ADMIN</span>
-                  }
+                  <span class="badge admin">ADMIN</span>
                   @if (r.note) {
                     <span class="note">· {{ r.note }}</span>
                   }
@@ -39,9 +35,7 @@
               </div>
 
               <div class="actions">
-                <button mat-stroked-button color="warn"
-                        [disabled]="r.isOwner"
-                        (click)="removeAdmin(r.uid)">
+                <button mat-stroked-button color="warn" (click)="removeAdmin(r.uid)">
                   <mat-icon>person_remove</mat-icon>
                   Entfernen
                 </button>

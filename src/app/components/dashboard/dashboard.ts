@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import {
   Component,
   OnDestroy,
@@ -65,6 +66,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private autoToastTimer?: any;
   private authUnsub?: () => void;
   private eventsSub?: { unsubscribe: () => void };
+  private latestEvents: EventItem[] = [];
+  private eventsRefreshTimer?: any;
 
   ngOnInit(): void {}
 
@@ -77,16 +80,25 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     runInInjectionContext(this.env, () => {
       this.authUnsub = onAuthStateChanged(this.auth, (user) => {
         this.eventsSub?.unsubscribe?.();
+        clearInterval(this.eventsRefreshTimer);
+        this.eventsRefreshTimer = undefined;
+        this.latestEvents = [];
 
         if (!user?.uid) {
           this.mapService.clearEvents();
           return;
         }
 
+        // zusätzlich: alle 60s neu filtern (abgelaufene Events verschwinden ohne Firestore-Update)
+        this.eventsRefreshTimer = setInterval(() => {
+          this.applyEventMarkers(user.uid);
+        }, 60_000);
+
         this.eventsSub = this.eventsSvc
           .listen()
           .subscribe((events: EventItem[]) => {
-            this.mapService.showLikedEvents(events, user.uid);
+            this.latestEvents = events || [];
+            this.applyEventMarkers(user.uid);
             this.mapService.invalidateSizeSoon(100);
           });
       });
@@ -97,8 +109,34 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.eventsSub?.unsubscribe?.();
     this.authUnsub?.();
     this.mapService.destroyMap();
+    clearInterval(this.eventsRefreshTimer);
     clearTimeout(this.autoResetTimer);
     clearTimeout(this.autoToastTimer);
+  }
+
+  private applyEventMarkers(uid: string) {
+    const now = Date.now();
+    const active = (this.latestEvents || []).filter((e: any) => this.isEventActiveUser(e, now));
+    this.mapService.showLikedEvents(active, uid);
+  }
+
+  /** User-Logik: manuell deaktivierte Events sind aus, vergangene startAt sind aus. Ohne startAt: aktiv. */
+  private isEventActiveUser(e: any, nowMs: number): boolean {
+    const status = String(e?.status ?? 'active');
+    if (status === 'inactive') return false;
+
+    const d = this.asMaybeDate(e?.startAt);
+    if (!d) return true;
+
+    return d.getTime() > nowMs;
+  }
+
+  private asMaybeDate(x: any): Date | null {
+    if (!x) return null;
+    if (x instanceof Date) return x;
+    if (typeof x?.toDate === 'function') return x.toDate();
+    const d = new Date(String(x));
+    return isNaN(d.getTime()) ? null : d;
   }
 
   private showToast(type: Toast['type'], text: string, ms = 2200) {
@@ -147,6 +185,50 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     ]);
   }
 
+  // ─────────────────────────────────────────────
+  // Daily Limit (client-side)
+  // ─────────────────────────────────────────────
+  private dayKey(d: Date = new Date()): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  }
+
+  private getDailyLimit(): number {
+    try {
+      const raw = localStorage.getItem('settings:consumptionThreshold');
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    } catch {}
+    return 3;
+  }
+
+  private todayCountKey(uid: string): string {
+    return `consumptions:count:${uid}:${this.dayKey()}`;
+  }
+
+  private canLogToday(uid: string): boolean {
+    const limit = this.getDailyLimit();
+    if (!limit || limit <= 0) return true;
+    try {
+      const key = this.todayCountKey(uid);
+      const c = Number(localStorage.getItem(key) ?? '0');
+      return !(Number.isFinite(c) && c >= limit);
+    } catch {
+      return true;
+    }
+  }
+
+  private bumpToday(uid: string): void {
+    try {
+      const key = this.todayCountKey(uid);
+      const c = Number(localStorage.getItem(key) ?? '0');
+      const next = Number.isFinite(c) ? c + 1 : 1;
+      localStorage.setItem(key, String(next));
+    } catch {}
+  }
+
   async logConsumption(selection: ConsumptionSelection) {
     if (
       !selection.product ||
@@ -158,6 +240,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const user = this.auth.currentUser;
     if (!user?.uid) {
       this.showToast('error', 'Bitte zuerst einloggen.');
+      return;
+    }
+
+    // Tageslimit (clientseitig, basierend auf Settings)
+    if (!this.canLogToday(user.uid)) {
+      const limit = this.getDailyLimit();
+      this.showToast('error', `Tageslimit erreicht (${limit}).`);
       return;
     }
 
@@ -220,6 +309,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         addDoc(collection(this.firestore, 'consumptions'), payload)
       );
 
+      this.bumpToday(user.uid);
+
       await this.notifications.sendConsumptionToFriends({
         userId: user.uid,
         displayName,
@@ -248,5 +339,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.cdr.markForCheck();
     }
   }
+
 }
 

@@ -1,4 +1,6 @@
 module.exports = function (config) {
+  const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
+
   config.set({
     basePath: '',
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
@@ -20,11 +22,13 @@ module.exports = function (config) {
       dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
       reports: ['html', 'text-summary', 'lcovonly'],
-      check: { global: { statements: 80, branches: 70, functions: 80, lines: 80 } },
+      check: { global: { statements: 100, branches: 100, functions: 100, lines: 100 } },
     },
 
     // Headless-Settings
-    browsers: ['ChromeHeadlessCI'],
+    // Local dev: run with a real Chrome window.
+    // CI: run headless (more reliable + works without a display).
+    browsers: [isCI ? 'ChromeHeadlessCI' : 'Chrome'],
     customLaunchers: {
       ChromeHeadlessCI: {
         base: 'ChromeHeadless',

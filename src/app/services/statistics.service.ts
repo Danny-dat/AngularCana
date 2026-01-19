@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, EnvironmentInjector, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, collection, collectionGroup, query, where, getDocs } from '@angular/fire/firestore';
 

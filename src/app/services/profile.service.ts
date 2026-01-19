@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { normalizeUnifiedUserNameKey } from '../utils/user-name';

@@ -1,14 +1,45 @@
 <div class="promo-slot">
   <span class="ad-label">Anzeige</span>
-  <img
-    [src]="imgSrc"
-    [alt]="_slotId"
-    class="ad-img"
-    (error)="onImgError()"
-    (load)="onImgLoad($event)"
-    loading="eager"
-    decoding="async"
-    width="1200"
-    height="115"
-  />
+
+  @if (vm$ | async; as vm) {
+    @if ((vm.linkEnabled ?? true) && vm.linkUrl) {
+      <a class="ad-link" [href]="vm.linkUrl" target="_blank" rel="noopener noreferrer">
+        <img
+          [src]="imgSrc"
+          [alt]="_slotId"
+          class="ad-img"
+          (error)="onImgError()"
+          (load)="onImgLoad($event)"
+          loading="eager"
+          decoding="async"
+          width="1200"
+          height="115"
+        />
+      </a>
+    } @else {
+      <img
+        [src]="imgSrc"
+        [alt]="_slotId"
+        class="ad-img"
+        (error)="onImgError()"
+        (load)="onImgLoad($event)"
+        loading="eager"
+        decoding="async"
+        width="1200"
+        height="115"
+      />
+    }
+  } @else {
+    <img
+      [src]="imgSrc"
+      [alt]="_slotId"
+      class="ad-img"
+      (error)="onImgError()"
+      (load)="onImgLoad($event)"
+      loading="eager"
+      decoding="async"
+      width="1200"
+      height="115"
+    />
+  }
 </div>

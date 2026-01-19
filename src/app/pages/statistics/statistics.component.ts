@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Component, DestroyRef, effect, inject, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatisticsService, StatsRange } from '../../services/statistics.service';

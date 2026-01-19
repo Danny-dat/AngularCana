@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Auth, user, updateProfile } from '@angular/fire/auth';

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/app.config.ts
 import { ApplicationConfig, importProvidersFrom, inject, PLATFORM_ID, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';

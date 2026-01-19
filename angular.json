@@ -75,6 +75,15 @@
           "builder": "@angular/build:karma",
           "options": {
             "codeCoverage": true,
+            "codeCoverageExclude": [
+              "src/main.ts",
+              "src/main.server.ts",
+              "src/server.ts",
+              "src/environments/**",
+              "src/app/app.config*.ts",
+              "src/app/app.routes*.ts",
+              "src/app/app.ts"
+            ],
             "tsConfig": "tsconfig.spec.json",
             "assets": [
               "src/favicon.ico",

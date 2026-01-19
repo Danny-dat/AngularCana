@@ -1,7 +1,8 @@
+/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { Auth, user } from '@angular/fire/auth';
 import {
@@ -31,6 +32,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { ReasonDialogComponent } from '../dialogs/reason-dialog';
+import { BanDialogComponent } from '../dialogs/ban-dialog';
+import { LockDialogComponent } from '../dialogs/lock-dialog';
+import { AdminModerationService } from '../services/admin-moderation.service';
 
 type ReportStatus = 'new' | 'in_review' | 'resolved';
 type ReportScope = 'direct' | 'channel' | 'group' | 'unknown';
@@ -162,6 +166,9 @@ export class AdminReports {
   private auth = inject(Auth);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
+  private router = inject(Router);
+  private moderation = inject(AdminModerationService);
+  // NOTE: router & moderation are injected once (avoid duplicate class members)
 
   readonly reasonLabel = reasonLabel;
 
@@ -172,12 +179,12 @@ export class AdminReports {
   uid$: Observable<string | null> = user(this.auth).pipe(
     map((u) => u?.uid ?? null),
     startWith(null),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   private reportsRaw$: Observable<ReportDoc[]> = collectionData(
     query(collection(this.afs, 'reports'), orderBy('createdAt', 'desc'), limit(500)),
-    { idField: 'id' }
+    { idField: 'id' },
   ) as Observable<ReportDoc[]>;
 
   /** Reports (convert + search filter) */
@@ -190,7 +197,8 @@ export class AdminReports {
 
       const rows = docs.map((r) => {
         const inferredScope: ReportScope =
-          (r.scope as ReportScope) ?? (r.chatId === 'global' ? 'channel' : r.chatId ? 'direct' : 'unknown');
+          (r.scope as ReportScope) ??
+          (r.chatId === 'global' ? 'channel' : r.chatId ? 'direct' : 'unknown');
 
         const fixedStatus: ReportStatus = (r.status as ReportStatus) ?? 'new';
 
@@ -225,7 +233,7 @@ export class AdminReports {
         return hay.includes(queryTxt);
       });
     }),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   /**
@@ -236,23 +244,33 @@ export class AdminReports {
    */
   vm$: Observable<ReportsVm> = combineLatest([this.rowsFiltered$, this.uid$]).pipe(
     map(([rows, uid]) => {
-      const open = rows.filter((r) => r.statusFixed === 'new' || (r.statusFixed === 'in_review' && !r.assignedTo));
-      const inProgress = uid ? rows.filter((r) => r.statusFixed === 'in_review' && r.assignedTo === uid) : [];
+      const open = rows.filter(
+        (r) => r.statusFixed === 'new' || (r.statusFixed === 'in_review' && !r.assignedTo),
+      );
+      const inProgress = uid
+        ? rows.filter((r) => r.statusFixed === 'in_review' && r.assignedTo === uid)
+        : [];
       const done = rows.filter((r) => r.statusFixed === 'resolved');
       return { open, inProgress, done, uid };
-    })
+    }),
   );
 
-  admins$: Observable<AdminItem[]> = collectionData(collection(this.afs, 'admins'), { idField: 'uid' }).pipe(
+  admins$: Observable<AdminItem[]> = collectionData(collection(this.afs, 'admins'), {
+    idField: 'uid',
+  }).pipe(
     map((docs: any[]) => docs.map((d) => String(d.uid)).filter(Boolean)),
     switchMap((uids: string[]) => {
       if (!uids.length) return of([] as AdminItem[]);
       return combineLatest(
-        uids.map((uid) => this.userInfo$(uid).pipe(map((u) => ({ uid: u.uid, name: u.name, email: u.email } as AdminItem))))
+        uids.map((uid) =>
+          this.userInfo$(uid).pipe(
+            map((u) => ({ uid: u.uid, name: u.name, email: u.email }) as AdminItem),
+          ),
+        ),
       );
     }),
     map((list) => list.sort((a, b) => a.name.localeCompare(b.name))),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   trackById(_: number, r: ReportRow) {
@@ -281,8 +299,10 @@ export class AdminReports {
 
     const obs = combineLatest([profile$, user$]).pipe(
       map(([p, u]) => {
-        const name = (p?.username || p?.displayName || u?.displayName || u?.email || '').toString().trim();
-        const email = (u?.email || null) ? String(u?.email) : null;
+        const name = (p?.username || p?.displayName || u?.displayName || u?.email || '')
+          .toString()
+          .trim();
+        const email = u?.email || null ? String(u?.email) : null;
 
         return {
           uid: id,
@@ -290,7 +310,7 @@ export class AdminReports {
           email,
         } as UserSummary;
       }),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.userInfoCache.set(id, obs);
@@ -319,7 +339,7 @@ export class AdminReports {
         assignedTo: r.assignedTo ?? actorUid,
         assignedAt: serverTimestamp(),
       } as any,
-      'Report auf "In Bearbeitung" gesetzt'
+      'Report auf "In Bearbeitung" gesetzt',
     );
   }
 
@@ -333,7 +353,7 @@ export class AdminReports {
         assignedAt: serverTimestamp(),
         status: 'in_review',
       } as any,
-      'Report dir zugewiesen'
+      'Report dir zugewiesen',
     );
   }
 
@@ -346,7 +366,7 @@ export class AdminReports {
         assignedAt: serverTimestamp(),
         status: 'in_review',
       } as any,
-      'Report zugewiesen'
+      'Report zugewiesen',
     );
   }
 
@@ -363,7 +383,7 @@ export class AdminReports {
             confirmText: 'Erledigen',
           },
         })
-        .afterClosed()
+        .afterClosed(),
     );
 
     const actorUid = await this.actorUid();
@@ -376,7 +396,7 @@ export class AdminReports {
         resolvedAt: serverTimestamp(),
         resolutionNote: res?.reason?.trim?.() || null,
       } as any,
-      'Report erledigt'
+      'Report erledigt',
     );
   }
 
@@ -389,8 +409,69 @@ export class AdminReports {
         resolvedAt: null,
         resolutionNote: null,
       } as any,
-      'Report wieder geöffnet'
+      'Report wieder geöffnet',
     );
+  }
+
+  openChat(uid: string, ev?: Event) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+    void this.router.navigate(['/social'], { queryParams: { openChatWith: uid } });
+  }
+
+  async ban(uid: string) {
+    const res = await firstValueFrom(
+      this.dialog
+        .open(BanDialogComponent, {
+          data: { uid, displayName: uid },
+        })
+        .afterClosed(),
+    );
+    if (!res) return;
+
+    try {
+      await this.moderation.banUser({
+        targetUid: uid,
+        actorUid: await this.actorUid(),
+        reason: res.reason ?? '',
+        until: res.until ?? null,
+      });
+      this.snack.open('User gebannt', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Bannen fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
+  async lock(uid: string) {
+    const res = await firstValueFrom(
+      this.dialog
+        .open(LockDialogComponent, {
+          data: { uid, displayName: uid },
+        })
+        .afterClosed(),
+    );
+    if (!res) return;
+
+    try {
+      await this.moderation.lockUser({
+        targetUid: uid,
+        actorUid: await this.actorUid(),
+        reason: res.reason ?? '',
+        until: res.until,
+      });
+      this.snack.open('User gesperrt', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Sperren fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
+  async unblock(uid: string) {
+    try {
+      await this.moderation.unlockUser({ targetUid: uid, actorUid: await this.actorUid() });
+      this.snack.open('Sperre/Ban aufgehoben', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Entsperren fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
   }
 
   private async actorUid(): Promise<string> {

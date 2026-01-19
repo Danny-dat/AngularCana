@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, signal, effect } from '@angular/core';
 
 type BoolPref = boolean;

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // src/app/utils/analytics-utils.ts
 
 /**

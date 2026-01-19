@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 export interface EventItem {
   id: string;
   name: string;

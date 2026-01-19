@@ -1,0 +1,108 @@
+<mat-card class="slot">
+  <div class="slot-head">
+    <div>
+      <div class="title">{{ title }}</div>
+      <div class="sub" *ngIf="subtitle">{{ subtitle }}</div>
+    </div>
+
+    <div class="slot-actions">
+      <button mat-stroked-button type="button" (click)="openLink()" [disabled]="!(current.linkEnabled && current.linkUrl)">
+        <mat-icon>open_in_new</mat-icon>
+        Link testen
+      </button>
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="grid">
+    <div>
+      <div class="hint">Aktuell (App)</div>
+      <promo-slot [slotId]="slotId" data-variant="wide"></promo-slot>
+
+      <div class="paths">
+        <div class="path-row">
+          <div class="lbl">Server-Pfad (Override):</div>
+          <code>{{ serverTargetPath() }}</code>
+          <button mat-icon-button type="button" (click)="copyPath(serverTargetPath())" aria-label="Pfad kopieren">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+
+        <div class="path-row">
+          <div class="lbl">Assets-Fallback (Build):</div>
+          <code>{{ assetsTargetPath() }}</code>
+          <button mat-icon-button type="button" (click)="copyPath(assetsTargetPath())" aria-label="Pfad kopieren">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+
+        <div class="small">
+          Hinweis: Im laufenden Browser kann man <b>nicht</b> in <code>assets</code> hochladen. Fuer echte Updates bitte den <code>/media</code>-Pfad auf deinem Server per FTP/Upload ersetzen und danach <b>Speichern</b> klicken.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="hint">Neue Promo (Vorschau)</div>
+      <div class="preview" [class.empty]="!previewUrl">
+        @if (previewUrl) {
+          <img [src]="previewUrl" alt="Vorschau" />
+        } @else {
+          <div class="placeholder">
+            <mat-icon>image</mat-icon>
+            <div>Kein neues Bild ausgewaehlt</div>
+          </div>
+        }
+      </div>
+
+      <div class="controls" [formGroup]="form">
+        <div class="file-row">
+          <input #fileInput type="file" accept="image/svg+xml,image/webp,image/png,image/jpeg" (change)="onFileSelected($event)" />
+          <button mat-stroked-button type="button" (click)="fileInput.click()">
+            <mat-icon>upload</mat-icon>
+            Bild waehlen
+          </button>
+
+          <button mat-button type="button" (click)="resetSelection()" [disabled]="!selectedFile">
+            Zuruecksetzen
+          </button>
+        </div>
+
+        <div class="small" *ngIf="selectedFile">
+          Ausgewaehlt: <b>{{ selectedFile.name }}</b> ({{ Math.round(selectedFile.size/1024) }} KB) → Ziel: <b>banner.{{ nextExt() }}</b>
+        </div>
+        <div class="error" *ngIf="fileError">{{ fileError }}</div>
+
+        <mat-divider></mat-divider>
+
+        <mat-checkbox formControlName="linkEnabled">Link aktiv</mat-checkbox>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Weiterleitungs-Link (https://...)</mat-label>
+          <input matInput formControlName="linkUrl" [disabled]="!form.controls.linkEnabled.value" />
+          <mat-hint>Wenn deaktiviert, ist das Banner nicht klickbar.</mat-hint>
+          <mat-error *ngIf="form.controls.linkEnabled.value && form.controls.linkUrl.invalid">
+            Bitte gueltige URL eintragen (mind. http(s)://...)
+          </mat-error>
+        </mat-form-field>
+
+        <div class="btns">
+          <button mat-stroked-button type="button" (click)="downloadPrepared()" [disabled]="!selectedFile || !!fileError">
+            <mat-icon>download</mat-icon>
+            Datei vorbereiten
+          </button>
+
+          <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
+            <mat-icon>save</mat-icon>
+            Speichern
+          </button>
+        </div>
+
+        <div class="small">
+          <b>Empfehlung (damit der Server nicht zugemuellt wird):</b> Nutze nur <code>banner.webp</code> (oder <code>banner.svg</code>) und ueberschreibe die Datei jedes Mal. Dann bleibt der Ordner sauber.
+        </div>
+      </div>
+    </div>
+  </div>
+</mat-card>

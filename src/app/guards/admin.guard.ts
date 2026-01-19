@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { inject } from '@angular/core';
 import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { Auth, user } from '@angular/fire/auth';

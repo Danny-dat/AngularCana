@@ -1,3 +1,31 @@
+# dependencies
+node_modules/
+
+# Angular build output
+dist/
+.angular/
+
+# coverage output
+coverage/
+
+# environment files (often contain secrets)
+src/environments/*
+!src/environments/environments.ts
+!src/environments/environment*.ts
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+.angular
+.github
+.vscode
+
+
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # Compiled output
@@ -42,5 +70,3 @@ __screenshots__/
 /src/environments/*.ts
 
 # System files
-.DS_Store
-Thumbs.db

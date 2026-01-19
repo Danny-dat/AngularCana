@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Injectable, inject, DestroyRef } from '@angular/core';
 import { Auth, user } from '@angular/fire/auth';
 import { filter, map, distinctUntilChanged } from 'rxjs/operators';

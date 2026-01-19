@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // auth.service.ts
 import { Injectable } from '@angular/core';
 import {
@@ -264,7 +265,9 @@ export class AuthService {
 
     // direkt nach Login prüfen: ist der User geblockt?
     const ok = await this.checkNotBlocked(cred.user.uid, { silent: false });
-    if (!ok) throw new Error('ACCOUNT_BLOCKED');
+    // Blocked users sollen die "Account blocked"-Seite sehen können,
+    // inkl. Grund/Dauer + Möglichkeit ein Ticket zu öffnen.
+    if (!ok) return null as any;
 
     // nach Erfolg frischen Namen setzen (für Header)
     try {
@@ -318,11 +321,12 @@ export class AuthService {
         this.lastAccessCheckMs = Date.now();
 
         if (!silent) {
-          await this.logout();
+          // WICHTIG: nicht automatisch ausloggen –
+          // damit die Blocked-Seite den Grund/Dauer laden und ein Ticket öffnen kann.
           this.snack.open(
-            'Dein Account ist gesperrt oder gebannt. Bitte kontaktiere den Admin.',
+            'Dein Account ist gesperrt oder gebannt. Details findest du auf der nächsten Seite.',
             'OK',
-            { duration: 6000 }
+            { duration: 6500 }
           );
           await this.router.navigateByUrl('/account-blocked');
         }

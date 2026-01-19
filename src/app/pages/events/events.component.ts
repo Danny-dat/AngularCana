@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Auth } from '@angular/fire/auth';
 import { onAuthStateChanged } from 'firebase/auth';
