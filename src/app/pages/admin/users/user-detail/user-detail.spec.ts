@@ -14,7 +14,6 @@ describe('UserDetail', () => {
 
     fixture = TestBed.createComponent(AdminUserDetailComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

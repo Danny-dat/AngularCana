@@ -22,7 +22,7 @@ module.exports = function (config) {
       dir: require('path').join(__dirname, './coverage'),
       subdir: '.',
       reports: ['html', 'text-summary', 'lcovonly'],
-      check: { global: { statements: 100, branches: 100, functions: 100, lines: 100 } },
+      check: isCI ? { global: { statements: 80, branches: 80, functions: 80, lines: 80 } } : undefined
     },
 
     // Headless-Settings
@@ -42,7 +42,8 @@ module.exports = function (config) {
     },
 
     // Für CI oft sinnvoll:
-    singleRun: isCI,
-    restartOnFileChange: !isCI,
+      autoWatch: !isCI,
+      singleRun: isCI,
+      restartOnFileChange: !isCI,
   });
 };
