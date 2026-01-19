@@ -8,8 +8,15 @@ import { AppHeaderComponent } from '../components/app-header/app-header';
   standalone: true,
   imports: [RouterOutlet, AppHeaderComponent],
   template: `
-    <app-header></app-header>
-    <router-outlet></router-outlet>
+    <div class="app-shell">
+      <app-header></app-header>
+
+      <main class="app-main">
+        <div class="app-container">
+          <router-outlet></router-outlet>
+        </div>
+      </main>
+    </div>
   `,
 })
 export class AppLayoutComponent {}

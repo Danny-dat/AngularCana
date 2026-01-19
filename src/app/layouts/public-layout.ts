@@ -6,6 +6,12 @@ import { RouterOutlet } from '@angular/router';
   selector: 'public-layout',
   standalone: true,
   imports: [RouterOutlet],
-  template: `<router-outlet></router-outlet>`,
+  template: `
+    <main class="public-shell">
+      <div class="public-container">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  `,
 })
 export class PublicLayoutComponent {}
