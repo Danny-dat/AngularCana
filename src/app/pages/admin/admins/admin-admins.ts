@@ -40,10 +40,10 @@ export class AdminAdminsComponent {
     .pipe(
       map((rows) =>
         [...rows]
-          .map((r) => ({ ...r, isOwner: r.uid === this.OWNER_UID }))
-          .sort((a, b) =>
-            a.isOwner === b.isOwner ? a.uid.localeCompare(b.uid) : a.isOwner ? -1 : 1
-          )
+          // Owner nicht anzeigen (soll „unsichtbar“ bleiben)
+          .filter((r) => r.uid !== this.OWNER_UID)
+          .map((r) => ({ ...r, isOwner: false }))
+          .sort((a, b) => a.uid.localeCompare(b.uid))
       )
     );
 

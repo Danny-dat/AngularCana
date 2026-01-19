@@ -166,6 +166,26 @@ body.theme-dark .report-card {
   min-width: 0;
 }
 
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-row .user {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini {
+  width: 32px;
+  height: 32px;
+}
+
 .user:hover {
   text-decoration: underline;
 }

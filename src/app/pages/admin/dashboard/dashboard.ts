@@ -29,7 +29,7 @@ type RecentReportVm = {
   link: any;
 };
 
-type ActivityVm = { id: string; text: string; when: string };
+type ActivityVm = { id: string; icon: string; title: string; detail: string; when: string };
 
 @Component({
   standalone: true,
@@ -162,9 +162,19 @@ export class AdminDashboardComponent {
     map((rows) =>
       (rows || []).map((a) => {
         const d = this.toDateSafe(a?.timestamp);
+        const action = String(a?.action ?? 'ACTION');
+        const target = this.shortUid(String(a?.targetUid ?? ''));
+        const actor = this.shortUid(String(a?.actorUid ?? ''));
+        const reason = (a?.reason ?? '').toString().trim();
+
+        const icon = this.auditIcon(action);
+        const title = this.auditTitle(action, target);
+        const detail = this.auditDetail(action, actor, reason);
         return {
           id: String(a?.id ?? ''),
-          text: this.auditText(a),
+          icon,
+          title,
+          detail,
           when: d ? d.toLocaleString('de-DE') : '—',
         } satisfies ActivityVm;
       })
@@ -213,6 +223,50 @@ export class AdminDashboardComponent {
     const msg = (r?.messageText ?? '').toString().trim();
     const snippet = msg ? ` · ${msg.slice(0, 42)}${msg.length > 42 ? '…' : ''}` : '';
     return `${catLabel}${snippet}`;
+  }
+
+  private auditIcon(action: string): string {
+    switch (String(action ?? '')) {
+      case 'BAN':
+        return 'gavel';
+      case 'LOCK':
+        return 'lock';
+      case 'UNLOCK':
+        return 'lock_open';
+      case 'SOFT_DELETE':
+        return 'delete';
+      case 'RESTORE':
+        return 'restore';
+      case 'CREATE_USER':
+        return 'person_add';
+      default:
+        return 'history';
+    }
+  }
+
+  private auditTitle(action: string, target: string): string {
+    switch (String(action ?? 'ACTION')) {
+      case 'BAN':
+        return `Ban · ${target}`;
+      case 'LOCK':
+        return `Sperre · ${target}`;
+      case 'UNLOCK':
+        return `Entsperrt · ${target}`;
+      case 'SOFT_DELETE':
+        return `Gelöscht · ${target}`;
+      case 'RESTORE':
+        return `Wiederhergestellt · ${target}`;
+      case 'CREATE_USER':
+        return `User erstellt · ${target}`;
+      default:
+        return `${action} · ${target}`;
+    }
+  }
+
+  private auditDetail(action: string, actor: string, reason: string): string {
+    if (reason) return reason;
+    if (String(action ?? '') === 'CREATE_USER') return `by ${actor}`;
+    return actor ? `by ${actor}` : '';
   }
 
   private auditText(a: any): string {

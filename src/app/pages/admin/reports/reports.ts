@@ -2,7 +2,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { Auth, user } from '@angular/fire/auth';
 import {
@@ -32,6 +32,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { ReasonDialogComponent } from '../dialogs/reason-dialog';
+import { BanDialogComponent } from '../dialogs/ban-dialog';
+import { LockDialogComponent } from '../dialogs/lock-dialog';
+import { AdminModerationService } from '../services/admin-moderation.service';
 
 type ReportStatus = 'new' | 'in_review' | 'resolved';
 type ReportScope = 'direct' | 'channel' | 'group' | 'unknown';
@@ -163,6 +166,9 @@ export class AdminReports {
   private auth = inject(Auth);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
+  private router = inject(Router);
+  private moderation = inject(AdminModerationService);
+  // NOTE: router & moderation are injected once (avoid duplicate class members)
 
   readonly reasonLabel = reasonLabel;
 
@@ -392,6 +398,67 @@ export class AdminReports {
       } as any,
       'Report wieder geöffnet'
     );
+  }
+
+  openChat(uid: string, ev?: Event) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+    void this.router.navigate(['/social'], { queryParams: { openChatWith: uid } });
+  }
+
+  async ban(uid: string) {
+    const res = await firstValueFrom(
+      this.dialog
+        .open(BanDialogComponent, {
+          data: { uid, displayName: uid },
+        })
+        .afterClosed()
+    );
+    if (!res) return;
+
+    try {
+      await this.moderation.banUser({
+        targetUid: uid,
+        actorUid: await this.actorUid(),
+        reason: res.reason ?? '',
+        until: res.until ?? null,
+      });
+      this.snack.open('User gebannt', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Bannen fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
+  async lock(uid: string) {
+    const res = await firstValueFrom(
+      this.dialog
+        .open(LockDialogComponent, {
+          data: { uid, displayName: uid },
+        })
+        .afterClosed()
+    );
+    if (!res) return;
+
+    try {
+      await this.moderation.lockUser({
+        targetUid: uid,
+        actorUid: await this.actorUid(),
+        reason: res.reason ?? '',
+        until: res.until,
+      });
+      this.snack.open('User gesperrt', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Sperren fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
+  }
+
+  async unblock(uid: string) {
+    try {
+      await this.moderation.unlockUser({ targetUid: uid, actorUid: await this.actorUid() });
+      this.snack.open('Sperre/Ban aufgehoben', 'OK', { duration: 2500 });
+    } catch {
+      this.snack.open('Entsperren fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
+    }
   }
 
   private async actorUid(): Promise<string> {
