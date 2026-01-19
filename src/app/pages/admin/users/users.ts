@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { combineLatest, Observable, firstValueFrom } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
+import { map, shareReplay, startWith } from 'rxjs/operators';
 
 import { FirebaseApp } from '@angular/fire/app';
 import { Auth, user } from '@angular/fire/auth';
@@ -19,6 +19,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTabsModule } from '@angular/material/tabs';
 
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
@@ -37,6 +38,9 @@ type CreateUserDialogResult = {
   sendReset: boolean;
 };
 
+type StatusTab = 'all' | 'active' | 'locked' | 'banned' | 'deleted';
+type GroupedRows = Record<StatusTab, AdminUserRow[]>;
+
 @Component({
   standalone: true,
   selector: 'app-admin-users',
@@ -44,6 +48,7 @@ type CreateUserDialogResult = {
     CommonModule,
     RouterModule,
     ReactiveFormsModule,
+    MatTabsModule,
     MatTableModule,
     MatIconModule,
     MatFormFieldModule,
@@ -71,7 +76,11 @@ export class AdminUsers {
   searchCtrl = new FormControl<string>('', { nonNullable: true });
   displayedColumns: string[] = ['displayName', 'uid', 'role', 'status'];
 
-  rows$: Observable<AdminUserRow[]> = combineLatest([
+  /**
+   * Tabs nach Status (Alle / Aktiv / Gesperrt / Gebannt / Gelöscht)
+   * + Suche wirkt auf alle Tabs.
+   */
+  groupedRows$: Observable<GroupedRows> = combineLatest([
     this.dir.directory$,
     this.searchCtrl.valueChanges.pipe(startWith('')),
   ]).pipe(
@@ -85,7 +94,15 @@ export class AdminUsers {
           r.displayName.toLowerCase().includes(query) ||
           (r.username ?? '').toLowerCase().includes(query)
       );
-    })
+    }),
+    map((rows): GroupedRows => {
+      const active = rows.filter((r) => r.status === 'active');
+      const locked = rows.filter((r) => r.status === 'locked');
+      const banned = rows.filter((r) => r.status === 'banned');
+      const deleted = rows.filter((r) => r.status === 'deleted');
+      return { all: rows, active, locked, banned, deleted };
+    }),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   constructor() {

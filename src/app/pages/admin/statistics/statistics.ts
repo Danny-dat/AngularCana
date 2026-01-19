@@ -22,6 +22,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
 
 import { AdminStatsService } from '../services/admin-stats.service';
+import { AdminUserProfileStatsService, AdminUserProfileStats } from '../services/admin-user-profile-stats.service';
 import {
   AdminAnalyticsService,
   DailyTotal,
@@ -51,6 +52,7 @@ type KpiVm = { label: string; value: string; icon: string; hint?: string };
 export class AdminStatistic {
   private stats = inject(AdminStatsService);
   private analytics = inject(AdminAnalyticsService);
+  private userProfileStatsSvc = inject(AdminUserProfileStatsService);
   private destroyRef = inject(DestroyRef);
   private nf = new Intl.NumberFormat('de-DE');
 
@@ -65,6 +67,92 @@ export class AdminStatistic {
   readonly active24hCount = toSignal(this.stats.active24hCount$, { initialValue: 0 });
   readonly consumptions7dCount = toSignal(this.stats.consumptions7dCount$, { initialValue: 0 });
   readonly consumptions30dCount = toSignal(this.stats.consumptions30dCount$, { initialValue: 0 });
+
+  // ------- User-Profile Auswertung (clientseitig aggregiert)
+  private readonly emptyProfileStats: AdminUserProfileStats = {
+    totalUsers: 0,
+    activeUsers: 0,
+    lockedUsers: 0,
+    bannedUsers: 0,
+    deletedUsers: 0,
+    adminUsers: 0,
+
+    withFirstName: 0,
+    withLastName: 0,
+    withPhone: 0,
+    withPhoto: 0,
+    withBirthday: 0,
+    withBio: 0,
+    withWebsite: 0,
+    withLocation: 0,
+    withAnySocials: 0,
+
+    visibilityShowBio: 0,
+    visibilityShowWebsite: 0,
+    visibilityShowLocation: 0,
+    visibilityShowSocials: 0,
+
+    gender: { male: 0, female: 0, diverse: 0, unspecified: 0 },
+    public: { bio: 0, website: 0, location: 0, socials: 0 },
+    friends: { withFriends: 0, totalFriendRefs: 0 },
+  };
+
+  readonly userProfileStats = toSignal(this.userProfileStatsSvc.stats$, {
+    initialValue: this.emptyProfileStats,
+  });
+
+  readonly profileFieldMetrics = computed(() => {
+    const s = this.userProfileStats();
+    return [
+      { label: 'Mit Foto', count: s.withPhoto },
+      { label: 'Mit Vorname', count: s.withFirstName },
+      { label: 'Mit Nachname', count: s.withLastName },
+      { label: 'Mit Telefon', count: s.withPhone },
+      { label: 'Mit Geburtstag', count: s.withBirthday },
+      { label: 'Mit Bio', count: s.withBio },
+      { label: 'Mit Website', count: s.withWebsite },
+      { label: 'Mit Ort', count: s.withLocation },
+      { label: 'Mit Social Links', count: s.withAnySocials },
+    ];
+  });
+
+  readonly visibilityMetrics = computed(() => {
+    const s = this.userProfileStats();
+    return [
+      { label: 'Bio öffentlich (Toggle AN)', count: s.visibilityShowBio },
+      { label: 'Website öffentlich (Toggle AN)', count: s.visibilityShowWebsite },
+      { label: 'Ort öffentlich (Toggle AN)', count: s.visibilityShowLocation },
+      { label: 'Socials öffentlich (Toggle AN)', count: s.visibilityShowSocials },
+    ];
+  });
+
+  readonly publicProfileMetrics = computed(() => {
+    const s = this.userProfileStats();
+    return [
+      { label: 'Public Bio gesetzt', count: s.public.bio },
+      { label: 'Public Website gesetzt', count: s.public.website },
+      { label: 'Public Ort gesetzt', count: s.public.location },
+      { label: 'Public Socials gesetzt', count: s.public.socials },
+    ];
+  });
+
+  readonly genderMetrics = computed(() => {
+    const g = this.userProfileStats().gender;
+    return [
+      { label: 'Keine Angabe', count: g.unspecified },
+      { label: 'Männlich', count: g.male },
+      { label: 'Weiblich', count: g.female },
+      { label: 'Divers', count: g.diverse },
+    ];
+  });
+
+  readonly friendsMetrics = computed(() => {
+    const f = this.userProfileStats().friends;
+    return [
+      { label: 'User mit Freunden', count: f.withFriends },
+      { label: 'Freundes-Referenzen gesamt', count: f.totalFriendRefs },
+    ];
+  });
 
   readonly kpis = computed<KpiVm[]>(() => [
     { label: 'Users', value: this.nf.format(this.usersCount()), icon: 'group' },
