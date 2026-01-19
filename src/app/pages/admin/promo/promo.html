@@ -1,1 +1,28 @@
-<p>promo works!</p>
+<h3>Promo / Ads</h3>
+
+<mat-card class="info">
+  <div class="info-row">
+    <mat-icon>local_offer</mat-icon>
+    <div>
+      <div class="info-title">Banner verwalten</div>
+      <div class="info-sub">
+        Du hast 3 feste Promo-Slots. Die App nutzt zuerst einen Server-Override unter <code>/media/&lt;slotId&gt;/banner.*</code>
+        und faellt sonst auf <code>assets/promo</code> zurueck.
+      </div>
+      <div class="info-sub">
+        <b>Workflow (ohne Firebase Storage):</b>
+        1) Bild auswaehlen → 2) Datei vorbereiten (Download) → 3) per FTP/Server ersetzen → 4) Speichern (damit Clients refreshen)
+      </div>
+    </div>
+  </div>
+</mat-card>
+
+<div class="grid">
+  @for (s of slots; track s.id) {
+    <app-promo-slot-editor
+      [slotId]="s.id"
+      [title]="s.title"
+      [subtitle]="s.subtitle">
+    </app-promo-slot-editor>
+  }
+</div>
