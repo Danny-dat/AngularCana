@@ -17,6 +17,11 @@ describe('user-name utils', () => {
       expect(normalizeUnifiedUserName('   @@@   ')).toBe('');
     });
 
+    it('handles undefined/null safely', () => {
+      expect(normalizeUnifiedUserName(undefined as any)).toBe('');
+      expect(normalizeUnifiedUserName(null as any)).toBe('');
+    });
+
     it('limits to 20 characters', () => {
       const long = '@' + 'A'.repeat(50) + '   ';
       const out = normalizeUnifiedUserName(long);
@@ -29,6 +34,11 @@ describe('user-name utils', () => {
     it('lowercases the normalized handle', () => {
       expect(normalizeUnifiedUserNameKey('  @MaX  ')).toBe('max');
       expect(normalizeUnifiedUserNameKey('  @Ma X  ')).toBe('ma_x');
+    });
+
+    it('handles undefined/null safely', () => {
+      expect(normalizeUnifiedUserNameKey(undefined as any)).toBe('');
+      expect(normalizeUnifiedUserNameKey(null as any)).toBe('');
     });
   });
 });

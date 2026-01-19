@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { RegisterComponent } from './register';
 import { AuthService } from '../../services/auth.service';
@@ -39,9 +40,8 @@ describe('RegisterComponent', () => {
     bootstrapMock = jasmine.createSpyObj<UserBootstrapService>('UserBootstrapService', ['bootstrapNow']);
 
     await TestBed.configureTestingModule({
-      imports: [RegisterComponent],
+      imports: [RegisterComponent, RouterTestingModule.withRoutes([])],
       providers: [
-        provideRouter([]),
         { provide: AuthService, useValue: authMock },
         { provide: ThemeService, useValue: themeMock },
         { provide: UserBootstrapService, useValue: bootstrapMock },
@@ -71,6 +71,10 @@ describe('RegisterComponent', () => {
     expect(component.form.photoURL).toBe('assets/avatars/a.png');
     expect(component.isAvatarSelected('assets/avatars/a.png')).toBeTrue();
     expect(component.isAvatarSelected('assets/avatars/b.png')).toBeFalse();
+
+    // cover nullish coalescing branch
+    component.form.photoURL = undefined as any;
+    expect(component.isAvatarSelected('assets/avatars/a.png')).toBeFalse();
   });
 
   it('doRegister: uses explicitly selected theme and bootstraps + navigates on success', async () => {
@@ -154,6 +158,28 @@ describe('RegisterComponent', () => {
     const arg = authMock.register.calls.mostRecent().args[0] as any;
     expect(arg.theme).toBe('dark');
     expect(themeMock.setTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('doRegister: defaults to light when no valid theme and system is not dark', async () => {
+    fixture = TestBed.createComponent(RegisterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    spyOn(localStorage, 'getItem').and.returnValue('weird');
+    setMatchMedia(false);
+
+    component.form.email = 'test@example.com';
+    component.form.password = 'pw';
+    component.form.displayName = 'User';
+
+    authMock.register.and.resolveTo({ uid: 'uid-3b' } as any);
+    bootstrapMock.bootstrapNow.and.resolveTo();
+
+    await component.doRegister();
+
+    const arg = authMock.register.calls.mostRecent().args[0] as any;
+    expect(arg.theme).toBe('light');
+    expect(themeMock.setTheme).toHaveBeenCalledWith('light');
   });
 
   it('doRegister: safely defaults to light when theme detection throws', async () => {
