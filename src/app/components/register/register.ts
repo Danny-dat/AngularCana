@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { RegisterData, AuthService } from '../../services/auth.service';
 import { normalizeUnifiedUserName } from '../../utils/user-name';
-import { ThemeService } from '../../services/theme.service'; // 👈 neu
+import { ThemeService } from '../../services/theme.service';
 import { UserBootstrapService } from '../../services/user-bootstrap.service';
 import { AVATAR_PRESETS, AvatarPreset } from '../../utils/avatar-presets';
 
