@@ -7,7 +7,7 @@
     "build": "node ./node_modules/@angular/cli/bin/ng.js build --configuration production --base-href /",
     "watch": "node ./node_modules/@angular/cli/bin/ng.js build --watch --configuration development",
     "test": "node ./node_modules/@angular/cli/bin/ng.js test",
-    "test:ci": "node ./node_modules/@angular/cli/bin/ng.js test --no-watch --no-progress --browsers=ChromeHeadless --coverage",
+    "test:ci": "node ./node_modules/@angular/cli/bin/ng.js test --watch=false --code-coverage",
     "serve:ssr:cannatrack-angular": "node dist/cannatrack-angular/server/server.mjs"
   },
   "prettier": {
@@ -24,6 +24,7 @@
   },
   "private": true,
   "dependencies": {
+    "@angular/animations": "^20.3.0",
     "@angular/cdk": "^20.2.5",
     "@angular/common": "^20.3.0",
     "@angular/compiler": "^20.3.0",
