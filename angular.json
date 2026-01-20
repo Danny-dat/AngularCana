@@ -76,6 +76,15 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "testing": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "polyfills": [
+                "zone.js",
+                "zone.js/testing"
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -98,37 +107,9 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "buildTarget": "cannatrack-angular:build:testing",
             "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              "src/favicon.ico",
-              {
-                "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
-              },
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
-            ],
-            "styles": [
-              "src/styles.css",
-              "leaflet/dist/leaflet.css"
-            ],
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "runner": "karma",
-            "coverage": true,
-            "coverageInclude": [
-              "src/app/**/*.ts"
-            ],
-            "coverageReporters": [
-              "html",
-              "lcov",
-              "text-summary"
-            ]
+            "runner": "karma"
           }
         }
       }

@@ -13,6 +13,11 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
+
 import { FirebaseApp } from '@angular/fire/app';
 import { Auth } from '@angular/fire/auth';
 import { Firestore } from '@angular/fire/firestore';
@@ -25,13 +30,15 @@ declare const jasmine: any;
 // ✅ löscht gespeicherte Jasmine-UI-Optionen (damit Checkbox nicht direkt wieder an ist)
 try {
   Object.keys(localStorage)
-    .filter(k => k.toLowerCase().includes('jasmine'))
-    .forEach(k => localStorage.removeItem(k));
+    .filter((k) => k.toLowerCase().includes('jasmine'))
+    .forEach((k) => localStorage.removeItem(k));
 } catch {}
 
 // ✅ erzwingt random=false mehrfach (falls Reporter später nochmal überschreibt)
 const forceNoRandom = () => {
-  try { jasmine.getEnv().configure({ random: false }); } catch {}
+  try {
+    jasmine.getEnv().configure({ random: false });
+  } catch {}
 };
 
 forceNoRandom();
@@ -52,13 +59,13 @@ const fs = getFirestore(app);
 // keine echten Netzwerk-Calls in Unit-Tests
 disableNetwork(fs).catch(() => void 0);
 
-getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting(),
-  {
+const __g: any = globalThis as any;
+if (!__g.__cannatrackTestEnvInited) {
+  __g.__cannatrackTestEnvInited = true;
+  getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
     teardown: { destroyAfterEach: true },
-  }
-);
+  });
+}
 
 // ✅ nach Angular Test-Env init nochmal erzwingen
 forceNoRandom();
@@ -75,7 +82,7 @@ beforeEach(() => {
   } catch {}
 
   TestBed.configureTestingModule({
-    imports: [HttpClientTestingModule, RouterTestingModule],
+    imports: [HttpClientTestingModule, RouterTestingModule, NoopAnimationsModule],
     providers: [
       {
         provide: ActivatedRoute,
@@ -84,6 +91,23 @@ beforeEach(() => {
           params: of({}),
           data: of({}),
           paramMap: of(convertToParamMap({})),
+        },
+      },
+
+      // Material stubs (SnackBar/Dialog/BottomSheet)
+      { provide: MatSnackBar, useValue: { open: () => void 0 } },
+      {
+        provide: MatDialog,
+        useValue: {
+          open: () => ({ afterClosed: () => of(true) }),
+          closeAll: () => void 0,
+        },
+      },
+      {
+        provide: MatBottomSheet,
+        useValue: {
+          open: () => ({ afterDismissed: () => of(true) }),
+          dismiss: () => void 0,
         },
       },
 
