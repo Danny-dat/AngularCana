@@ -8,7 +8,7 @@
   --up: var(--success-color);
   --down: var(--error-color);
   --accent: var(--accent);
-  color: var(--text-color);
+  color:  var(--text-color);
 }
 
 /* ===== Header & Aktionen ===== */
@@ -53,7 +53,7 @@
 
 .ev-stats .badge {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-color);
   border-radius: 999px;
   padding: 6px 10px;
   font-size: .85rem;
@@ -278,7 +278,7 @@
 }
 .btn.primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-color);
   border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border));
 }
 .btn.outline {
