@@ -14,7 +14,6 @@ describe('Statistics', () => {
 
     fixture = TestBed.createComponent(AdminStatistic);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

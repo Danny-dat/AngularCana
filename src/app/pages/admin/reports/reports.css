@@ -1,6 +1,9 @@
 .page {
   padding: 16px;
+  overflow-x: hidden;
+  container-type: inline-size;
 }
+
 
 .header {
   display: flex;
@@ -21,33 +24,41 @@
 }
 
 .search {
-  min-width: 320px;
+  min-width: min(320px, 100%);
   max-width: 520px;
-  flex: 1;
+  flex: 1 1 360px;
 }
+
 
 /* Kanban / Board */
 .board {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
 
-@media (max-width: 1200px) {
-  .board {
-    grid-template-columns: repeat(2, minmax(320px, 1fr));
-  }
+/* Container-Queries (reagiert auf die echte Content-Breite, nicht nur Viewport) */
+@container (max-width: 1150px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 860px) {
-  .board {
-    grid-template-columns: 1fr;
-  }
+@container (max-width: 760px) {
+  .board { grid-template-columns: 1fr; }
 }
+
+/* Fallback (falls Container Queries nicht greifen) */
+@media (max-width: 1200px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .board { grid-template-columns: 1fr; }
+}
+
 
 .col {
+  min-width: 0;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -84,6 +95,7 @@
 
 /* Report Card */
 .report-card {
+  min-width: 0;
   border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 10px;
@@ -158,12 +170,37 @@ body.theme-dark .report-card {
 }
 
 .user {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   text-decoration: none;
   color: inherit;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+
+
+.user-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-row .user {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini {
+  width: 32px;
+  height: 32px;
 }
 
 .user:hover {
@@ -233,4 +270,11 @@ body.theme-dark .empty-global {
   font-size: 12px;
   opacity: 0.75;
   margin-top: 4px;
+}
+
+
+/* Prevent long ids from forcing horizontal scroll */
+.subline code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

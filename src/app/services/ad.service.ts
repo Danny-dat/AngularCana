@@ -14,7 +14,7 @@ export class AdService {
   private afs = inject(Firestore, { optional: true });
 
   /** Debug-Schalter */
-  private readonly DEBUG = false;
+  private readonly DEBUG = true;
 
   /** Schutz gegen Doppel-Init */
   private initialized = false;
@@ -23,12 +23,7 @@ export class AdService {
   private readonly slotIds = ['dashboard-werbung1', 'login-werbung1', 'thc-werbung1'] as const;
 
   /** Override-Basis (z. B. vom Server gemountet) */
-  // Live-Override ueber FTP:
-  // Auf einem klassischen FTP/Webserver kannst du Dateien in /assets/ ueberschreiben,
-  // ohne neu zu deployen. Deshalb nutzen wir fuer Live-Overrides standardmaessig
-  // denselben Pfad wie die Build-Assets.
-  // (Spaeter kannst du das z.B. auf '/media' umstellen, wenn du ein separates Mounting willst.)
-  private readonly OVERRIDE_BASE = '/assets/promo';
+  private readonly OVERRIDE_BASE = '/media';
 
   /** Format-Reihenfolge für Overrides */
   // webp zuerst (sauberer Server-Standard), svg als kompatibles Fallback
@@ -47,8 +42,7 @@ export class AdService {
       alt: id,
       linkEnabled: true,
       linkUrl: null,
-      // Default: SVG (existiert im Build immer) → keine 404-Spam-HEADs.
-      activeExt: 'svg',
+      activeExt: 'webp',
     };
   }
 
@@ -114,9 +108,7 @@ export class AdService {
 
       const etag = head.headers.get('ETag') ?? head.headers.get('Etag');
       const lastMod = head.headers.get('Last-Modified') ?? head.headers.get('Last-modified');
-      // Wenn der Server keine ETags/Last-Modified liefert, nutzen wir eine konstante
-      // Version. Fuer echte Updates sorgt der Admin-Button "Speichern" (updatedAt).
-      const version = versionHint ?? etag ?? lastMod ?? '1';
+      const version = versionHint ?? etag ?? lastMod ?? new Date().toISOString();
 
       if (this.DEBUG) console.debug('[AdService] override found', { id, url, version });
       return { id, imgUrl: `${url}?v=${encodeURIComponent(version)}`, alt: id, updatedAt: version };

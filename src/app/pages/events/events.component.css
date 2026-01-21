@@ -1,12 +1,14 @@
 :host {
   display: block;
-  --bg: #f7f8fb;
-  --card: #ffffff;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --up: #10b981;
-  --down: #ef4444;
-  --accent: #6366f1;
+  /* Theme-aware palette (fixes unreadable tabs in Dark Mode) */
+  --bg: var(--background-color);
+  --card: var(--surface-color);
+  --muted: var(--text-muted-color);
+  --border: var(--border-color);
+  --up: var(--success-color);
+  --down: var(--error-color);
+  --accent: var(--accent);
+  color: var(--text-color);
 }
 
 /* ===== Header & Aktionen ===== */
@@ -36,7 +38,8 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   min-width: 220px;
-  background: var(--card);
+  background: var(--surface-2);
+  color: var(--text-color);
 }
 .ev-toggle {
   display: inline-flex;
@@ -66,7 +69,8 @@
 
 .ev-tabs .tab {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
+  color: var(--text-color);
   padding: 8px 12px;
   border-radius: 999px;
   cursor: pointer;
@@ -82,12 +86,13 @@
 
 .ev-tabs .tab.active {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent) 12%, #fff);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
 }
 
 .ev-tabs .pill {
-  background: #111827;
-  color: #fff;
+  /* auto-invert between light/dark */
+  background: color-mix(in srgb, var(--text-color) 85%, transparent);
+  color: var(--card);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: .8rem;
@@ -145,7 +150,7 @@
   border: 1px solid var(--border);
   padding: 4px 8px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
   line-height: 1;
 }
 .chip-up   { border-color: color-mix(in srgb, var(--up)   40%, var(--border)); }
@@ -159,7 +164,8 @@
 
 .btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
+  color: var(--text-color);
   padding: 6px 10px;
   border-radius: 10px;
   cursor: pointer;
@@ -168,15 +174,15 @@
 .btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); transform: translateY(-1px); }
 .btn:disabled { opacity: .6; cursor: default; transform: none; }
 
-.btn.up.active   { background: color-mix(in srgb, var(--up)   16%, #fff); border-color: color-mix(in srgb, var(--up)   40%, var(--border)); }
-.btn.down.active { background: color-mix(in srgb, var(--down) 16%, #fff); border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
-.btn.ghost { background: #fff; }
+.btn.up.active   { background: color-mix(in srgb, var(--up)   16%, var(--card)); border-color: color-mix(in srgb, var(--up)   40%, var(--border)); }
+.btn.down.active { background: color-mix(in srgb, var(--down) 16%, var(--card)); border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
+.btn.ghost { background: var(--card); }
 
 /* ===== Empty State ===== */
 .ev-empty {
   text-align: center;
   color: var(--muted);
-  background: #fff;
+  background: var(--card);
   border: 1px dashed var(--border);
   border-radius: 14px;
   padding: 24px;
@@ -210,7 +216,7 @@
 }
 .modal-header { padding: 14px 18px 0 18px; }
 .modal-title  { font-size: 1.1rem; font-weight: 600; }
-.modal-body   { padding: 8px 18px 0 18px; color: #111827; }
+.modal-body   { padding: 8px 18px 0 18px; color: var(--text-color); }
 .modal-body p { margin: 8px 0 12px; }
 
 /* Modal-Form */
@@ -232,7 +238,8 @@
   padding: 10px 10px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface-2);
+  color: var(--text-color);
   font: inherit;
 }
 .form-grid textarea { resize: vertical; }
@@ -247,7 +254,7 @@
 }
 
 .modal-dest {
-  background: #fafafa;
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
@@ -275,11 +282,11 @@
   border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border));
 }
 .btn.outline {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
 }
 .btn.primary:hover { filter: brightness(0.98); }
-.btn.outline:hover { background: #f9fafb; }
+.btn.outline:hover { background: color-mix(in srgb, var(--card) 88%, var(--surface-2)); }
 
 /* ===== Geocode helper UI ===== */
 .geo-tools {
@@ -288,17 +295,17 @@
   gap: 10px;
 }
 .geo-error {
-  color: #b91c1c;
+  color: var(--down);
 }
 .geo-ok {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: color-mix(in srgb, var(--up) 14%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--up) 30%, var(--border));
   padding: 10px 12px;
   border-radius: 12px;
   font-size: 0.92rem;
 }
 .geo-results {
-  background: #fafafa;
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
@@ -320,7 +327,7 @@
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 .geo-item input {
   margin-top: 3px;

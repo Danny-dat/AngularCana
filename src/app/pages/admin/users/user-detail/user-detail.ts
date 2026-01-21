@@ -30,6 +30,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 
 import { AdminModerationService } from '../../services/admin-moderation.service';
 import { UserDataService, UserDataModel } from '../../../../services/user-data.service';
@@ -46,6 +47,8 @@ type UserDoc = {
   email?: string | null;
   displayName?: string | null; // legacy
   phoneNumber?: string | null; // legacy
+  createdAt?: any | null;
+  updatedAt?: any | null;
   profile?: {
     displayName?: string | null;
     username?: string | null;
@@ -87,6 +90,27 @@ type Vm = {
   username: string;
   photoURL: string | null;
 
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  birthday: string | null;
+  gender: string;
+  bio: string | null;
+  website: string | null;
+  city: string | null;
+  country: string | null;
+  socials: any;
+  visibility: { showBio: boolean; showWebsite: boolean; showLocation: boolean; showSocials: boolean };
+
+  publicBio: string | null;
+  publicWebsite: string | null;
+  publicLocationText: string | null;
+  publicSocials: any;
+
+  createdAt: any | null;
+  updatedAt: any | null;
+
   roleLabel: 'admin' | 'user';
   status: UserStatus;
   statusLabel: string;
@@ -119,6 +143,7 @@ type Vm = {
     MatSlideToggleModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatTabsModule,
   ],
   templateUrl: './user-detail.html',
   styleUrls: ['./user-detail.css'],
@@ -315,11 +340,48 @@ export class AdminUserDetailComponent {
 
       const displayName = normalizeUnifiedUserName(baseName) || baseName || uid;
 
+      const p: any = userDoc?.profile ?? {};
+      const loc: any = p.location ?? {};
+      const socials: any = p.socials ?? {};
+      const visRaw: any = p.visibility ?? {};
+      const visibility = {
+        showBio: visRaw.showBio !== false,
+        showWebsite: visRaw.showWebsite !== false,
+        showLocation: visRaw.showLocation !== false,
+        showSocials: visRaw.showSocials !== false,
+      };
+
+      const safeGender =
+        p.gender === 'male' || p.gender === 'female' || p.gender === 'diverse'
+          ? p.gender
+          : 'unspecified';
+
       return {
         uid,
         displayName,
-        username: (profile?.username ?? '').toString(),
-        photoURL: profile?.photoURL ?? null,
+        username: (profile?.username ?? p.username ?? '').toString(),
+        photoURL: profile?.photoURL ?? p.photoURL ?? null,
+
+        email: (userDoc?.email ?? null) as any,
+        firstName: (p.firstName ?? null) as any,
+        lastName: (p.lastName ?? null) as any,
+        phoneNumber: (p.phoneNumber ?? userDoc?.phoneNumber ?? null) as any,
+        birthday: (p.birthday ?? null) as any,
+        gender: safeGender,
+        bio: (p.bio ?? null) as any,
+        website: (p.website ?? null) as any,
+        city: (loc.city ?? null) as any,
+        country: (loc.country ?? null) as any,
+        socials,
+        visibility,
+
+        publicBio: (profile?.bio ?? null) as any,
+        publicWebsite: (profile?.website ?? null) as any,
+        publicLocationText: (profile?.locationText ?? null) as any,
+        publicSocials: (profile?.socials ?? null) as any,
+
+        createdAt: (userDoc?.createdAt ?? null) as any,
+        updatedAt: (userDoc?.updatedAt ?? null) as any,
 
         roleLabel: isAdmin ? 'admin' : 'user',
         status,

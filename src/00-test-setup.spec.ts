@@ -1,11 +1,12 @@
-// This spec ensures that src/test.ts is executed when using the experimental
-// @angular/build:unit-test builder + Karma, which may not automatically
-// include src/test.ts as an entrypoint.
+// This spec is kept as a tiny smoke-test that the global test setup ran.
 //
-// It registers global providers (Firebase/Auth/Firestore, Router, HttpTesting, …)
-// via the top-level beforeEach() in src/test.ts.
-
-import './test';
+// IMPORTANT:
+// With @angular/build:unit-test we use:
+//  - options.providersFile: src/test-providers.ts
+//  - options.setupFiles:    src/test-setup.ts
+// Therefore we MUST NOT import the legacy src/test.ts entrypoint here,
+// otherwise Angular will try to create a second testing platform and crash
+// with NG0400 ("A platform with a different configuration has been created").
 
 describe('Global test setup', () => {
   it('should be loaded', () => {

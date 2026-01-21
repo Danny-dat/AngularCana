@@ -1,60 +1,69 @@
-import { Provider, EnvironmentProviders } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { EnvironmentProviders, Provider } from '@angular/core';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { initializeApp } from 'firebase/app';
 import { provideFirebaseApp } from '@angular/fire/app';
-import { getAuth, provideAuth } from '@angular/fire/auth';
-import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
-import { MatBottomSheet } from '@angular/material/bottom-sheet';
+import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
+import { disableNetwork } from 'firebase/firestore';
 import { of } from 'rxjs';
 
-// ⚠️ Dummy-Firebase-Config: keine echten Keys/Netzwerkzugriffe
 const firebaseTestConfig = {
-  apiKey: 'demo',
-  authDomain: 'demo.firebaseapp.com',
-  projectId: 'demo',
-  appId: 'demo',
+  apiKey: 'test',
+  authDomain: 'test.firebaseapp.com',
+  projectId: 'demo-test',
+  appId: '1:1:web:1',
+  messagingSenderId: '1',
 };
 
-// Globale Provider für ALLE Specs (reduziert Boilerplate in .spec.ts)
-const testProviders: Array<Provider | EnvironmentProviders> = [
-  provideNoopAnimations(),
-  provideRouter([]),
+function getOrCreateFirebaseApp() {
+  const apps = getApps();
+  return apps.length ? getApp() : initializeFirebaseApp(firebaseTestConfig);
+}
 
-  // HTTP
+export const TEST_PROVIDERS: Array<Provider | EnvironmentProviders> = [
+  // Router + default ActivatedRoute Stub (bei Bedarf in Specs überschreiben)
+  provideRouter([]),
+  {
+    provide: ActivatedRoute,
+    useValue: {
+      snapshot: {
+        paramMap: convertToParamMap({}),
+        queryParamMap: convertToParamMap({}),
+        params: {},
+        queryParams: {},
+        data: {},
+      },
+      paramMap: of(convertToParamMap({})),
+      queryParamMap: of(convertToParamMap({})),
+      params: of({}),
+      queryParams: of({}),
+      data: of({}),
+    },
+  },
+
+  // Animations (stabiler für Tests)
+  provideNoopAnimations(),
+
+  // HttpClient (für Services wie GeocodingService etc.)
   provideHttpClient(withInterceptorsFromDi()),
   provideHttpClientTesting(),
 
-  // Firebase (AngularFire)
-  provideFirebaseApp(() => initializeApp(firebaseTestConfig)),
+  // AngularFire (Auth/Firestore Tokens, damit DI nicht crasht)
+  provideFirebaseApp(() => getOrCreateFirebaseApp()),
   provideAuth(() => getAuth()),
-  provideFirestore(() => getFirestore()),
-
-  // Material: minimal stubs, damit Services in Unit-Tests nicht crashen
-  {
-    provide: MatSnackBar,
-    useValue: { open: () => void 0 },
-  },
-  {
-    provide: MatDialog,
-    useValue: {
-      open: () => ({ afterClosed: () => of(true) }),
-      closeAll: () => void 0,
-    },
-  },
-  {
-    provide: MatBottomSheet,
-    useValue: {
-      open: () => ({ afterDismissed: () => of(true) }),
-      dismiss: () => void 0,
-    },
-  },
+  provideFirestore(() => {
+    const fs = getFirestore();
+    // verhindert echte Netzwerkzugriffe im Testlauf
+    disableNetwork(fs).catch(() => void 0);
+    return fs;
+  }),
 ];
 
-export default testProviders;
+// IMPORTANT: required by @angular/build:unit-test
+// The providers file MUST export the providers array as a *default export*.
+export default TEST_PROVIDERS;

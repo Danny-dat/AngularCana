@@ -49,6 +49,116 @@
     </mat-card>
   </div>
 
+  <div class="grid-2 profile-grid">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>User Profil – Felder</mat-card-title>
+        <mat-card-subtitle>Wie viele Nutzer haben diese Felder ausgefüllt</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="profileFieldMetrics()" class="mini-table">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Feld</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>User Profil – Sichtbarkeit</mat-card-title>
+        <mat-card-subtitle>Privacy-Toggles (AN = öffentlich erlaubt)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="visibilityMetrics()" class="mini-table">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Option</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Public Profil (tatsächlich sichtbar)</mat-card-title>
+        <mat-card-subtitle>Aggregiert aus <code>profiles_public</code></mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="publicProfileMetrics()" class="mini-table">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Feld</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Gender</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="genderMetrics()" class="mini-table">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Kategorie</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Anzahl</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Freunde</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="friendsMetrics()" class="mini-table">
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef>Metric</th>
+            <td mat-cell *matCellDef="let r">{{ r.label }}</td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="num">Wert</th>
+            <td mat-cell *matCellDef="let r" class="num">{{ r.count }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
   <mat-card class="chart-card">
     <mat-card-header>
       <mat-card-title>Logs pro Tag</mat-card-title>
@@ -73,6 +183,76 @@
         <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
         <span>Lädt…</span>
       </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="chart-card">
+    <mat-card-header>
+      <mat-card-title>Custom Statistik – frei kombinierbar</mat-card-title>
+      <mat-card-subtitle>
+        Direkt aus <code>consumptions</code> (Rohdaten) + optional <code>users.profile</code>
+        (Geschlecht/Ort)
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="pivot-controls">
+        <mat-form-field appearance="outline" class="pivot-field pivot-dims">
+          <mat-label>Dimensionen</mat-label>
+          <mat-select
+            multiple
+            [value]="pivotDimensions()"
+            (selectionChange)="setPivotDimensions($event.value)"
+          >
+            <ng-container *ngFor="let g of pivotDimGroups">
+              <mat-optgroup [label]="g.label">
+                <mat-option *ngFor="let o of g.options" [value]="o.id">{{ o.label }}</mat-option>
+              </mat-optgroup>
+            </ng-container>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="pivot-field">
+          <mat-label>Metrik</mat-label>
+          <mat-select [value]="pivotMetric()" (selectionChange)="pivotMetric.set($event.value)">
+            <mat-option value="logs">Logs</mat-option>
+            <mat-option value="uniqueUsers">Unique User</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="pivot-field">
+          <mat-label>Top</mat-label>
+          <mat-select [value]="pivotTopN()" (selectionChange)="pivotTopN.set($event.value)">
+            <mat-option [value]="10">10</mat-option>
+            <mat-option [value]="25">25</mat-option>
+            <mat-option [value]="50">50</mat-option>
+            <mat-option [value]="100">100</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="loading" *ngIf="pivotLoading()">
+        <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
+        <span>Lade Rohdaten…</span>
+      </div>
+
+      <div class="pivot-chart" *ngIf="pivotRows().length">
+        <canvas #pivotCanvas></canvas>
+      </div>
+
+      <table mat-table [dataSource]="pivotRows()" class="mini-table" *ngIf="pivotRows().length">
+        <ng-container *ngFor="let col of pivotColumns()" [matColumnDef]="col">
+          <th mat-header-cell *matHeaderCellDef>{{ pivotColLabel(col) }}</th>
+          <td mat-cell *matCellDef="let r" [class.num]="col === 'logs' || col === 'uniqueUsers'">
+            {{ r[col] }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="pivotColumns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: pivotColumns()"></tr>
+      </table>
+
+      <div class="empty" *ngIf="!pivotRows().length && !pivotLoading()">—</div>
     </mat-card-content>
   </mat-card>
 

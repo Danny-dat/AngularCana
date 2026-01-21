@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
+import { ThemeService, Theme } from '../../services/theme.service';
+import { UserDataService } from '../../services/user-data.service';
 import { Auth, user, signOut } from '@angular/fire/auth';
 import { NotificationService } from '../../services/notification.service';
 import { AppNotification } from '../../models/notification-module';
@@ -25,6 +27,8 @@ export class AppHeaderComponent {
   private noti = inject(NotificationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private theme = inject(ThemeService);
+  private userData = inject(UserDataService);
 
   // Sound-Service injizieren
   private sound = inject(NotificationSoundService);
@@ -39,6 +43,9 @@ export class AppHeaderComponent {
   notifications$: Observable<AppNotification[]> = this.noti.notifications$;
 
   userDisplayName = '';
+  themeMode: Theme = 'light';
+  private currentUid = '';
+
 
   private unsubNoti?: () => void;
   private subAuth?: Subscription;
@@ -56,8 +63,11 @@ export class AppHeaderComponent {
   }
 
   constructor() {
+    this.themeMode = this.theme.getTheme();
     // 1) Auth-Änderungen -> Anzeigename und Noti-Stream
     this.subAuth = user(this.auth).subscribe((u) => {
+      this.currentUid = u?.uid ?? '';
+
       if (!u) {
         this.userDisplayName = 'User';
         this.unsubNoti?.();
@@ -85,6 +95,11 @@ export class AppHeaderComponent {
           if (!this.auth.currentUser) return;
           const ls = this.getLocalName();
           if (ls) this.userDisplayName = ls;
+        }
+
+        // Theme live-update (andere Tabs)
+        if (ev === null || ev.key === 'pref-theme' || ev.key === 'ui:theme') {
+          this.themeMode = this.theme.getTheme();
         }
       });
 
@@ -159,6 +174,25 @@ export class AppHeaderComponent {
   openSettings(ev?: MouseEvent) {
     ev?.stopPropagation();
     this.showSettings = !this.showSettings;
+  }
+
+  async toggleTheme(ev?: MouseEvent) {
+    ev?.stopPropagation();
+    const cur = this.theme.getTheme();
+    const next: Theme = cur === 'dark' ? 'light' : 'dark';
+
+    this.theme.setTheme(next);
+    this.themeMode = next;
+    try { localStorage.setItem('ui:theme', next); } catch {}
+
+    const uid = this.auth.currentUser?.uid || this.currentUid;
+    if (uid) {
+      try {
+        await this.userData.saveUserData(uid, { theme: next } as any);
+      } catch {
+        // best effort
+      }
+    }
   }
 
   // Öffnen/Schließen inkl. „Klick außerhalb schließt“

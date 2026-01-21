@@ -17,7 +17,7 @@ import type { AdSlotConfig } from '../../models/ad.types';
 export class AdSlotComponent {
   private ads = inject(AdService);
 
-  private readonly DEBUG = false;
+  private readonly DEBUG = true;
 
   _slotId = '';
   vm$: Observable<AdSlotConfig | undefined> = of(undefined);

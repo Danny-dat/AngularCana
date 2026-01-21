@@ -7,6 +7,7 @@
       Zurück zur Liste
     </a>
 
+    <!-- Header / Profilkarte -->
     <mat-card class="card">
       <div class="head">
 
@@ -25,7 +26,7 @@
 
           <div class="sub">
             @if (vm.username && vm.username !== vm.displayName) {
-              <span>{{ vm.username }}</span>
+              <span>@{{ vm.username }}</span>
             }
             <code>{{ vm.uid }}</code>
           </div>
@@ -41,10 +42,25 @@
 
       <div class="grid">
         <div class="kv">
+          <div class="k">E-Mail</div>
+          <div class="v">{{ vm.email || '—' }}</div>
+        </div>
+
+        <div class="kv">
           <div class="k">Letzte Aktivität</div>
           <div class="v">
             {{ vm.lastActiveAt ? (vm.lastActiveAt.toDate?.() || vm.lastActiveAt) : '—' }}
           </div>
+        </div>
+
+        <div class="kv">
+          <div class="k">Erstellt</div>
+          <div class="v">{{ vm.createdAt ? (vm.createdAt.toDate?.() || vm.createdAt) : '—' }}</div>
+        </div>
+
+        <div class="kv">
+          <div class="k">Aktualisiert</div>
+          <div class="v">{{ vm.updatedAt ? (vm.updatedAt.toDate?.() || vm.updatedAt) : '—' }}</div>
         </div>
 
         <div class="kv">
@@ -54,276 +70,390 @@
 
         <div class="kv">
           <div class="k">Deleted At</div>
-          <div class="v">
-            {{ vm.deletedAt ? (vm.deletedAt.toDate?.() || vm.deletedAt) : '—' }}
-          </div>
+          <div class="v">{{ vm.deletedAt ? (vm.deletedAt.toDate?.() || vm.deletedAt) : '—' }}</div>
         </div>
       </div>
     </mat-card>
 
-    <mat-card class="card">
-      <h3>Profil bearbeiten</h3>
-      <p class="hint">
-        Hinweis: Die Login-E-Mail kann ein Admin clientseitig nicht ändern. Hier bearbeitest du die
-        Profilfelder in Firestore + das öffentliche Profil.
-      </p>
+    <!-- Tabs -->
+    <mat-tab-group class="tabs" animationDuration="0ms">
 
-      <div class="form" [formGroup]="editForm">
-        <div class="form-grid">
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Name (Anzeigename/Username)</mat-label>
-            <input matInput formControlName="displayName" placeholder="z.B. canna_ole" />
-            @if (editForm.controls.displayName.hasError('pattern')) {
-              <mat-error>Nur A–Z/a–z, 0–9 und _ (3–20)</mat-error>
-            }
-            @if (editForm.controls.displayName.hasError('taken')) {
-              <mat-error>Name ist bereits vergeben</mat-error>
-            }
-          </mat-form-field>
-        </div>
+      <!-- Übersicht -->
+      <mat-tab label="Übersicht">
+        <mat-card class="card tab-card">
+          <h3>Übersicht</h3>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Vorname</mat-label>
-            <input matInput formControlName="firstName" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Nachname</mat-label>
-            <input matInput formControlName="lastName" />
-          </mat-form-field>
-        </div>
-
-        <div class="form-grid">
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>E-Mail (Snapshot)</mat-label>
-            <input matInput formControlName="email" />
-          </mat-form-field>
-        </div>
-
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Telefon</mat-label>
-            <input matInput formControlName="phoneNumber" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Geburtstag</mat-label>
-            <input matInput type="date" formControlName="birthday" />
-          </mat-form-field>
-        </div>
-
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Geschlecht</mat-label>
-            <mat-select formControlName="gender">
-              <mat-option value="unspecified">Keine Angabe</mat-option>
-              <mat-option value="male">Männlich</mat-option>
-              <mat-option value="female">Weiblich</mat-option>
-              <mat-option value="diverse">Divers</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <div class="avatar-field">
-            <div class="avatar-label">Avatar</div>
-            <div class="avatar-grid">
-              <button type="button"
-                      class="avatar-tile"
-                      [class.active]="isAvatarSelected(null)"
-                      (click)="selectAvatar(null)"
-                      aria-label="Kein Avatar">
-                <span class="avatar-none">—</span>
-              </button>
-
-              @for (a of avatarPresets; track a.id) {
-                <button type="button"
-                        class="avatar-tile"
-                        [class.active]="isAvatarSelected(a.path)"
-                        (click)="selectAvatar(a.path)"
-                        [attr.aria-label]="a.label">
-                  <img [src]="a.path" alt="" loading="lazy" />
-                </button>
-              }
+          <div class="sections">
+            <div class="section">
+              <div class="section-title">Profil</div>
+              <div class="kv-grid">
+                <div class="kv">
+                  <div class="k">Vorname</div>
+                  <div class="v">{{ vm.firstName || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Nachname</div>
+                  <div class="v">{{ vm.lastName || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Telefon</div>
+                  <div class="v">{{ vm.phoneNumber || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Geburtstag</div>
+                  <div class="v">{{ vm.birthday || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Geschlecht</div>
+                  <div class="v">{{ vm.gender || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Ort</div>
+                  <div class="v">{{ (vm.city || vm.country) ? ((vm.city || '') + (vm.city && vm.country ? ', ' : '') + (vm.country || '')) : '—' }}</div>
+                </div>
+              </div>
             </div>
-            <div class="avatar-hint">Spark Plan: Avatar nur aus Presets (assets).</div>
+
+            <mat-divider></mat-divider>
+
+            <div class="section">
+              <div class="section-title">Profil-Content</div>
+              <div class="kv-grid">
+                <div class="kv">
+                  <div class="k">Bio</div>
+                  <div class="v">{{ vm.bio || '—' }}</div>
+                  <div class="mini" *ngIf="vm.visibility.showBio">Öffentlich: {{ vm.publicBio || '—' }}</div>
+                  <div class="mini" *ngIf="!vm.visibility.showBio">Öffentlich: Aus</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Website</div>
+                  <div class="v">{{ vm.website || '—' }}</div>
+                  <div class="mini" *ngIf="vm.visibility.showWebsite">Öffentlich: {{ vm.publicWebsite || '—' }}</div>
+                  <div class="mini" *ngIf="!vm.visibility.showWebsite">Öffentlich: Aus</div>
+                </div>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="section">
+              <div class="section-title">Social Links</div>
+              <div class="kv-grid">
+                <div class="kv">
+                  <div class="k">Instagram</div>
+                  <div class="v">{{ vm.socials?.instagram || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">TikTok</div>
+                  <div class="v">{{ vm.socials?.tiktok || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">YouTube</div>
+                  <div class="v">{{ vm.socials?.youtube || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Discord</div>
+                  <div class="v">{{ vm.socials?.discord || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Telegram</div>
+                  <div class="v">{{ vm.socials?.telegram || '—' }}</div>
+                </div>
+                <div class="kv">
+                  <div class="k">Öffentlich</div>
+                  <div class="v">{{ vm.visibility.showSocials ? 'Ja' : 'Nein' }}</div>
+                  <div class="mini" *ngIf="vm.visibility.showSocials">Öffentlich gespeichert: {{ vm.publicSocials ? 'Ja' : '—' }}</div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </mat-card>
+      </mat-tab>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Bio</mat-label>
-            <textarea matInput rows="4" formControlName="bio"></textarea>
-          </mat-form-field>
-        </div>
+      <!-- Bearbeiten -->
+      <mat-tab label="Profil bearbeiten">
+        <mat-card class="card tab-card">
+          <h3>Profil bearbeiten</h3>
+          <p class="hint">
+            Hinweis: Die Login-E-Mail kann ein Admin clientseitig nicht ändern. Hier bearbeitest du die
+            Profilfelder in Firestore + das öffentliche Profil.
+          </p>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Website</mat-label>
-            <input matInput formControlName="website" placeholder="deine-seite.de" />
-          </mat-form-field>
+          <div class="form" [formGroup]="editForm">
+            <div class="section">
+              <div class="section-title">Name & Kontakt</div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Stadt</mat-label>
-            <input matInput formControlName="city" />
-          </mat-form-field>
-        </div>
+              <div class="form-grid">
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Name (Anzeigename/Username)</mat-label>
+                  <input matInput formControlName="displayName" placeholder="z.B. canna_ole" />
+                  @if (editForm.controls.displayName.hasError('pattern')) {
+                    <mat-error>Nur A–Z/a–z, 0–9 und _ (3–20)</mat-error>
+                  }
+                  @if (editForm.controls.displayName.hasError('taken')) {
+                    <mat-error>Name ist bereits vergeben</mat-error>
+                  }
+                </mat-form-field>
+              </div>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Land</mat-label>
-            <input matInput formControlName="country" />
-          </mat-form-field>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Vorname</mat-label>
+                  <input matInput formControlName="firstName" />
+                </mat-form-field>
 
-          <div></div>
-        </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>Nachname</mat-label>
+                  <input matInput formControlName="lastName" />
+                </mat-form-field>
+              </div>
 
-        <mat-divider></mat-divider>
-        <h3 style="margin-top: 12px;">Social Links</h3>
+              <div class="form-grid">
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>E-Mail (Snapshot)</mat-label>
+                  <input matInput formControlName="email" />
+                </mat-form-field>
+              </div>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Instagram</mat-label>
-            <input matInput formControlName="instagram" />
-          </mat-form-field>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Telefon</mat-label>
+                  <input matInput formControlName="phoneNumber" />
+                </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>TikTok</mat-label>
-            <input matInput formControlName="tiktok" />
-          </mat-form-field>
-        </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>Geburtstag</mat-label>
+                  <input matInput type="date" formControlName="birthday" />
+                </mat-form-field>
+              </div>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>YouTube</mat-label>
-            <input matInput formControlName="youtube" />
-          </mat-form-field>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Geschlecht</mat-label>
+                  <mat-select formControlName="gender">
+                    <mat-option value="unspecified">Keine Angabe</mat-option>
+                    <mat-option value="male">Männlich</mat-option>
+                    <mat-option value="female">Weiblich</mat-option>
+                    <mat-option value="diverse">Divers</mat-option>
+                  </mat-select>
+                </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Discord</mat-label>
-            <input matInput formControlName="discord" />
-          </mat-form-field>
-        </div>
+                <div class="avatar-field">
+                  <div class="avatar-label">Avatar</div>
+                  <div class="avatar-grid">
+                    <button type="button"
+                            class="avatar-tile"
+                            [class.active]="isAvatarSelected(null)"
+                            (click)="selectAvatar(null)"
+                            aria-label="Kein Avatar">
+                      <span class="avatar-none">—</span>
+                    </button>
 
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Telegram</mat-label>
-            <input matInput formControlName="telegram" />
-          </mat-form-field>
-          <div></div>
-        </div>
+                    @for (a of avatarPresets; track a.id) {
+                      <button type="button"
+                              class="avatar-tile"
+                              [class.active]="isAvatarSelected(a.path)"
+                              (click)="selectAvatar(a.path)"
+                              [attr.aria-label]="a.label">
+                        <img [src]="a.path" alt="" loading="lazy" />
+                      </button>
+                    }
+                  </div>
+                  <div class="avatar-hint">Spark Plan: Avatar nur aus Presets (assets).</div>
+                </div>
+              </div>
+            </div>
 
-        <mat-divider></mat-divider>
-        <h3 style="margin-top: 12px;">Öffentlichkeit</h3>
-        <div class="toggles">
-          <mat-slide-toggle formControlName="showBio">Bio öffentlich</mat-slide-toggle>
-          <mat-slide-toggle formControlName="showWebsite">Website öffentlich</mat-slide-toggle>
-          <mat-slide-toggle formControlName="showLocation">Ort öffentlich</mat-slide-toggle>
-          <mat-slide-toggle formControlName="showSocials">Social Links öffentlich</mat-slide-toggle>
-        </div>
-      </div>
+            <mat-divider></mat-divider>
 
-      <div class="btns" style="margin-top: 12px;">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="saveProfileAdmin()"
-          [disabled]="editForm.invalid || editForm.pristine || savingProfile()"
-        >
-          <mat-icon>save</mat-icon>
-          Speichern
-        </button>
-      </div>
-    </mat-card>
+            <div class="section">
+              <div class="section-title">Profil-Content</div>
 
-    <mat-card class="card actions">
-      <h3>Aktionen</h3>
+              <div class="form-grid">
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Bio</mat-label>
+                  <textarea matInput rows="4" formControlName="bio"></textarea>
+                </mat-form-field>
+              </div>
 
-      <p class="hint">
-        Status: <b>{{ vm.statusLabel }}</b>
-        @if (vm.isOwner) { · <b>OWNER (geschützt)</b> }
-        @if (vm.lockUntil) {
-          · bis: <b>{{ vm.lockUntil.toDate?.() || vm.lockUntil }}</b>
-        }
-      </p>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Website</mat-label>
+                  <input matInput formControlName="website" placeholder="deine-seite.de" />
+                </mat-form-field>
 
-      <div class="btns">
-        <button
-          mat-stroked-button
-          color="warn"
-          [disabled]="vm.isOwner"
-          (click)="onBan(vm.uid)"
-        >
-          <mat-icon>gavel</mat-icon>
-          Bannen
-        </button>
+                <mat-form-field appearance="outline">
+                  <mat-label>Stadt</mat-label>
+                  <input matInput formControlName="city" />
+                </mat-form-field>
+              </div>
 
-        <button
-          mat-stroked-button
-          [disabled]="vm.isOwner"
-          (click)="onLock(vm.uid)"
-        >
-          <mat-icon>lock_clock</mat-icon>
-          Sperren
-        </button>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Land</mat-label>
+                  <input matInput formControlName="country" />
+                </mat-form-field>
+                <div></div>
+              </div>
+            </div>
 
-        <button
-          mat-stroked-button
-          [disabled]="vm.isOwner || !vm.ban"
-          (click)="onUnlock(vm.uid)"
-        >
-          <mat-icon>lock_open</mat-icon>
-          Entsperren
-        </button>
+            <mat-divider></mat-divider>
 
-        <button
-          mat-stroked-button
-          color="warn"
-          [disabled]="vm.isOwner || vm.status === 'deleted'"
-          (click)="onSoftDelete(vm.uid)"
-        >
-          <mat-icon>delete</mat-icon>
-          Soft Delete
-        </button>
+            <div class="section">
+              <div class="section-title">Social Links</div>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Instagram</mat-label>
+                  <input matInput formControlName="instagram" />
+                </mat-form-field>
 
-        <button
-          mat-stroked-button
-          [disabled]="vm.status !== 'deleted'"
-          (click)="onRestore(vm.uid)"
-        >
-          <mat-icon>restore</mat-icon>
-          Restore
-        </button>
-      </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>TikTok</mat-label>
+                  <input matInput formControlName="tiktok" />
+                </mat-form-field>
+              </div>
 
-      <mat-divider></mat-divider>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>YouTube</mat-label>
+                  <input matInput formControlName="youtube" />
+                </mat-form-field>
 
-      <h3 style="margin-top: 12px;">Rollen</h3>
-      @if (!vm.canManageAdmins) {
-        <p class="hint">Hinweis: Admin-Rollen können nur vom Owner geändert werden.</p>
-      } @else {
-        <div class="btns" style="margin-top: 8px;">
-          @if (vm.roleLabel === 'user') {
+                <mat-form-field appearance="outline">
+                  <mat-label>Discord</mat-label>
+                  <input matInput formControlName="discord" />
+                </mat-form-field>
+              </div>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Telegram</mat-label>
+                  <input matInput formControlName="telegram" />
+                </mat-form-field>
+                <div></div>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="section">
+              <div class="section-title">Sichtbarkeit (öffentliches Profil)</div>
+              <div class="toggles">
+                <mat-slide-toggle formControlName="showBio">Bio öffentlich</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showWebsite">Website öffentlich</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showLocation">Ort öffentlich</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showSocials">Social Links öffentlich</mat-slide-toggle>
+              </div>
+            </div>
+          </div>
+
+          <div class="btns" style="margin-top: 12px;">
             <button
-              mat-stroked-button
-              [disabled]="vm.isOwner"
-              (click)="onGrantAdmin(vm.uid)"
+              mat-raised-button
+              color="primary"
+              (click)="saveProfileAdmin()"
+              [disabled]="editForm.invalid || editForm.pristine || savingProfile()"
             >
-              <mat-icon>admin_panel_settings</mat-icon>
-              Zum Admin machen
+              <mat-icon>save</mat-icon>
+              Speichern
             </button>
-          } @else {
+          </div>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Moderation -->
+      <mat-tab label="Moderation">
+        <mat-card class="card actions tab-card">
+          <h3>Aktionen</h3>
+
+          <p class="hint">
+            Status: <b>{{ vm.statusLabel }}</b>
+            @if (vm.isOwner) { · <b>OWNER (geschützt)</b> }
+            @if (vm.lockUntil) {
+              · bis: <b>{{ vm.lockUntil.toDate?.() || vm.lockUntil }}</b>
+            }
+          </p>
+
+          <div class="btns">
             <button
               mat-stroked-button
               color="warn"
               [disabled]="vm.isOwner"
-              (click)="onRevokeAdmin(vm.uid)"
+              (click)="onBan(vm.uid)"
             >
-              <mat-icon>remove_moderator</mat-icon>
-              Admin entfernen
+              <mat-icon>gavel</mat-icon>
+              Bannen
             </button>
+
+            <button
+              mat-stroked-button
+              [disabled]="vm.isOwner"
+              (click)="onLock(vm.uid)"
+            >
+              <mat-icon>lock_clock</mat-icon>
+              Sperren
+            </button>
+
+            <button
+              mat-stroked-button
+              [disabled]="vm.isOwner || !vm.ban"
+              (click)="onUnlock(vm.uid)"
+            >
+              <mat-icon>lock_open</mat-icon>
+              Entsperren
+            </button>
+
+            <button
+              mat-stroked-button
+              color="warn"
+              [disabled]="vm.isOwner || vm.status === 'deleted'"
+              (click)="onSoftDelete(vm.uid)"
+            >
+              <mat-icon>delete</mat-icon>
+              Soft Delete
+            </button>
+
+            <button
+              mat-stroked-button
+              [disabled]="vm.status !== 'deleted'"
+              (click)="onRestore(vm.uid)"
+            >
+              <mat-icon>restore</mat-icon>
+              Restore
+            </button>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <h3 style="margin-top: 12px;">Rollen</h3>
+          @if (!vm.canManageAdmins) {
+            <p class="hint">Hinweis: Admin-Rollen können nur vom Owner geändert werden.</p>
+          } @else {
+            <div class="btns" style="margin-top: 8px;">
+              @if (vm.roleLabel === 'user') {
+                <button
+                  mat-stroked-button
+                  [disabled]="vm.isOwner"
+                  (click)="onGrantAdmin(vm.uid)"
+                >
+                  <mat-icon>admin_panel_settings</mat-icon>
+                  Zum Admin machen
+                </button>
+              } @else {
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  [disabled]="vm.isOwner"
+                  (click)="onRevokeAdmin(vm.uid)"
+                >
+                  <mat-icon>remove_moderator</mat-icon>
+                  Admin entfernen
+                </button>
+              }
+            </div>
           }
-        </div>
-      }
-    </mat-card>
+        </mat-card>
+      </mat-tab>
+    </mat-tab-group>
   </div>
 }

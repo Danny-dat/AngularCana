@@ -25,7 +25,9 @@ import { Firestore } from '@angular/fire/firestore';
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
 import { disableNetwork, getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+
 declare const jasmine: any;
+declare const beforeEach: any;
 
 // ✅ löscht gespeicherte Jasmine-UI-Optionen (damit Checkbox nicht direkt wieder an ist)
 try {
@@ -59,12 +61,23 @@ const fs = getFirestore(app);
 // keine echten Netzwerk-Calls in Unit-Tests
 disableNetwork(fs).catch(() => void 0);
 
-const __g: any = globalThis as any;
-if (!__g.__cannatrackTestEnvInited) {
-  __g.__cannatrackTestEnvInited = true;
-  getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
+// The experimental Angular "unit-test" builder may initialize the platform itself.
+// If we try to init again (with a different config), Angular throws NG0400.
+// So: attempt init once and ignore the "different configuration" error if already initialized.
+try {
+  getTestBed().initTestEnvironment(
+    BrowserDynamicTestingModule,
+    platformBrowserDynamicTesting(),
+  );
+} catch (err: any) {
+  const msg = String(err?.message ?? err);
+  if (
+    !msg.includes('NG0400') &&
+    !msg.includes('different configuration') &&
+    !msg.includes('A platform with a different configuration')
+  ) {
+    throw err;
+  }
 }
 
 // ✅ nach Angular Test-Env init nochmal erzwingen
