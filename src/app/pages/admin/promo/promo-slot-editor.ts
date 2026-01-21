@@ -118,7 +118,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       this.current = {
         linkEnabled: d.linkEnabled ?? true,
         linkUrl: d.linkUrl ?? null,
-        activeExt: (d.activeExt ?? 'webp') as any,
+        activeExt: (d.activeExt ?? 'svg') as any,
         updatedAt: d.updatedAt ?? null,
       };
 
@@ -140,7 +140,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
 
   serverTargetPath(): string {
     const ext = this.nextExt();
-    return `/media/${this.slotId}/banner.${ext}`;
+    return `/assets/promo/${this.slotId}/banner.${ext}`;
   }
 
   assetsTargetPath(): string {

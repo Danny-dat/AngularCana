@@ -23,7 +23,7 @@ export class AdService {
   private readonly slotIds = ['dashboard-werbung1', 'login-werbung1', 'thc-werbung1'] as const;
 
   /** Override-Basis (z. B. vom Server gemountet) */
-  private readonly OVERRIDE_BASE = '/media';
+  private readonly OVERRIDE_BASE = '/assets/promo';
 
   /** Format-Reihenfolge für Overrides */
   // webp zuerst (sauberer Server-Standard), svg als kompatibles Fallback
@@ -42,7 +42,7 @@ export class AdService {
       alt: id,
       linkEnabled: true,
       linkUrl: null,
-      activeExt: 'webp',
+      activeExt: 'svg',
     };
   }
 
