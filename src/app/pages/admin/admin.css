@@ -1,58 +1,45 @@
 /* ==========================================================================
-   Admin Layout (Enterprise)
-   - no dependency on body padding
-   - readable on small screens (auto-collapsed)
-   ==========================================================================
-*/
+   Admin Layout (Sidenav + Content)
+   ========================================================================== */
 
 :host {
   display: block;
-
-  /* Local tokens */
-  --side-expanded: 252px;
-  --side-collapsed: 96px;
-  --side-pad: 12px;
-  --item-h: 48px;
-}
-
-/* Card-like shell inside the normal app container */
-.shell {
-  height: calc(100dvh - 180px);
-  min-height: 620px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
+  height: calc(100vh - 40px); /* wegen body padding: 20px oben + 20px unten */
   overflow: hidden;
-  background: var(--surface-color);
-  box-shadow: var(--shadow-e1);
 }
 
-/* Material Drawer: prevent inner scroll, content scrolls */
+/* Container füllt jetzt den Host komplett */
+.shell {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Material Drawer: verhindert den hässlichen Container-Scroll */
 :host ::ng-deep .mat-drawer-inner-container {
   overflow: hidden !important;
 }
 
+/* Sidenav + Content über volle Höhe */
 .side {
   height: 100%;
   width: var(--side-expanded);
   padding: var(--side-pad);
   box-sizing: border-box;
   transition: width 160ms ease;
-  border-right: 1px solid var(--border-color);
 }
 
 .side.collapsed {
   width: var(--side-collapsed);
-  padding: 10px 8px;
 }
 
 mat-sidenav-content {
   height: 100%;
-  overflow: hidden;
-  display: flex;
+  overflow: hidden;          /* <-- wichtig: nicht auto */
+  display: flex;             /* Layout als Column */
   flex-direction: column;
 }
 
-/* Sidebar content */
+/* Sidebar: innen fix, nur Menü scrollt */
 .side-inner {
   height: 100%;
   display: flex;
@@ -65,41 +52,35 @@ mat-sidenav-content {
   flex: 1 1 auto;
   overflow: auto;
   padding-right: 4px;
+
   scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.25) transparent;
 }
 
 .nav-scroll::-webkit-scrollbar { width: 8px; }
 .nav-scroll::-webkit-scrollbar-track { background: transparent; }
 .nav-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text-muted-color) 30%, transparent);
+  background: rgba(0,0,0,0.25);
   border-radius: 999px;
 }
 
-/* Brand */
+/* ==========================================================================
+   Brand/Header oben
+   ========================================================================== */
+
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 6px;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 13px;
 }
 
+/* ==========================================================================
+   Menü (Material List Items)
+   ========================================================================== */
 
-.brand-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.side.collapsed .brand {
-  justify-content: center;
-  padding-inline: 0;
-}
-.side.collapsed .brand-text {
-  display: none;
-}
-/* Menu */
 .menu {
   display: flex;
   flex-direction: column;
@@ -110,23 +91,23 @@ mat-sidenav-content {
 .menu-item {
   text-decoration: none !important;
   color: inherit !important;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--radius);
 }
 
 :host ::ng-deep a.menu-item.mat-mdc-list-item.mdc-list-item {
   min-height: var(--item-h);
   height: var(--item-h);
   padding-inline: 12px;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--radius);
 }
 
 .menu-item:hover {
-  background: color-mix(in srgb, var(--text-color) 6%, transparent);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .menu-item.active {
-  background: color-mix(in srgb, var(--text-color) 10%, transparent);
-  font-weight: 700;
+  background: rgba(0, 0, 0, 0.07);
+  font-weight: 600;
   position: relative;
 }
 
@@ -138,7 +119,7 @@ mat-sidenav-content {
   bottom: 8px;
   width: 3px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--accent) 75%, transparent);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .menu mat-icon {
@@ -157,12 +138,16 @@ mat-sidenav-content {
   font-size: 13px;
 }
 
-/* Collapsed */
+/* ==========================================================================
+   Collapsed Mode: Icons zentrieren
+   ========================================================================== */
+
 :host ::ng-deep .side.collapsed a.menu-item.mat-mdc-list-item.mdc-list-item {
   justify-content: center;
   padding-inline: 0;
-  width: 60px;
-  min-width: 60px;
+
+  width: 52px;
+  min-width: 52px;
   height: 52px;
   min-height: 52px;
   border-radius: 14px;
@@ -172,7 +157,10 @@ mat-sidenav-content {
   margin-right: 0 !important;
 }
 
-/* Footer */
+/* ==========================================================================
+   Sidebar Footer: Collapse Button unten
+   ========================================================================== */
+
 .side-footer {
   margin-top: 8px;
   display: flex;
@@ -191,46 +179,34 @@ mat-sidenav-content {
   gap: 8px;
 }
 
+/* collapsed: kompakter + zentriert */
 .side.collapsed .collapse-btn {
   justify-content: center;
-  width: 60px;
-  min-width: 60px;
+  width: 52px;         /* wie deine Menü-Buttons */
+  min-width: 52px;
   padding: 0;
 }
 
-/* Content area */
+/* ==========================================================================
+   Topbar + Content
+   ========================================================================== */
+
+.topbar {
+  flex: 0 0 auto;
+}
+
 .content {
-  flex: 1 1 auto;
-  overflow: auto;
+  flex: 1 1 auto;            /* nimmt Resthöhe */
+  overflow: auto;            /* <-- NUR hier scrollen */
   padding: 16px;
 }
 
-@media (max-width: 980px) {
-  /* On smaller screens: icons-only sidebar to preserve content width */
-  .side {
-    width: var(--side-collapsed);
-  }
-  .brand-text {
-    display: none;
-  }
+.hide-desktop {
+  display: none;
 }
 
-@media (max-width: 640px) {
-  .shell {
-    height: auto;
-    min-height: 0;
+@media (max-width: 900px) {
+  .hide-desktop {
+    display: inline-flex;
   }
-  .content {
-    padding: 12px;
-  }
-}
-
-
-/* Collapsed toggle button */
-:host ::ng-deep .collapse-icon.mat-mdc-icon-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
 }

@@ -12,17 +12,15 @@
 
 .muted {
   margin: 4px 0 0;
-  color: var(--text-muted-color);
+  opacity: 0.75;
 }
 
 .card {
   margin-top: 16px;
   padding: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  background: var(--surface-color);
-  color: var(--text-color);
-  box-shadow: var(--shadow-e1);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  background: #fff;
 }
 
 .card-header {
@@ -76,7 +74,7 @@
   gap: 6px;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  border: 1px solid rgba(0,0,0,0.12);
   font-size: 12px;
   margin-right: 6px;
 }
@@ -85,7 +83,7 @@
   display: inline-flex;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  border: 1px solid rgba(0,0,0,0.12);
   font-size: 12px;
   text-transform: uppercase;
 }
@@ -101,4 +99,4 @@
   opacity: 0.75;
 }
 
-code { font-size: 12px; color: var(--text-muted-color); }
+code { font-size: 12px; opacity: 0.85; }

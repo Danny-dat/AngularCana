@@ -96,16 +96,4 @@ return query(
   eventSuggestionsOpenCount$ = this.count$(() =>
     query(collection(this.firestore, 'event_suggestions'), where('status', '==', 'open'))
   );
-
-  // =========================
-  // Promo / Werbung (adSlots)
-  // =========================
-
-  /** Anzahl konfigurierter Promo-Slots (Docs in adSlots) */
-  promoSlotsCount$ = this.count$(() => query(collection(this.firestore, 'adSlots')));
-
-  /** Anzahl aktiv geschalteter Promo-Slots (linkEnabled == true) */
-  promoSlotsActiveCount$ = this.count$(() =>
-    query(collection(this.firestore, 'adSlots'), where('linkEnabled', '==', true))
-  );
 }

@@ -72,12 +72,10 @@
 
     @for (a of (activity$ | async) ?? []; track a.id) {
       <div class="row">
-        <mat-icon class="row-icon">{{ a.icon }}</mat-icon>
-        <div class="row-main">
-          <div class="title">{{ a.title }}</div>
-          <div class="meta" *ngIf="a.detail">{{ a.detail }}</div>
+        <div>
+          <div class="title">{{ a.text }}</div>
+          <div class="meta">{{ a.when }}</div>
         </div>
-        <div class="row-when">{{ a.when }}</div>
       </div>
     }
   </mat-card>

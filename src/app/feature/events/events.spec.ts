@@ -14,6 +14,7 @@ describe('Events', () => {
 
     fixture = TestBed.createComponent(Events);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -1,5 +1,6 @@
 .page { padding: 16px; }
 .back { display:inline-flex; align-items:center; gap:8px; text-decoration:none; margin-bottom: 12px; }
+.top { display:grid; grid-template-columns: 1.4fr .9fr; gap: 16px; align-items: start; }
 .card { border-radius: 12px; overflow: hidden; }
 .head { display:flex; gap: 12px; padding: 16px; align-items: center; }
 .avatar { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; display:flex; align-items:center; justify-content:center; }
@@ -13,18 +14,9 @@
 .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
 .kv .k { font-size: 12px; opacity: .7; }
 .kv .v { margin-top: 2px; }
-.mini { font-size: 12px; opacity: .7; margin-top: 6px; }
 .actions { padding: 16px; }
 .hint { font-size: 12px; opacity: .7; margin-top: 4px; }
 .btns { display:grid; grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
-
-.tabs { margin-top: 12px; }
-.tab-card { padding: 16px; margin-top: 12px; }
-
-.sections { display: grid; gap: 12px; }
-.section-title { font-weight: 700; margin-bottom: 8px; }
-
-.kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .form { padding: 8px 16px 0 16px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
@@ -66,7 +58,7 @@
 
 @media (max-width: 700px) {
   .grid { grid-template-columns: 1fr; }
-  .kv-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .toggles { grid-template-columns: 1fr; }
 }
+@media (max-width: 900px) { .top { grid-template-columns: 1fr; } }

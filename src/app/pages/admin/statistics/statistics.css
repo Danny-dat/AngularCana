@@ -78,39 +78,6 @@
   margin-bottom: 12px;
 }
 
-.pivot-controls {
-  display: grid;
-  grid-template-columns: 1.6fr .7fr .5fr;
-  gap: 12px;
-  align-items: end;
-  margin-bottom: 10px;
-}
-
-.pivot-field {
-  min-width: 160px;
-}
-
-.pivot-dims {
-  min-width: 260px;
-}
-
-.pivot-chart {
-  height: 320px;
-  margin: 10px 0 8px;
-}
-
-@media (max-width: 820px) {
-  .pivot-controls {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-  .pivot-field,
-  .pivot-dims {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
 .loading {
   display: flex;
   gap: 10px;
@@ -123,10 +90,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 12px;
-}
-
-.profile-grid {
-  margin-bottom: 12px;
 }
 
 .recent-card {

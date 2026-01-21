@@ -99,14 +99,14 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   current: { linkEnabled: boolean; linkUrl: string | null; activeExt: AdSlotConfig['activeExt']; updatedAt?: string | null } = {
     linkEnabled: true,
     linkUrl: null,
-    activeExt: 'webp',
+    activeExt: 'svg',
     updatedAt: null,
   };
 
   ngOnInit(): void {
     if (!this.afs) {
       // z.B. in Unit-Tests ohne AngularFire Provider
-      this.doc$ = of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any);
+      this.doc$ = of({ linkEnabled: true, linkUrl: null, activeExt: 'svg', updatedAt: null } as any);
       this.sub = this.doc$.subscribe();
       return;
     }
@@ -118,7 +118,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       this.current = {
         linkEnabled: d.linkEnabled ?? true,
         linkUrl: d.linkUrl ?? null,
-        activeExt: (d.activeExt ?? 'webp') as any,
+        activeExt: (d.activeExt ?? 'svg') as any,
         updatedAt: d.updatedAt ?? null,
       };
 
@@ -140,7 +140,8 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
 
   serverTargetPath(): string {
     const ext = this.nextExt();
-    return `/media/${this.slotId}/banner.${ext}`;
+    // FTP Ziel: Datei auf dem Webserver ueberschreiben (keine neuen Namen → kein "zugemuellen")
+    return `/assets/promo/${this.slotId}/banner.${ext}`;
   }
 
   assetsTargetPath(): string {
@@ -155,7 +156,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       // SVG bleibt SVG; alles andere -> WEBP (sauberer Standard)
       return this.selectedFile.type === 'image/svg+xml' ? 'svg' : 'webp';
     }
-    return this.current.activeExt ?? 'webp';
+    return this.current.activeExt ?? 'svg';
   }
 
   onFileSelected(ev: Event) {
@@ -232,8 +233,9 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
 
       // optional: nach speichern selection zuruecksetzen
       this.resetSelection();
-    } catch {
-      this.snack?.open('Speichern fehlgeschlagen ❌', 'OK', { duration: 3000 });
+    } catch (e: any) {
+      const msg = (e?.code || e?.message) ? ` (${e?.code || e?.message})` : '';
+      this.snack?.open(`Speichern fehlgeschlagen ❌${msg}`, 'OK', { duration: 3500 });
     }
   }
 
@@ -275,17 +277,17 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   private slotDoc$(): Observable<{ linkEnabled: boolean; linkUrl: string | null; activeExt: AdSlotConfig['activeExt']; updatedAt?: string | null }> {
     const afs = this.afs;
     if (!afs) {
-      return of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any);
+      return of({ linkEnabled: true, linkUrl: null, activeExt: 'svg', updatedAt: null } as any);
     }
     const r = doc(afs, 'adSlots', this.slotId);
     return (docData(r) as Observable<AdSlotDoc>).pipe(
       map((d) => ({
         linkEnabled: typeof d?.linkEnabled === 'boolean' ? d.linkEnabled : true,
         linkUrl: (d?.linkUrl ?? null) as string | null,
-        activeExt: (d?.activeExt ?? 'webp') as any,
+        activeExt: (d?.activeExt ?? 'svg') as any,
         updatedAt: this.toIsoSafe(d?.updatedAt) ?? null,
       })),
-      catchError(() => of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any))
+      catchError(() => of({ linkEnabled: true, linkUrl: null, activeExt: 'svg', updatedAt: null } as any))
     );
   }
 

@@ -21,25 +21,6 @@ table {
   margin-top: 16px;
 }
 
-.tabs {
-  margin-top: 8px;
-}
-
-.count {
-  font-weight: 600;
-  opacity: 0.75;
-  margin-left: 6px;
-}
-
-.tab-content table {
-  margin-top: 12px;
-}
-
-.empty {
-  padding: 16px;
-  opacity: 0.75;
-}
-
 .name {
   font-weight: 500;
   text-decoration: none;

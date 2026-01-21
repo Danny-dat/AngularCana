@@ -1,16 +1,20 @@
 /* ===========================
-   CannaComponent Styles (Enterprise / Theme-aware)
+   CannaComponent Styles
+   (Dropdown Tracker)
    =========================== */
-
+/*
+  Karten-Layout für den Tracker.
+  Die Komponente ist jetzt selbst für ihr Aussehen als "Karte" verantwortlich.
+*/
 .tracker-container.card {
   padding: 16px 18px;
   border-radius: 14px;
   background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-e1);
+  box-shadow: 0 10px 24px var(--shadow-color);
   color: var(--text-color);
 }
 
+/* Überschriften-Layout in der Karte */
 .tracker-container h3 {
   border-bottom: none !important;
   padding-bottom: 0 !important;
@@ -28,6 +32,7 @@
   margin-top: 10px;
 }
 
+
 /* ===========================
    Dropdown-Auswahl
    =========================== */
@@ -43,44 +48,44 @@
 }
 
 .dropdown-wrapper.disabled .dropdown-toggle {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  background-color: rgb(250, 250, 250);
 }
 
 .dropdown-toggle {
   width: 100%;
   padding: 10px 14px;
-  background: var(--surface-2);
+  background-color: rgb(255, 255, 255);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: var(--text-muted-color);
+  color: var(--muted-text);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .dropdown-toggle:hover {
-  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--border-color));
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgb(250, 249, 249);
 }
 
 .dropdown-toggle .dropdown-label {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--primary-color);
   letter-spacing: 0.5px;
 }
 
 .dropdown-toggle.filled > span:not(.dropdown-label) {
   color: var(--text-color);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .dropdown-caret {
@@ -92,7 +97,7 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 5px solid var(--text-muted-color);
+  border-top: 5px solid var(--muted-text);
 }
 
 .dropdown-menu {
@@ -101,11 +106,11 @@
   left: 0;
   width: 100%;
   z-index: 10;
-  background: var(--surface-color);
+  background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 6px;
-  box-shadow: var(--shadow-e2);
+  box-shadow: 0 8px 24px var(--shadow-color);
   max-height: 240px;
   overflow-y: auto;
 }
@@ -120,22 +125,21 @@
   transition: background-color 0.15s ease;
 }
 .dropdown-item:hover {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background-color: var(--primary-color-600);
 }
 .dropdown-item img {
   width: 32px;
   height: 32px;
   padding: 4px;
   border-radius: 6px;
-  background: var(--surface-2);
-  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,.15);
   object-fit: cover;
 }
 .dropdown-item p {
   margin: 0;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-color);
 }
 
@@ -145,6 +149,7 @@
     gap: 12px;
   }
 }
+
 
 /* ================= Primärer Action-Button & Status ================= */
 .actions { margin-top: 6px; }
@@ -183,6 +188,7 @@
 
 .saved-stamp {
   margin-top: .5rem;
-  color: var(--text-muted-color);
+  color: var(--muted-text);
   font-size: .9rem;
 }
+

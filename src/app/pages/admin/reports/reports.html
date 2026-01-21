@@ -54,33 +54,6 @@
 
                     <mat-divider></mat-divider>
 
-                    <button mat-menu-item (click)="openChat(r.reporterId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Reporter</span>
-                    </button>
-
-                    <button mat-menu-item (click)="openChat(r.reportedId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Gemeldet</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
-                    <button mat-menu-item (click)="ban(r.reportedId)">
-                      <mat-icon>gavel</mat-icon>
-                      <span>Gemeldet bannen…</span>
-                    </button>
-                    <button mat-menu-item (click)="lock(r.reportedId)">
-                      <mat-icon>lock</mat-icon>
-                      <span>Gemeldet sperren…</span>
-                    </button>
-                    <button mat-menu-item (click)="unblock(r.reportedId)">
-                      <mat-icon>lock_open</mat-icon>
-                      <span>Gemeldet entsperren…</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
                     <button mat-menu-item (click)="markInReview(r)" [disabled]="r.statusFixed === 'resolved'">
                       <mat-icon>rule</mat-icon>
                       <span>In Bearbeitung</span>
@@ -110,14 +83,9 @@
                 <div class="who-item">
                   <div class="lbl">Reporter</div>
                   <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
-                        {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reporterId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
 
@@ -126,14 +94,9 @@
                 <div class="who-item">
                   <div class="lbl">Gemeldet</div>
                   <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
-                        {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reportedId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
               </div>
@@ -196,33 +159,6 @@
 
                     <mat-divider></mat-divider>
 
-                    <button mat-menu-item (click)="openChat(r.reporterId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Reporter</span>
-                    </button>
-
-                    <button mat-menu-item (click)="openChat(r.reportedId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Gemeldet</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
-                    <button mat-menu-item (click)="ban(r.reportedId)">
-                      <mat-icon>gavel</mat-icon>
-                      <span>Gemeldet bannen…</span>
-                    </button>
-                    <button mat-menu-item (click)="lock(r.reportedId)">
-                      <mat-icon>lock</mat-icon>
-                      <span>Gemeldet sperren…</span>
-                    </button>
-                    <button mat-menu-item (click)="unblock(r.reportedId)">
-                      <mat-icon>lock_open</mat-icon>
-                      <span>Gemeldet entsperren…</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
                     <button mat-menu-item (click)="resolve(r)" [disabled]="r.statusFixed === 'resolved'">
                       <mat-icon>done</mat-icon>
                       <span>Erledigen</span>
@@ -242,14 +178,9 @@
                 <div class="who-item">
                   <div class="lbl">Reporter</div>
                   <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
-                        {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reporterId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
 
@@ -258,14 +189,9 @@
                 <div class="who-item">
                   <div class="lbl">Gemeldet</div>
                   <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
-                        {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reportedId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
               </div>
@@ -315,33 +241,6 @@
                   </button>
 
                   <mat-menu #rowMenu="matMenu">
-                    <button mat-menu-item (click)="openChat(r.reporterId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Reporter</span>
-                    </button>
-
-                    <button mat-menu-item (click)="openChat(r.reportedId)">
-                      <mat-icon>chat</mat-icon>
-                      <span>Chat: Gemeldet</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
-                    <button mat-menu-item (click)="ban(r.reportedId)">
-                      <mat-icon>gavel</mat-icon>
-                      <span>Gemeldet bannen…</span>
-                    </button>
-                    <button mat-menu-item (click)="lock(r.reportedId)">
-                      <mat-icon>lock</mat-icon>
-                      <span>Gemeldet sperren…</span>
-                    </button>
-                    <button mat-menu-item (click)="unblock(r.reportedId)">
-                      <mat-icon>lock_open</mat-icon>
-                      <span>Gemeldet entsperren…</span>
-                    </button>
-
-                    <mat-divider></mat-divider>
-
                     <button mat-menu-item (click)="reopen(r)">
                       <mat-icon>restart_alt</mat-icon>
                       <span>Wieder öffnen</span>
@@ -354,14 +253,9 @@
                 <div class="who-item">
                   <div class="lbl">Reporter</div>
                   <ng-container *ngIf="(userInfo$(r.reporterId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
-                        {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reporterId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reporterId]" class="user" [title]="r.reporterId">
+                      {{ u.name }} <code>{{ shortId(r.reporterId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
 
@@ -370,14 +264,9 @@
                 <div class="who-item">
                   <div class="lbl">Gemeldet</div>
                   <ng-container *ngIf="(userInfo$(r.reportedId) | async) as u">
-                    <div class="user-row">
-                      <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
-                        {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
-                      </a>
-                      <button mat-icon-button class="mini" (click)="openChat(r.reportedId, $event)" title="Chat öffnen">
-                        <mat-icon>chat</mat-icon>
-                      </button>
-                    </div>
+                    <a [routerLink]="['/admin/users', r.reportedId]" class="user" [title]="r.reportedId">
+                      {{ u.name }} <code>{{ shortId(r.reportedId) }}</code>
+                    </a>
                   </ng-container>
                 </div>
               </div>

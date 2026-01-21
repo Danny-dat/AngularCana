@@ -17,87 +17,40 @@
     </mat-form-field>
   </div>
 
-  <ng-container *ngIf="groupedRows$ | async as g">
-    <mat-tab-group class="tabs" animationDuration="0ms">
-      <mat-tab>
-        <ng-template mat-tab-label>
-          Alle <span class="count">{{ g.all.length }}</span>
-        </ng-template>
-        <ng-container *ngTemplateOutlet="tableTpl; context:{ rows: g.all }"></ng-container>
-      </mat-tab>
+  <table mat-table [dataSource]="(rows$ | async) || []">
 
-      <mat-tab>
-        <ng-template mat-tab-label>
-          Aktiv <span class="count">{{ g.active.length }}</span>
-        </ng-template>
-        <ng-container *ngTemplateOutlet="tableTpl; context:{ rows: g.active }"></ng-container>
-      </mat-tab>
+    <ng-container matColumnDef="displayName">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let r">
+        <a [routerLink]="['/admin/users', r.uid]" class="name">
+          {{ r.displayName }}
+        </a>
+        <div class="sub" *ngIf="r.username">@{{ r.username }}</div>
+      </td>
+    </ng-container>
 
-      <mat-tab>
-        <ng-template mat-tab-label>
-          Gesperrt <span class="count">{{ g.locked.length }}</span>
-        </ng-template>
-        <ng-container *ngTemplateOutlet="tableTpl; context:{ rows: g.locked }"></ng-container>
-      </mat-tab>
+    <ng-container matColumnDef="uid">
+      <th mat-header-cell *matHeaderCellDef>UID</th>
+      <td mat-cell *matCellDef="let r">
+        <code>{{ r.uid }}</code>
+      </td>
+    </ng-container>
 
-      <mat-tab>
-        <ng-template mat-tab-label>
-          Gebannt <span class="count">{{ g.banned.length }}</span>
-        </ng-template>
-        <ng-container *ngTemplateOutlet="tableTpl; context:{ rows: g.banned }"></ng-container>
-      </mat-tab>
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef>Rolle</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-chip>{{ r.role }}</mat-chip>
+      </td>
+    </ng-container>
 
-      <mat-tab>
-        <ng-template mat-tab-label>
-          Gelöscht <span class="count">{{ g.deleted.length }}</span>
-        </ng-template>
-        <ng-container *ngTemplateOutlet="tableTpl; context:{ rows: g.deleted }"></ng-container>
-      </mat-tab>
-    </mat-tab-group>
-  </ng-container>
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-chip>{{ r.statusLabel }}</mat-chip>
+      </td>
+    </ng-container>
 
-  <ng-template #tableTpl let-rows="rows">
-    <div class="tab-content">
-      <table mat-table [dataSource]="rows || []">
-
-        <ng-container matColumnDef="displayName">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let r">
-            <a [routerLink]="['/admin/users', r.uid]" class="name">
-              {{ r.displayName }}
-            </a>
-            <div class="sub" *ngIf="r.username">@{{ r.username }}</div>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="uid">
-          <th mat-header-cell *matHeaderCellDef>UID</th>
-          <td mat-cell *matCellDef="let r">
-            <code>{{ r.uid }}</code>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Rolle</th>
-          <td mat-cell *matCellDef="let r">
-            <mat-chip>{{ r.role }}</mat-chip>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let r">
-            <mat-chip>{{ r.statusLabel }}</mat-chip>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-      </table>
-
-      <div class="empty" *ngIf="!rows || rows.length === 0">
-        Keine Benutzer gefunden.
-      </div>
-    </div>
-  </ng-template>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
 </div>

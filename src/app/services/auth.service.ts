@@ -265,9 +265,7 @@ export class AuthService {
 
     // direkt nach Login prüfen: ist der User geblockt?
     const ok = await this.checkNotBlocked(cred.user.uid, { silent: false });
-    // Blocked users sollen die "Account blocked"-Seite sehen können,
-    // inkl. Grund/Dauer + Möglichkeit ein Ticket zu öffnen.
-    if (!ok) return null as any;
+    if (!ok) throw new Error('ACCOUNT_BLOCKED');
 
     // nach Erfolg frischen Namen setzen (für Header)
     try {
@@ -321,12 +319,11 @@ export class AuthService {
         this.lastAccessCheckMs = Date.now();
 
         if (!silent) {
-          // WICHTIG: nicht automatisch ausloggen –
-          // damit die Blocked-Seite den Grund/Dauer laden und ein Ticket öffnen kann.
+          await this.logout();
           this.snack.open(
-            'Dein Account ist gesperrt oder gebannt. Details findest du auf der nächsten Seite.',
+            'Dein Account ist gesperrt oder gebannt. Bitte kontaktiere den Admin.',
             'OK',
-            { duration: 6500 }
+            { duration: 6000 }
           );
           await this.router.navigateByUrl('/account-blocked');
         }

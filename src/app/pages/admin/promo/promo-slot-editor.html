@@ -22,7 +22,7 @@
 
       <div class="paths">
         <div class="path-row">
-          <div class="lbl">Server-Pfad (Override):</div>
+          <div class="lbl">Server-Pfad (FTP):</div>
           <code>{{ serverTargetPath() }}</code>
           <button mat-icon-button type="button" (click)="copyPath(serverTargetPath())" aria-label="Pfad kopieren">
             <mat-icon>content_copy</mat-icon>
@@ -30,7 +30,7 @@
         </div>
 
         <div class="path-row">
-          <div class="lbl">Assets-Fallback (Build):</div>
+          <div class="lbl">Repo-Pfad (Dev):</div>
           <code>{{ assetsTargetPath() }}</code>
           <button mat-icon-button type="button" (click)="copyPath(assetsTargetPath())" aria-label="Pfad kopieren">
             <mat-icon>content_copy</mat-icon>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="small">
-          Hinweis: Im laufenden Browser kann man <b>nicht</b> in <code>assets</code> hochladen. Fuer echte Updates bitte den <code>/media</code>-Pfad auf deinem Server per FTP/Upload ersetzen und danach <b>Speichern</b> klicken.
+          Hinweis: Im laufenden Browser kann man <b>nicht</b> auf deinen Server hochladen. Fuer echte Updates bitte die Datei auf deinem Webserver per FTP ueberschreiben (z. B. <code>/assets/promo/{{ slotId }}/banner.{{ nextExt() }}</code>) und danach <b>Speichern</b> klicken (Cache-Bust).
         </div>
       </div>
     </div>

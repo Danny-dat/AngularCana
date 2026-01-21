@@ -2,15 +2,7 @@
    APP HEADER – aufgeräumte, gruppierte Styles
    ========================================================= */
 
-:host {
-  display: block;
-  position: sticky;
-  top: 0;
-  z-index: 1100;
-  background: var(--background-color);
-  padding: var(--page-pad);
-  padding-bottom: 0;
-}
+:host { display: block; }
 
 /* -----------------------------
    Layout / Container / Title
@@ -23,8 +15,7 @@
   padding: 10px 15px;
   background: var(--surface-color);
   border-radius: var(--border-radius);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-e1);
+  box-shadow: 0 2px 5px var(--shadow-color);
   margin-bottom: 20px;
 }
 
@@ -34,7 +25,7 @@
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: .2px;
 }
@@ -71,7 +62,7 @@
 }
 .icon-btn:hover{
   color: var(--text-color);
-  background: color-mix(in srgb, var(--text-color) 8%, transparent);
+  background: rgba(0,0,0,.06);
 }
 .icon-btn:active{ transform: scale(.98); }
 
@@ -140,7 +131,7 @@
   position: absolute;
   top: 46px; right: 0;
 
-  width: 280px;                           /* kompakter als Standard */
+  width: 260px;                           /* kompakter als Standard */
   max-height: 48vh;                       /* kompakter als Standard */
   overflow: auto;
 
@@ -201,31 +192,3 @@ body.theme-dark .item{ border-bottom: 1px solid rgba(255,255,255,.08); }
 .dropdown .item .row { display:flex; align-items:flex-start; gap:8px; }
 .dropdown .item .row .col { flex:1 1 auto; }
 .dropdown .item .icon-btn.sm { padding:4px; }
-
-/* ---------- Mobile header tweaks ---------- */
-@media (max-width: 520px) {
-  .app-header {
-    padding: 10px 12px;
-  }
-
-  /* Titel nicht mehr absolut – sonst kollidiert er mit Icons */
-  .title {
-    position: static;
-    transform: none;
-    margin-left: 8px;
-    font-size: 18px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Username ausblenden, spart Platz */
-  .user-name { display: none; }
-
-  .header-actions { gap: 10px; }
-
-  .dropdown {
-    width: min(340px, 92vw);
-    right: -6px;
-  }
-}

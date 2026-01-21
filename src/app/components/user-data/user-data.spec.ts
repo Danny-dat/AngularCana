@@ -14,6 +14,7 @@ describe('UserData', () => {
 
     fixture = TestBed.createComponent(UserDataComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('should create', () => {

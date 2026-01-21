@@ -1,66 +1,79 @@
 /* ===========================
-   DASHBOARD – Enterprise Layout
+   DASHBOARD – Layout & Theme
    =========================== */
 
-:host { display: block; }
+/* -------- Globale Theme-Variablen -------- */
+:root {
+  --surface-color: #1f1e20;
+  --shadow-color: rgba(0,0,0,.35);
+  --text-color: #f2f2f2;
+  --muted-text: #b7b7b7;
+  --border-color: rgba(255,255,255,.08);
+  --primary-color: #2ea043; /* Grün */
+  --primary-color-600: #27923c;
+  --ok: #2ea043;
+  --err: #c62828;
+}
 
-/* Zentriertes Page-Layout (kompakt, aber lesbar) */
+/*
+  Layout für die direkten Kinder des Dashboards.
+  Wir definieren hier nur noch die Position und Breite, nicht das Aussehen.
+*/
 app-canna,
 .map-container.card {
-  display: block;
-  max-width: 720px;
+  display: block; /* Wichtig für die <app-canna> Komponente */
+  max-width: 680px;
   margin: 18px auto;
 }
 
-/* Karte übernimmt das globale .card Styling – wir passen nur Typography an */
-.map-container h3 {
-  margin: 6px 0 12px;
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.15;
+/* Karten-Styling nur noch für Elemente, die direkt im Dashboard sind (z.B. Map) */
+.map-container.card {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--surface-color);
+  box-shadow: 0 10px 24px var(--shadow-color);
+  color: var(--text-color);
 }
 
-/* Map */
+/* Überschriften-Layout nur noch für die Map-Karte */
+.map-container h3 {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin: 6px 0 12px !important;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* ================= Map-Container ================= */
 .map-container #map-container {
   height: 420px;
   width: 100%;
-  border-radius: calc(var(--border-radius) - 2px);
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border-color);
 }
 
-/* Toast */
+
+/* ================= Toast-Benachrichtigungen ================= */
 .toast {
   position: fixed;
   right: 16px;
   top: 16px;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #fff;
-  box-shadow: var(--shadow-e2);
-  z-index: 1200;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  z-index: 1000;
   pointer-events: none;
   backdrop-filter: saturate(180%) blur(6px);
+  transform: translateY(0);
   animation: toast-in .18s ease-out;
 }
-.toast.success { background: var(--success-color); }
-.toast.error { background: var(--error-color); }
+.toast.success { background: var(--ok); }
+.toast.error { background: var(--err); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 520px) {
-  app-canna,
-  .map-container.card {
-    margin: 14px auto;
-  }
-
-  .toast {
-    left: 12px;
-    right: 12px;
-    top: 12px;
-    text-align: center;
-  }
-}

@@ -12,19 +12,10 @@ import { environment } from '../environments/environments'; // oder '../environm
 import { isPlatformBrowser } from '@angular/common';
 import { AdService } from './services/ad.service';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { MAT_DIALOG_DEFAULT_OPTIONS } from '@angular/material/dialog';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideNativeDateAdapter(),
-    {
-      provide: MAT_DIALOG_DEFAULT_OPTIONS,
-      useValue: {
-        panelClass: 'app-dialog',
-        autoFocus: false,
-        restoreFocus: true,
-      },
-    },
     provideRouter(routes),
     importProvidersFrom(FormsModule),
     provideHttpClient(withInterceptorsFromDi(), withFetch()),

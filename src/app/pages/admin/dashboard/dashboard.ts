@@ -29,7 +29,7 @@ type RecentReportVm = {
   link: any;
 };
 
-type ActivityVm = { id: string; icon: string; title: string; detail: string; when: string };
+type ActivityVm = { id: string; text: string; when: string };
 
 @Component({
   standalone: true,
@@ -43,21 +43,14 @@ export class AdminDashboardComponent {
   private afs = inject(Firestore);
   private nf = new Intl.NumberFormat('de-DE');
 
-  /** KPIs live */
+  /** KPIs live (Promo bleibt Placeholder bis Feature fertig ist) */
   kpis$: Observable<Kpi[]> = combineLatest([
     this.stats.usersCount$,
     this.stats.reportsOpenCount$,
     this.stats.eventsCount$,
-    this.stats.promoSlotsActiveCount$,
-    this.stats.promoSlotsCount$,
     this.stats.onlineNowCount$,
   ]).pipe(
-    map(([users, openReports, events, promoActive, promoTotal, onlineNow]) => {
-      const promoValue = promoTotal > 0
-        ? `${this.nf.format(promoActive)}/${this.nf.format(promoTotal)}`
-        : this.nf.format(promoActive);
-
-      return [
+    map(([users, openReports, events, onlineNow]) => [
       { label: 'Users', value: this.nf.format(users), icon: 'group', link: '/admin/users' },
       {
         label: 'Offene Reports',
@@ -66,20 +59,20 @@ export class AdminDashboardComponent {
         link: '/admin/reports',
       },
       { label: 'Events', value: this.nf.format(events), icon: 'event', link: '/admin/events' },
-      { label: 'Promo Slots', value: promoValue, icon: 'local_offer', link: '/admin/promo' },
+      // Placeholder bis Promo fertig ist
+      { label: 'Promo', value: '—', icon: 'local_offer', link: '/admin/promo' },
       {
         label: 'Online jetzt',
         value: this.nf.format(onlineNow),
         icon: 'wifi',
         link: '/admin/statistics',
       },
-    ];
-    }),
+    ]),
     startWith([
       { label: 'Users', value: '…', icon: 'group', link: '/admin/users' },
       { label: 'Offene Reports', value: '…', icon: 'rule', link: '/admin/reports' },
       { label: 'Events', value: '…', icon: 'event', link: '/admin/events' },
-      { label: 'Promo Slots', value: '…', icon: 'local_offer', link: '/admin/promo' },
+      { label: 'Promo', value: '—', icon: 'local_offer', link: '/admin/promo' },
       { label: 'Online jetzt', value: '…', icon: 'wifi', link: '/admin/statistics' },
     ]),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -95,7 +88,7 @@ export class AdminDashboardComponent {
     { text: 'Neuen User anlegen', icon: 'person_add', link: '/admin/users', queryParams: { create: 1 } },
     { text: 'Reports prüfen', icon: 'rule', link: '/admin/reports' },
     { text: 'Events verwalten', icon: 'event', link: '/admin/events' },
-    { text: 'Promo verwalten', icon: 'local_offer', link: '/admin/promo' },
+    { text: 'Promo (coming soon)', icon: 'campaign', link: '/admin/promo' },
   ];
 
   /** Inbox: Counts live */
@@ -169,19 +162,9 @@ export class AdminDashboardComponent {
     map((rows) =>
       (rows || []).map((a) => {
         const d = this.toDateSafe(a?.timestamp);
-        const action = String(a?.action ?? 'ACTION');
-        const target = this.shortUid(String(a?.targetUid ?? ''));
-        const actor = this.shortUid(String(a?.actorUid ?? ''));
-        const reason = (a?.reason ?? '').toString().trim();
-
-        const icon = this.auditIcon(action);
-        const title = this.auditTitle(action, target);
-        const detail = this.auditDetail(action, actor, reason);
         return {
           id: String(a?.id ?? ''),
-          icon,
-          title,
-          detail,
+          text: this.auditText(a),
           when: d ? d.toLocaleString('de-DE') : '—',
         } satisfies ActivityVm;
       })
@@ -230,50 +213,6 @@ export class AdminDashboardComponent {
     const msg = (r?.messageText ?? '').toString().trim();
     const snippet = msg ? ` · ${msg.slice(0, 42)}${msg.length > 42 ? '…' : ''}` : '';
     return `${catLabel}${snippet}`;
-  }
-
-  private auditIcon(action: string): string {
-    switch (String(action ?? '')) {
-      case 'BAN':
-        return 'gavel';
-      case 'LOCK':
-        return 'lock';
-      case 'UNLOCK':
-        return 'lock_open';
-      case 'SOFT_DELETE':
-        return 'delete';
-      case 'RESTORE':
-        return 'restore';
-      case 'CREATE_USER':
-        return 'person_add';
-      default:
-        return 'history';
-    }
-  }
-
-  private auditTitle(action: string, target: string): string {
-    switch (String(action ?? 'ACTION')) {
-      case 'BAN':
-        return `Ban · ${target}`;
-      case 'LOCK':
-        return `Sperre · ${target}`;
-      case 'UNLOCK':
-        return `Entsperrt · ${target}`;
-      case 'SOFT_DELETE':
-        return `Gelöscht · ${target}`;
-      case 'RESTORE':
-        return `Wiederhergestellt · ${target}`;
-      case 'CREATE_USER':
-        return `User erstellt · ${target}`;
-      default:
-        return `${action} · ${target}`;
-    }
-  }
-
-  private auditDetail(action: string, actor: string, reason: string): string {
-    if (reason) return reason;
-    if (String(action ?? '') === 'CREATE_USER') return `by ${actor}`;
-    return actor ? `by ${actor}` : '';
   }
 
   private auditText(a: any): string {

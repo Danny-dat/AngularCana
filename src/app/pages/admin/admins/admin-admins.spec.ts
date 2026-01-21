@@ -14,6 +14,7 @@ describe('AdminAdmins', () => {
 
     fixture = TestBed.createComponent(AdminAdminsComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -85,7 +85,11 @@ export type BanDialogResult = { reason: string; until: Date | null };
     </div>
   `,
   styles: [`
-    :host{ display:block; }
+    :host{
+      display:block;
+      width: 360px;
+      max-width: 92vw;
+    }
 
     .content{
       display:grid;

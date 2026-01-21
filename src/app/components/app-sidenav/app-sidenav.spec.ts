@@ -14,6 +14,7 @@ describe('AppSidenav', () => {
 
     fixture = TestBed.createComponent(AppSidenav);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('should create', () => {

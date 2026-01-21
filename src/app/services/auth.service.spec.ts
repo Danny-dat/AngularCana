@@ -1,17 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AuthService } from './auth.service';
 
-describe('AuthService', () => {
+describe('Auth', () => {
   let service: AuthService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-      ],
-    });
+    TestBed.configureTestingModule({});
     service = TestBed.inject(AuthService);
   });
 
