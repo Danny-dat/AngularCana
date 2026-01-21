@@ -101,7 +101,12 @@ type Vm = {
   city: string | null;
   country: string | null;
   socials: any;
-  visibility: { showBio: boolean; showWebsite: boolean; showLocation: boolean; showSocials: boolean };
+  visibility: {
+    showBio: boolean;
+    showWebsite: boolean;
+    showLocation: boolean;
+    showSocials: boolean;
+  };
 
   publicBio: string | null;
   publicWebsite: string | null;
@@ -166,7 +171,10 @@ export class AdminUserDetailComponent {
 
   editForm = this.fb.group({
     // Name ist Anzeigename + Username zugleich
-    displayName: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)]],
+    displayName: [
+      '',
+      [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)],
+    ],
     firstName: ['', [Validators.maxLength(40)]],
     lastName: ['', [Validators.maxLength(60)]],
     email: [{ value: '', disabled: true }],
@@ -204,7 +212,11 @@ export class AdminUserDetailComponent {
   }
 
   /** Owner darf nicht gebannt/gesperrt/gelöscht werden */
-  private readonly OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
+  private OWNER_UID = [
+    'ZAz0Bnde5zYIS8qCDT86aOvEDX52',
+    'I1G1BWLcpUTcVU3smdRF1fmgPCR2',
+    'mUaEdJMTlVX5rRJBTsMEYialWtD2',
+  ];
 
   constructor() {
     // Form initial befüllen
@@ -247,7 +259,7 @@ export class AdminUserDetailComponent {
             showLocation: userDoc?.profile?.visibility?.showLocation ?? true,
             showSocials: userDoc?.profile?.visibility?.showSocials ?? true,
           },
-          { emitEvent: false }
+          { emitEvent: false },
         );
 
         this.editForm.markAsPristine();
@@ -258,7 +270,7 @@ export class AdminUserDetailComponent {
 
   private actorUid$ = user(this.auth).pipe(
     map((u) => u?.uid ?? ''),
-    catchError(() => of(''))
+    catchError(() => of('')),
   );
 
   private userDoc$ = this.uid$.pipe(
@@ -266,21 +278,23 @@ export class AdminUserDetailComponent {
       uid
         ? (docData(doc(this.firestore, 'users', uid)) as Observable<UserDoc>).pipe(
             map((d) => d ?? null),
-            catchError(() => of(null))
+            catchError(() => of(null)),
           )
-        : of(null)
-    )
+        : of(null),
+    ),
   );
 
   private profile$ = this.uid$.pipe(
     switchMap((uid) =>
       uid
-        ? (docData(doc(this.firestore, 'profiles_public', uid)) as Observable<PublicProfileDoc>).pipe(
+        ? (
+            docData(doc(this.firestore, 'profiles_public', uid)) as Observable<PublicProfileDoc>
+          ).pipe(
             map((d) => d ?? null),
-            catchError(() => of(null))
+            catchError(() => of(null)),
           )
-        : of(null)
-    )
+        : of(null),
+    ),
   );
 
   private ban$ = this.uid$.pipe(
@@ -288,10 +302,10 @@ export class AdminUserDetailComponent {
       uid
         ? (docData(doc(this.firestore, 'banlist', uid)) as Observable<BanDoc>).pipe(
             map((d) => d ?? null),
-            catchError(() => of(null))
+            catchError(() => of(null)),
           )
-        : of(null)
-    )
+        : of(null),
+    ),
   );
 
   private isAdmin$ = this.uid$.pipe(
@@ -299,10 +313,10 @@ export class AdminUserDetailComponent {
       uid
         ? (docData(doc(this.firestore, 'admins', uid)) as Observable<any>).pipe(
             map((d) => !!d),
-            catchError(() => of(false))
+            catchError(() => of(false)),
           )
-        : of(false)
-    )
+        : of(false),
+    ),
   );
 
   vm$: Observable<Vm> = combineLatest([
@@ -393,10 +407,10 @@ export class AdminUserDetailComponent {
 
         lockUntil: ban?.type === 'lock' && ban?.until ? ban.until : null,
 
-        isOwner: uid === this.OWNER_UID,
-        canManageAdmins: actorUid === this.OWNER_UID,
+        isOwner: this.OWNER_UID.includes(uid),
+        canManageAdmins: this.OWNER_UID.includes(actorUid),
       };
-    })
+    }),
   );
 
   async saveProfileAdmin() {
@@ -410,7 +424,9 @@ export class AdminUserDetailComponent {
     const handle = normalizeUnifiedUserName((raw.displayName ?? '').toString());
     const key = normalizeUnifiedUserNameKey(handle);
     if (!handle) {
-      this.snack.open('Bitte einen gültigen Namen wählen (3–20 Zeichen, A–Z/a–z, 0–9, _).', 'OK', { duration: 3500 });
+      this.snack.open('Bitte einen gültigen Namen wählen (3–20 Zeichen, A–Z/a–z, 0–9, _).', 'OK', {
+        duration: 3500,
+      });
       this.savingProfile.set(false);
       return;
     }
@@ -434,11 +450,13 @@ export class AdminUserDetailComponent {
     const locationText = [city, country].filter(Boolean).join(', ') || null;
 
     try {
-
       // Unique-Check (Name ist Username)
       const ok = await this.userDataSvc.isUsernameAvailable(handle, uid);
       if (!ok) {
-        this.editForm.controls.displayName.setErrors({ ...(this.editForm.controls.displayName.errors ?? {}), taken: true });
+        this.editForm.controls.displayName.setErrors({
+          ...(this.editForm.controls.displayName.errors ?? {}),
+          taken: true,
+        });
         this.snack.open('Name ist bereits vergeben.', 'OK', { duration: 3000 });
         return;
       }
@@ -540,10 +558,10 @@ export class AdminUserDetailComponent {
   // Rollen (Admin ⇄ User)
   // =========================
   async onGrantAdmin(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     const actorUid = await this.actorUid();
-    if (actorUid !== this.OWNER_UID) {
+    if (!this.OWNER_UID.includes(actorUid)) {
       this.fail('Nur der Owner darf Admins vergeben.');
       return;
     }
@@ -558,7 +576,7 @@ export class AdminUserDetailComponent {
             confirmText: 'Admin geben',
           },
         })
-        .afterClosed()
+        .afterClosed(),
     );
     if (!res) return;
 
@@ -570,14 +588,14 @@ export class AdminUserDetailComponent {
           createdBy: actorUid,
           note: (res.reason ?? '').trim(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       // optional fürs UI: roles[] pflegen
       await setDoc(
         doc(this.firestore, 'users', targetUid),
         { roles: arrayUnion('admin'), updatedAt: serverTimestamp() },
-        { merge: true }
+        { merge: true },
       );
 
       await this.audit({
@@ -595,10 +613,10 @@ export class AdminUserDetailComponent {
   }
 
   async onRevokeAdmin(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     const actorUid = await this.actorUid();
-    if (actorUid !== this.OWNER_UID) {
+    if (!this.OWNER_UID.includes(actorUid)) {
       this.fail('Nur der Owner darf Admins entfernen.');
       return;
     }
@@ -613,7 +631,7 @@ export class AdminUserDetailComponent {
             confirmText: 'Admin entfernen',
           },
         })
-        .afterClosed()
+        .afterClosed(),
     );
     if (!res) return;
 
@@ -623,7 +641,7 @@ export class AdminUserDetailComponent {
       await setDoc(
         doc(this.firestore, 'users', targetUid),
         { roles: arrayRemove('admin'), updatedAt: serverTimestamp() },
-        { merge: true }
+        { merge: true },
       );
 
       await this.audit({
@@ -644,7 +662,7 @@ export class AdminUserDetailComponent {
   // Actions (Phase 2)
   // =========================
   async onBan(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     const res = await firstValueFrom(this.dialog.open(BanDialogComponent).afterClosed());
     if (!res) return;
@@ -663,7 +681,7 @@ export class AdminUserDetailComponent {
   }
 
   async onLock(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     const res = await firstValueFrom(this.dialog.open(LockDialogComponent).afterClosed());
     if (!res) return;
@@ -682,7 +700,7 @@ export class AdminUserDetailComponent {
   }
 
   async onUnlock(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     try {
       await this.moderation.unlockUser({
@@ -697,7 +715,7 @@ export class AdminUserDetailComponent {
   }
 
   async onSoftDelete(targetUid: string) {
-    if (!targetUid || targetUid === this.OWNER_UID) return;
+    if (!targetUid || this.OWNER_UID.includes(targetUid)) return;
 
     const res = await firstValueFrom(
       this.dialog
@@ -709,7 +727,7 @@ export class AdminUserDetailComponent {
             confirmText: 'Soft Delete',
           },
         })
-        .afterClosed()
+        .afterClosed(),
     );
 
     if (!res) return;
@@ -739,7 +757,7 @@ export class AdminUserDetailComponent {
             confirmText: 'Restore',
           },
         })
-        .afterClosed()
+        .afterClosed(),
     );
 
     if (!res) return;

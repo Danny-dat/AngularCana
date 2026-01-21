@@ -21,7 +21,7 @@ type MenuItem = {
 };
 
 // Optional: Owner-Notbremse
-const OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
+const OWNER_UID = ['ZAz0Bnde5zYIS8qCDT86aOvEDX52', 'I1G1BWLcpUTcVU3smdRF1fmgPCR2', 'mUaEdJMTlVX5rRJBTsMEYialWtD2'];
 
 @Component({
   selector: 'app-app-sidenav',
@@ -44,7 +44,7 @@ export class AppSidenav {
       if (!u) return of(false);
 
       // Owner darf immer (optional)
-      if (u.uid === OWNER_UID) return of(true);
+      if (OWNER_UID.includes(u.uid)) return of(true);
 
       const ref = doc(this.firestore, 'admins', u.uid);
       return from(getDoc(ref)).pipe(
