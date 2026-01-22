@@ -5,7 +5,6 @@ module.exports = function (config) {
   config.set({
     basePath: '',
 
-    // ✅ nur Jasmine – kein @angular-devkit/build-angular mehr
     frameworks: ['jasmine'],
 
     plugins: [
@@ -17,7 +16,7 @@ module.exports = function (config) {
 
     client: {
       jasmine: {
-        random: false, // ✅ Random aus
+        random: false,
       },
       clearContext: false,
     },
