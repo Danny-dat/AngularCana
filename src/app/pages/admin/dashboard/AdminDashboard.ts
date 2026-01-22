@@ -35,8 +35,8 @@ type ActivityVm = { id: string; icon: string; title: string; detail: string; whe
   standalone: true,
   selector: 'app-admin-dashboard',
   imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule],
-  templateUrl: './dashboard.html',
-  styleUrl: './dashboard.css',
+  templateUrl: './AdminDashboard.html',
+  styleUrl: './AdminDashboard.css',
 })
 export class AdminDashboardComponent {
   private stats = inject(AdminStatsService);

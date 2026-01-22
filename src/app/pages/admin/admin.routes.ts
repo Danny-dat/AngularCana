@@ -8,12 +8,12 @@ export const ADMIN_ROUTES: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'admins',
-        loadComponent: () =>
-          import('./admins/admin-admins').then((m) => m.AdminAdminsComponent),
+        loadComponent: () => import('./admins/admin-admins').then((m) => m.AdminAdminsComponent),
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./dashboard/dashboard').then((m) => m.AdminDashboardComponent),
+        loadComponent: () =>
+          import('./dashboard/AdminDashboard').then((m) => m.AdminDashboardComponent),
       },
       { path: 'users', loadComponent: () => import('./users/users').then((m) => m.AdminUsers) },
       {
@@ -25,11 +25,14 @@ export const ADMIN_ROUTES: Routes = [
         path: 'reports',
         loadComponent: () => import('./reports/reports').then((m) => m.AdminReports),
       },
-      { path: 'events', loadComponent: () => import('./events/events').then((m) => m.AdminEvents) },
+      {
+        path: 'events',
+        loadComponent: () => import('./events/AdminEvents').then((m) => m.AdminEvents),
+      },
       { path: 'promo', loadComponent: () => import('./promo/promo').then((m) => m.AdminPromo) },
       {
         path: 'statistics',
-        loadComponent: () => import('./statistics/statistics').then((m) => m.AdminStatistic),
+        loadComponent: () => import('./statistics/AdminStatistic').then((m) => m.AdminStatistic),
       },
     ],
   },

@@ -6,8 +6,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { firstValueFrom } from 'rxjs';
 
 import { Auth, user } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
-import { addDoc, collection, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Firestore,addDoc, collection, doc, getDoc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';

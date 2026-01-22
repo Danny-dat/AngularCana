@@ -55,8 +55,8 @@ type KpiVm = { label: string; value: string; icon: string; hint?: string };
     MatDividerModule,
     MatTableModule,
   ],
-  templateUrl: './statistics.html',
-  styleUrl: './statistics.css',
+  templateUrl: './AdminStatistic.html',
+  styleUrl: './AdminStatistic.css',
 })
 export class AdminStatistic {
   private stats = inject(AdminStatsService);

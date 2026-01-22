@@ -21,8 +21,8 @@ import {
   setDoc,
   serverTimestamp,
   writeBatch,
+  deleteDoc
 } from '@angular/fire/firestore';
-import { deleteDoc } from '@angular/fire/firestore';
 import { BehaviorSubject } from 'rxjs';
 import { FriendsService } from './friends.services';
 import { AppNotification } from '../models/notification-module';

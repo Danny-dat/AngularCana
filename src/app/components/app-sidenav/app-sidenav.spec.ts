@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AppSidenav } from './app-sidenav';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 
 describe('AppSidenav', () => {
   let component: AppSidenav;
@@ -8,7 +10,11 @@ describe('AppSidenav', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AppSidenav]
+      imports: [AppSidenav],
+      providers: [
+        { provide: Auth, useValue: {} as any },
+        { provide: Firestore, useValue: {} as any },
+      ],
     })
     .compileComponents();
 

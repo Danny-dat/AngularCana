@@ -1,7 +1,6 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore, doc, updateDoc, setDoc, deleteDoc, collection, addDoc } from '@angular/fire/firestore';
-import { serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Firestore, doc, updateDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
 
 export type ModerationAction = 'BAN' | 'LOCK' | 'UNLOCK' | 'SOFT_DELETE' | 'RESTORE';
 

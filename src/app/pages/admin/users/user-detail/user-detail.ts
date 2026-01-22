@@ -4,20 +4,16 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Firestore, doc, docData } from '@angular/fire/firestore';
-import { Auth, user } from '@angular/fire/auth';
-import { Observable, of, combineLatest, firstValueFrom } from 'rxjs';
-import { map, switchMap, catchError } from 'rxjs/operators';
-
-import {
-  setDoc,
+import { Firestore, doc, docData,  setDoc,
   deleteDoc,
   addDoc,
   collection,
   serverTimestamp,
   arrayUnion,
-  arrayRemove,
-} from 'firebase/firestore';
+  arrayRemove, } from '@angular/fire/firestore';
+import { Auth, user } from '@angular/fire/auth';
+import { Observable, of, combineLatest, firstValueFrom } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';

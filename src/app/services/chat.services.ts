@@ -13,8 +13,8 @@ import {
   limit,
   CollectionReference,
   DocumentData,
+  arrayUnion, arrayRemove, writeBatch
 } from '@angular/fire/firestore';
-import { arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { ChatMessage, UID } from '../models/social.models';
 
 const NOTIFY_COOLDOWN_MS = 8000;

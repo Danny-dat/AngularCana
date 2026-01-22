@@ -6,9 +6,12 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { combineLatest, Observable, firstValueFrom } from 'rxjs';
 import { map, shareReplay, startWith } from 'rxjs/operators';
 
-import { FirebaseApp } from '@angular/fire/app';
-import { Auth, user } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+import { FirebaseApp,initializeApp, deleteApp  } from '@angular/fire/app';
+import { Auth, user,  createUserWithEmailAndPassword,
+  getAuth,
+  signOut,
+  sendPasswordResetEmail, } from '@angular/fire/auth';
+import { Firestore, getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from '@angular/fire/firestore';
 
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,15 +23,6 @@ import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dial
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTabsModule } from '@angular/material/tabs';
-
-import { initializeApp, deleteApp } from 'firebase/app';
-import {
-  createUserWithEmailAndPassword,
-  getAuth,
-  signOut,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
-import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 import { AdminDirectoryService, AdminUserRow } from '../services/admin-directory.service';
 

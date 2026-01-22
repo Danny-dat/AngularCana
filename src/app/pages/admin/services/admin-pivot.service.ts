@@ -1,8 +1,6 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore } from '@angular/fire/firestore';
-import {
-  Timestamp,
+import { Firestore,   Timestamp,
   collection,
   documentId,
   getDocs,
@@ -10,8 +8,7 @@ import {
   orderBy,
   query,
   startAfter,
-  where,
-} from 'firebase/firestore';
+  where, } from '@angular/fire/firestore';
 
 export type PivotMetric = 'logs' | 'uniqueUsers';
 
