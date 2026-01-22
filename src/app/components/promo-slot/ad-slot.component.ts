@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/components/promo-slot/ad-slot.component.ts
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -42,7 +41,7 @@ export class AdSlotComponent {
     this.vm$ = this.ads.slot$(value).pipe(
       filter((vm): vm is AdSlotConfig => !!vm), // undefined überspringen
       distinctUntilChanged((a, b) => (a?.imgUrl ?? '') === (b?.imgUrl ?? '')),
-      tap(vm => {
+      tap((vm) => {
         this.resetFallbacks(); // neue Quelle → Kaskade neu
         if (vm.imgUrl && !this.badUrls.has(vm.imgUrl)) {
           this.setImgSrc(vm.imgUrl, 'vm.imgUrl');
@@ -50,26 +49,37 @@ export class AdSlotComponent {
           // Wenn vm-URL bereits als "bad" markiert ist, bleib auf aktuellem/fallback
           if (this.DEBUG) console.warn('[promo-slot] skip bad vm url', vm.imgUrl);
         }
-      })
+      }),
     );
   }
 
   /** Absolute Pfade */
-  private slotSvgPath() { return `/assets/promo/${this._slotId}/banner.svg`; }
-  private slotPngPath() { return `/assets/promo/${this._slotId}/banner.png`; }
-  private genSvgPath()  { return `/assets/promo/generic/banner.svg`; }
-  private genPngPath()  { return `/assets/promo/generic/banner.png`; }
+  private slotSvgPath() {
+    return `/assets/promo/${this._slotId}/banner.svg`;
+  }
+  private slotPngPath() {
+    return `/assets/promo/${this._slotId}/banner.png`;
+  }
+  private genSvgPath() {
+    return `/assets/promo/generic/banner.svg`;
+  }
+  private genPngPath() {
+    return `/assets/promo/generic/banner.png`;
+  }
 
   /** Bei Fehler: aktuelle URL merken und zur nächsten sinnvollen Quelle wechseln */
   onImgError() {
     if (this.imgSrc) this.badUrls.add(this.imgSrc);
 
-    const next =
-      !this.tried.slotSvg ? (this.tried.slotSvg = true, this.slotSvgPath()) :
-      !this.tried.slotPng ? (this.tried.slotPng = true, this.slotPngPath()) :
-      !this.tried.genSvg  ? (this.tried.genSvg  = true, this.genSvgPath())  :
-      !this.tried.genPng  ? (this.tried.genPng  = true, this.genPngPath())  :
-      null;
+    const next = !this.tried.slotSvg
+      ? ((this.tried.slotSvg = true), this.slotSvgPath())
+      : !this.tried.slotPng
+        ? ((this.tried.slotPng = true), this.slotPngPath())
+        : !this.tried.genSvg
+          ? ((this.tried.genSvg = true), this.genSvgPath())
+          : !this.tried.genPng
+            ? ((this.tried.genPng = true), this.genPngPath())
+            : null;
 
     if (next && !this.badUrls.has(next)) {
       if (this.DEBUG) console.warn('[promo-slot] ERROR → fallback', this._slotId, '→', next);
@@ -87,7 +97,8 @@ export class AdSlotComponent {
 
   private setImgSrc(src: string, reason?: string) {
     this.imgSrc = src;
-    if (this.DEBUG && reason) console.debug('[promo-slot] SRC', this._slotId, '←', src, `(${reason})`);
+    if (this.DEBUG && reason)
+      console.debug('[promo-slot] SRC', this._slotId, '←', src, `(${reason})`);
   }
 
   private resetFallbacks() {

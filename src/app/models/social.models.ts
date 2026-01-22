@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 export type UID = string;
 
 export interface FriendPublicProfile {

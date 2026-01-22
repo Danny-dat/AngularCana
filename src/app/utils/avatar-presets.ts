@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 export type AvatarPreset = {
   id: string;
   label: string;

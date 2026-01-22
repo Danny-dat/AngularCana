@@ -1,10 +1,16 @@
-/* istanbul ignore file */
 import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Firestore, addDoc, collection, serverTimestamp, doc, getDoc } from '@angular/fire/firestore';
+import {
+  Firestore,
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  getDoc,
+} from '@angular/fire/firestore';
 
 import { FriendRequest, FriendPublicProfile } from '../../models/social.models';
 import { ChatService } from '../../services/chat.services';
@@ -413,43 +419,42 @@ export class SocialPage implements OnDestroy {
   }
 
   // Report aus dem ChatOverlay
-async onReport(evt: ReportEvent) {
-  const me = this.user().uid;
-  const cid = this.currentChatId();
-  if (!me || !cid) return;
+  async onReport(evt: ReportEvent) {
+    const me = this.user().uid;
+    const cid = this.currentChatId();
+    if (!me || !cid) return;
 
-  // Guard / Normalisierung (sicherer)
-  const cat = (evt.reasonCategory || '').trim();
-  const note = (evt.reasonText ?? '').toString().trim();
-  if (!cat) return;
+    // Guard / Normalisierung (sicherer)
+    const cat = (evt.reasonCategory || '').trim();
+    const note = (evt.reasonText ?? '').toString().trim();
+    if (!cat) return;
 
-  try {
-    await addDoc(collection(this.afs, 'reports'), {
-      type: 'chat_message',
-      scope: 'direct',
-      chatId: cid,
+    try {
+      await addDoc(collection(this.afs, 'reports'), {
+        type: 'chat_message',
+        scope: 'direct',
+        chatId: cid,
 
-      reporterId: me,
-      reportedId: evt.userId,
+        reporterId: me,
+        reportedId: evt.userId,
 
-      messageId: evt.messageId ?? null,
-      messageText: evt.text ?? '',
+        messageId: evt.messageId ?? null,
+        messageText: evt.text ?? '',
 
-      // hier die normalisierten Werte nutzen
-      reasonCategory: cat,
-      reasonText: note ? note : null,
+        // hier die normalisierten Werte nutzen
+        reasonCategory: cat,
+        reasonText: note ? note : null,
 
-      status: 'new',
-      createdAt: serverTimestamp(),
-    });
+        status: 'new',
+        createdAt: serverTimestamp(),
+      });
 
-    alert('Danke! Die Nachricht wurde gemeldet.');
-  } catch (e) {
-    console.error('Report fehlgeschlagen', e);
-    alert('Melden hat nicht funktioniert.');
+      alert('Danke! Die Nachricht wurde gemeldet.');
+    } catch (e) {
+      console.error('Report fehlgeschlagen', e);
+      alert('Melden hat nicht funktioniert.');
+    }
   }
-}
-
 
   // Cleanup
   ngOnDestroy() {

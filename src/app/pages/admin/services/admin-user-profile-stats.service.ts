@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionData } from '@angular/fire/firestore';
 import { combineLatest, Observable } from 'rxjs';
@@ -48,10 +47,18 @@ export type AdminUserProfileStats = {
 export class AdminUserProfileStatsService {
   private firestore = inject(Firestore);
 
-  private users$ = collectionData(collection(this.firestore, 'users') as any, { idField: 'uid' }) as Observable<any[]>;
-  private profiles$ = collectionData(collection(this.firestore, 'profiles_public') as any, { idField: 'uid' }) as Observable<any[]>;
-  private bans$ = collectionData(collection(this.firestore, 'banlist') as any, { idField: 'uid' }) as Observable<any[]>;
-  private admins$ = collectionData(collection(this.firestore, 'admins') as any, { idField: 'uid' }) as Observable<any[]>;
+  private users$ = collectionData(collection(this.firestore, 'users') as any, {
+    idField: 'uid',
+  }) as Observable<any[]>;
+  private profiles$ = collectionData(collection(this.firestore, 'profiles_public') as any, {
+    idField: 'uid',
+  }) as Observable<any[]>;
+  private bans$ = collectionData(collection(this.firestore, 'banlist') as any, {
+    idField: 'uid',
+  }) as Observable<any[]>;
+  private admins$ = collectionData(collection(this.firestore, 'admins') as any, {
+    idField: 'uid',
+  }) as Observable<any[]>;
 
   readonly stats$: Observable<AdminUserProfileStats> = combineLatest([
     this.users$,
@@ -157,7 +164,8 @@ export class AdminUserProfileStatsService {
         if (hasStr(p.website)) publicWebsite++;
         if (hasStr(p.locationText)) publicLocation++;
         const socials = p.socials ?? null;
-        const anySocial = socials && typeof socials === 'object' && Object.values(socials).some((v) => hasStr(v));
+        const anySocial =
+          socials && typeof socials === 'object' && Object.values(socials).some((v) => hasStr(v));
         if (anySocial) publicSocials++;
       }
 
@@ -199,6 +207,6 @@ export class AdminUserProfileStatsService {
         },
       };
     }),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 }

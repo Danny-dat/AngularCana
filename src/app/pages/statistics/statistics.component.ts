@@ -1,5 +1,14 @@
-/* istanbul ignore file */
-import { Component, DestroyRef, effect, inject, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  signal,
+  computed,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatisticsService, StatsRange } from '../../services/statistics.service';
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
@@ -9,9 +18,9 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-statistics',
   standalone: true,
-  imports: [CommonModule,FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './statistics.component.html',
-  styleUrls: ['./statistics.component.css']
+  styleUrls: ['./statistics.component.css'],
 })
 export class StatisticsComponent implements AfterViewInit {
   private statsSvc = inject(StatisticsService);
@@ -24,30 +33,35 @@ export class StatisticsComponent implements AfterViewInit {
   readonly uid = signal<string>('');
 
   // UI-State
-  readonly range = signal<StatsRange>('week');          // Start = Woche
+  readonly range = signal<StatsRange>('week'); // Start = Woche
   readonly labels = signal<string[]>([]);
   readonly values = signal<number[]>([]);
-  readonly rankings = signal({ byProduct: [] as {name:string;count:number}[], byDevice: [] as {name:string;count:number}[], byPair: [] as {name:string;count:number}[] });
+  readonly rankings = signal({
+    byProduct: [] as { name: string; count: number }[],
+    byDevice: [] as { name: string; count: number }[],
+    byPair: [] as { name: string; count: number }[],
+  });
   readonly isLoading = signal<boolean>(false);
 
   // Custom-Range
   readonly minDate = signal<string>(''); // yyyy-MM-dd (Registrierung)
   readonly maxDate = signal<string>(''); // heute
   readonly startDate = signal<string>(''); // für Custom
-  readonly endDate   = signal<string>(''); // für Custom
+  readonly endDate = signal<string>(''); // für Custom
 
-  readonly hasData = computed(() => this.values().some(v => v > 0));
-  readonly totalCount = computed(() => this.values().reduce((a,b)=>a+b, 0));
+  readonly hasData = computed(() => this.values().some((v) => v > 0));
+  readonly totalCount = computed(() => this.values().reduce((a, b) => a + b, 0));
 
   private chart?: Chart;
 
   constructor() {
-    authUser(this.auth).subscribe(u => {
+    authUser(this.auth).subscribe((u) => {
       this.uid.set(u?.uid ?? '');
       // frühester Zeitpunkt = Registrierungsdatum (aus Auth-Metadata)
       const created = u?.metadata?.creationTime ? new Date(u.metadata.creationTime) : new Date();
       const today = new Date();
-      const toStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const toStr = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       this.minDate.set(toStr(created));
       this.maxDate.set(toStr(today));
       // Default-Custom: von Registrierung bis heute
@@ -57,7 +71,8 @@ export class StatisticsComponent implements AfterViewInit {
 
     // neu laden bei UID/Range
     effect(() => {
-      const uid = this.uid(); const r = this.range();
+      const uid = this.uid();
+      const r = this.range();
       if (!uid) return;
       void this.load(uid, r);
     });
@@ -75,10 +90,12 @@ export class StatisticsComponent implements AfterViewInit {
       const data = await this.statsSvc.loadAdvancedConsumptionStats(
         uid,
         range,
-        range === 'custom' ? {
-          start: new Date(this.startDate()),
-          end:   new Date(this.endDate())
-        } : undefined
+        range === 'custom'
+          ? {
+              start: new Date(this.startDate()),
+              end: new Date(this.endDate()),
+            }
+          : undefined,
       );
 
       this.labels.set(data.chartLabels);
@@ -101,25 +118,30 @@ export class StatisticsComponent implements AfterViewInit {
 
   private renderChart(): void {
     const canvas = this.canvasRef?.nativeElement;
-    if (!canvas) { setTimeout(()=>this.renderChart(), 0); return; }
+    if (!canvas) {
+      setTimeout(() => this.renderChart(), 0);
+      return;
+    }
     this.chart?.destroy();
 
     const config: ChartConfiguration<'bar'> = {
       type: 'bar',
       data: {
         labels: this.labels(),
-        datasets: [{
-          label: 'Anzahl Konsumeinheiten',
-          data: this.values(),
-          borderWidth: 1
-        }]
+        datasets: [
+          {
+            label: 'Anzahl Konsumeinheiten',
+            data: this.values(),
+            borderWidth: 1,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-      }
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+      },
     };
     this.chart = new Chart(canvas, config);
   }

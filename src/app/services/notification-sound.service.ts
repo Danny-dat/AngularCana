@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/services/notification-sound.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -6,12 +5,14 @@ import { isPlatformBrowser } from '@angular/common';
 @Injectable({ providedIn: 'root' })
 export class NotificationSoundService {
   private platformId = inject(PLATFORM_ID);
-  private get isBrowser() { return isPlatformBrowser(this.platformId); }
+  private get isBrowser() {
+    return isPlatformBrowser(this.platformId);
+  }
 
   private audio?: HTMLAudioElement;
   private unlocked = false;
 
-  private defaultVolume = 0.30;
+  private defaultVolume = 0.3;
 
   private ctx?: AudioContext;
   private gain?: GainNode;
@@ -65,41 +66,53 @@ export class NotificationSoundService {
       this.audio.pause();
       this.audio.src = this.assetUrl(path, version);
       this.audio.currentTime = 0;
-      try { this.audio.load(); } catch {}
+      try {
+        this.audio.load();
+      } catch {}
       // Fallback-Lautstärke bis WebAudio aktiv ist
       if (!this.gain) this.audio.volume = this.defaultVolume;
     }
   }
 
-  getSource() { return this.src; }
-  getVolume() { return this.defaultVolume; }
+  getSource() {
+    return this.src;
+  }
+  getVolume() {
+    return this.defaultVolume;
+  }
 
   setVolume(v: number) {
     const clamped = Math.min(1, Math.max(0, v));
     this.defaultVolume = clamped;
     if (this.isBrowser) {
-      try { localStorage.setItem('notify:volume', String(clamped)); } catch {}
+      try {
+        localStorage.setItem('notify:volume', String(clamped));
+      } catch {}
       if (this.gain) this.gain.gain.value = clamped;
       else if (this.audio) this.audio.volume = clamped;
     }
   }
 
-  preview(vol?: number) { return this.play(vol); }
+  preview(vol?: number) {
+    return this.play(vol);
+  }
 
   async play(vol?: number) {
     if (!this.isBrowser) return; // SSR: einfach no-op
     this.ensureAudio();
     if (!this.audio) return;
 
-    const volToUse = typeof vol === 'number'
-      ? Math.min(1, Math.max(0, vol))
-      : this.defaultVolume;
+    const volToUse = typeof vol === 'number' ? Math.min(1, Math.max(0, vol)) : this.defaultVolume;
 
     if (this.gain) this.gain.gain.value = volToUse;
     else this.audio.volume = volToUse;
 
     this.audio.currentTime = 0;
-    try { await this.audio.play(); } catch { /* evtl. wegen fehlender User-Geste geblockt */ }
+    try {
+      await this.audio.play();
+    } catch {
+      /* evtl. wegen fehlender User-Geste geblockt */
+    }
   }
 
   stop() {
@@ -136,10 +149,16 @@ export class NotificationSoundService {
     const CtxCtor: typeof AudioContext | undefined =
       (window as any).AudioContext || (window as any).webkitAudioContext;
     // kein WebAudio verfügbar → einfach als "unlocked" markieren
-    if (!CtxCtor) { this.unlocked = true; return; }
+    if (!CtxCtor) {
+      this.unlocked = true;
+      return;
+    }
 
     this.ensureAudio();
-    if (!this.audio) { this.unlocked = true; return; }
+    if (!this.audio) {
+      this.unlocked = true;
+      return;
+    }
 
     if (!this.ctx) {
       const ctx = new CtxCtor();
@@ -158,6 +177,10 @@ export class NotificationSoundService {
 
   private unlockOnce = () => {
     if (!this.isBrowser || this.unlocked) return;
-    try { this.ensureContextUnlockedSync(); } catch { this.unlocked = true; }
+    try {
+      this.ensureContextUnlockedSync();
+    } catch {
+      this.unlocked = true;
+    }
   };
 }

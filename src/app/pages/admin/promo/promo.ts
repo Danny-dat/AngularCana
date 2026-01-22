@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -10,17 +9,11 @@ import { PromoSlotEditorComponent } from './promo-slot-editor';
 @Component({
   standalone: true,
   selector: 'app-AdminPromo',
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatIconModule,
-    PromoSlotEditorComponent,
-  ],
+  imports: [CommonModule, MatCardModule, MatIconModule, PromoSlotEditorComponent],
   templateUrl: './promo.html',
-  styleUrl: './promo.css'
+  styleUrl: './promo.css',
 })
 export class AdminPromo {
-
   readonly slots = [
     {
       id: 'dashboard-werbung1',

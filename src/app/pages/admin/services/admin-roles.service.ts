@@ -1,9 +1,16 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
-  Firestore, doc, setDoc, deleteDoc, updateDoc, collection, addDoc, arrayUnion, arrayRemove, serverTimestamp
+  Firestore,
+  doc,
+  setDoc,
+  deleteDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp,
 } from '@angular/fire/firestore';
-
 
 @Injectable({ providedIn: 'root' })
 export class AdminRolesService {
@@ -20,7 +27,7 @@ export class AdminRolesService {
         createdBy: actorUid,
         note: (note ?? '').trim(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     // Optional: zusätzlich im UserDoc pflegen (für UI/Später)

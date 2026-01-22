@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -51,10 +50,17 @@ export type CreateUserDialogResult = {
       </button>
     </div>
   `,
-  styles: [`
-    .content { display: grid; gap: 12px; }
-    .full { width: 100%; }
-  `],
+  styles: [
+    `
+      .content {
+        display: grid;
+        gap: 12px;
+      }
+      .full {
+        width: 100%;
+      }
+    `,
+  ],
 })
 export class CreateUserDialogComponent {
   ref = inject(MatDialogRef<CreateUserDialogComponent, CreateUserDialogResult>);

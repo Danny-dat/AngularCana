@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionData } from '@angular/fire/firestore';
 import { Observable, combineLatest } from 'rxjs';
@@ -133,9 +132,9 @@ export class AdminDirectoryService {
       rows.sort((a, b) => {
         if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
         return a.displayName.localeCompare(b.displayName);
-      })
+      }),
     ),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   private computeStatus(ban: (BanDoc & { uid: string }) | undefined, deletedAt: any | null) {

@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { normalizeUnifiedUserNameKey } from '../utils/user-name';
@@ -39,7 +38,7 @@ export class ProfileService {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-        { merge: true }
+        { merge: true },
       );
     } else {
       // Falls Felder fehlen, ergänzen wir sie best-effort
@@ -69,7 +68,7 @@ export class ProfileService {
       website?: string | null;
       locationText?: string | null;
       socials?: any;
-    }
+    },
   ) {
     // Falls username/displayName gesetzt werden, aber usernameKey fehlt, ergänzen wir ihn automatisch.
     const p: any = { ...patch };

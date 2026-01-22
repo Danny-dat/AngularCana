@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
@@ -21,7 +20,7 @@ import { FriendPublicProfile, FriendRequest, UID } from '../models/social.models
 
 function pickAllowed<T extends object, K extends keyof T>(
   obj: Partial<T>,
-  allowed: K[]
+  allowed: K[],
 ): Partial<T> {
   const out: Partial<T> = {};
   for (const key of allowed) if (key in obj) (out as any)[key] = (obj as any)[key];
@@ -61,16 +60,16 @@ export class FriendsService {
         this.friendRequestsCollection,
         where('fromUid', '==', fromUid),
         where('toUid', '==', toUid),
-        where('status', '==', 'pending')
-      )
+        where('status', '==', 'pending'),
+      ),
     );
     const pendingToFrom = await getDocs(
       query(
         this.friendRequestsCollection,
         where('fromUid', '==', toUid),
         where('toUid', '==', fromUid),
-        where('status', '==', 'pending')
-      )
+        where('status', '==', 'pending'),
+      ),
     );
     if (!pendingFromTo.empty || !pendingToFrom.empty) return;
 
@@ -79,16 +78,16 @@ export class FriendsService {
         this.friendRequestsCollection,
         where('fromUid', '==', fromUid),
         where('toUid', '==', toUid),
-        where('status', '==', 'accepted')
-      )
+        where('status', '==', 'accepted'),
+      ),
     );
     const acceptedToFrom = await getDocs(
       query(
         this.friendRequestsCollection,
         where('fromUid', '==', toUid),
         where('toUid', '==', fromUid),
-        where('status', '==', 'accepted')
-      )
+        where('status', '==', 'accepted'),
+      ),
     );
     if (!acceptedFromTo.empty || !acceptedToFrom.empty) return;
 
@@ -123,7 +122,7 @@ export class FriendsService {
 
     const requestsQuery = query(
       this.friendRequestsCollection,
-      where('participants', 'array-contains', myUid)
+      where('participants', 'array-contains', myUid),
     );
     return onSnapshot(requestsQuery, (snapshot) => {
       const incoming: FriendRequest[] = snapshot.docs
@@ -136,7 +135,7 @@ export class FriendsService {
   async fetchIncoming(myUid: UID): Promise<FriendRequest[]> {
     if (!myUid) return []; // Zusätzliche Sicherheitsprüfung
     const requestsSnapshot = await getDocs(
-      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid))
+      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid)),
     );
     return requestsSnapshot.docs
       .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as any) }))
@@ -150,7 +149,7 @@ export class FriendsService {
 
     const requestsQuery = query(
       this.friendRequestsCollection,
-      where('participants', 'array-contains', myUid)
+      where('participants', 'array-contains', myUid),
     );
     return onSnapshot(requestsQuery, async (snapshot) => {
       const acceptedRequests = snapshot.docs
@@ -159,8 +158,10 @@ export class FriendsService {
 
       const friendIds = Array.from(
         new Set<string>(
-          acceptedRequests.map((req) => (req.fromUid === myUid ? req.toUid : req.fromUid) as string)
-        )
+          acceptedRequests.map(
+            (req) => (req.fromUid === myUid ? req.toUid : req.fromUid) as string,
+          ),
+        ),
       );
 
       if (!friendIds.length) return callback([]);
@@ -176,7 +177,7 @@ export class FriendsService {
           } catch {
             return null;
           }
-        })
+        }),
       );
 
       const friends: FriendPublicProfile[] = friendIds.map((friendId, index) => {
@@ -243,7 +244,7 @@ export class FriendsService {
 
   private async findRelationshipDocs(userA: UID, userB: UID) {
     const snapshot = await getDocs(
-      query(this.friendRequestsCollection, where('participants', 'array-contains', userA))
+      query(this.friendRequestsCollection, where('participants', 'array-contains', userA)),
     );
     return snapshot.docs.filter((docSnap) => (docSnap.data() as any).participants?.includes(userB));
   }
@@ -251,7 +252,7 @@ export class FriendsService {
   async remove(myUid: UID, friendUid: UID) {
     const relationshipDocs = await this.findRelationshipDocs(myUid, friendUid);
     const acceptedDocs = relationshipDocs.filter(
-      (docSnap) => (docSnap.data() as any).status === 'accepted'
+      (docSnap) => (docSnap.data() as any).status === 'accepted',
     );
     if (!acceptedDocs.length) throw new Error('Keine bestehende Freundschaft gefunden.');
     for (const acceptedDoc of acceptedDocs) {
@@ -281,7 +282,7 @@ export class FriendsService {
   async unblock(myUid: UID, friendUid: UID) {
     const relationshipDocs = await this.findRelationshipDocs(myUid, friendUid);
     const blockedDocs = relationshipDocs.filter(
-      (docSnap) => (docSnap.data() as any).status === 'blocked'
+      (docSnap) => (docSnap.data() as any).status === 'blocked',
     );
     if (!blockedDocs.length) throw new Error('Kein blockiertes Dokument gefunden.');
     for (const blockedDoc of blockedDocs) {
@@ -296,7 +297,7 @@ export class FriendsService {
 
     const requestsQuery = query(
       this.friendRequestsCollection,
-      where('participants', 'array-contains', myUid)
+      where('participants', 'array-contains', myUid),
     );
     return onSnapshot(requestsQuery, (snapshot) => {
       const blockedIds = new Set<string>();
@@ -356,7 +357,7 @@ export class FriendsService {
             _action: '',
           };
           return profile;
-        })
+        }),
       );
       // Filtere eventuelle null-Werte heraus
       callback(profiles.filter((p) => p !== null) as FriendPublicProfile[]);
@@ -365,7 +366,7 @@ export class FriendsService {
 
   async getAcceptedFriendIds(myUid: string): Promise<string[]> {
     const snap = await getDocs(
-      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid))
+      query(this.friendRequestsCollection, where('participants', 'array-contains', myUid)),
     );
     const ids = new Set<string>();
     snap.docs.forEach((d) => {

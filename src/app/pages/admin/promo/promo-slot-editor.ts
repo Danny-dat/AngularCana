@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/pages/admin/promo/promo-slot-editor.ts
 import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -96,7 +95,12 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   fileError: string | null = null;
 
   // aktuelle Konfig (aus Firestore)
-  current: { linkEnabled: boolean; linkUrl: string | null; activeExt: AdSlotConfig['activeExt']; updatedAt?: string | null } = {
+  current: {
+    linkEnabled: boolean;
+    linkUrl: string | null;
+    activeExt: AdSlotConfig['activeExt'];
+    updatedAt?: string | null;
+  } = {
     linkEnabled: true,
     linkUrl: null,
     activeExt: 'webp',
@@ -106,7 +110,12 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!this.afs) {
       // z.B. in Unit-Tests ohne AngularFire Provider
-      this.doc$ = of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any);
+      this.doc$ = of({
+        linkEnabled: true,
+        linkUrl: null,
+        activeExt: 'webp',
+        updatedAt: null,
+      } as any);
       this.sub = this.doc$.subscribe();
       return;
     }
@@ -128,7 +137,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
           linkEnabled: this.current.linkEnabled,
           linkUrl: this.current.linkUrl ?? '',
         },
-        { emitEvent: false }
+        { emitEvent: false },
       );
     });
   }
@@ -197,9 +206,13 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
     try {
       const prepared = await this.prepareFile(this.selectedFile);
       this.downloadFile(prepared, `banner.${this.nextExt()}`);
-      this.snack?.open('Datei vorbereitet. Jetzt per FTP/Server ersetzen und danach "Speichern" klicken.', 'OK', {
-        duration: 3500,
-      });
+      this.snack?.open(
+        'Datei vorbereitet. Jetzt per FTP/Server ersetzen und danach "Speichern" klicken.',
+        'OK',
+        {
+          duration: 3500,
+        },
+      );
     } catch {
       this.snack?.open('Konnte Datei nicht vorbereiten.', 'OK', { duration: 2500 });
     }
@@ -214,7 +227,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       const linkUrl = (this.form.controls.linkUrl.value ?? '').trim();
 
       // Wenn Link deaktiviert -> URL null
-      const finalUrl = linkEnabled ? (linkUrl || null) : null;
+      const finalUrl = linkEnabled ? linkUrl || null : null;
 
       const r = doc(afs, 'adSlots', this.slotId);
       await setDoc(
@@ -225,7 +238,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
           activeExt: this.nextExt(),
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       this.snack?.open('Promo gespeichert ✅', 'OK', { duration: 2000 });
@@ -272,7 +285,12 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   // intern
   // -----------------------
 
-  private slotDoc$(): Observable<{ linkEnabled: boolean; linkUrl: string | null; activeExt: AdSlotConfig['activeExt']; updatedAt?: string | null }> {
+  private slotDoc$(): Observable<{
+    linkEnabled: boolean;
+    linkUrl: string | null;
+    activeExt: AdSlotConfig['activeExt'];
+    updatedAt?: string | null;
+  }> {
     const afs = this.afs;
     if (!afs) {
       return of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any);
@@ -285,7 +303,9 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
         activeExt: (d?.activeExt ?? 'webp') as any,
         updatedAt: this.toIsoSafe(d?.updatedAt) ?? null,
       })),
-      catchError(() => of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any))
+      catchError(() =>
+        of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any),
+      ),
     );
   }
 
@@ -331,7 +351,7 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       canvas.toBlob(
         (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
         'image/webp',
-        0.92
+        0.92,
       );
     });
 

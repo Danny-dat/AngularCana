@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -77,19 +76,32 @@ export type LockDialogResult = { reason: string; until: Date };
       </button>
     </div>
   `,
-  styles: [`
-    :host{ display:block; }
+  styles: [
+    `
+      :host {
+        display: block;
+      }
 
-    .content{ display:grid; gap:14px; padding-top:8px; }
-    .full{ width:100%; }
+      .content {
+        display: grid;
+        gap: 14px;
+        padding-top: 8px;
+      }
+      .full {
+        width: 100%;
+      }
 
-    .field{ display:grid; gap:6px; }
-    .field-label{
-      font-size:12px;
-      opacity:.75;
-      margin-left:4px;
-    }
-  `]
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field-label {
+        font-size: 12px;
+        opacity: 0.75;
+        margin-left: 4px;
+      }
+    `,
+  ],
 })
 export class LockDialogComponent {
   ref = inject(MatDialogRef<LockDialogComponent, LockDialogResult>);

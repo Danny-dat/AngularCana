@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject, DestroyRef } from '@angular/core';
 import { Auth, user } from '@angular/fire/auth';
 import { filter, map, distinctUntilChanged } from 'rxjs/operators';
@@ -10,16 +9,16 @@ export class SessionService {
   private auth = inject(Auth);
   private presence = inject(PresenceService);
   private destroyRef = inject(DestroyRef);
-  
-  constructor() {        
+
+  constructor() {
     // Reagiere EINMAL global auf Login/Logout
     user(this.auth)
       .pipe(
-        map(u => u?.uid ?? ''),
+        map((u) => u?.uid ?? ''),
         distinctUntilChanged(),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(uid => {
+      .subscribe((uid) => {
         if (uid) {
           this.presence.start(uid);
         } else {

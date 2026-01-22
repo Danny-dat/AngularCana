@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // Ergänze/angleiche die Typen
 export type NotificationType = 'chat_message' | 'friend_request' | 'default';
 

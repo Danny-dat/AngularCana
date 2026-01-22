@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
@@ -43,8 +42,8 @@ export class GeocodingService {
             lat: Number(i.lat),
             lng: Number(i.lon),
             label: i.display_name,
-          }))
-        )
+          })),
+        ),
       );
   }
 }

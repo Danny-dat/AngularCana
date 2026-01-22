@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, ChangeDetectorRef, Input, Output, EventEmitter, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -19,7 +18,7 @@ interface Consumable {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './canna.html',
-  styleUrl: './canna.css'
+  styleUrl: './canna.css',
 })
 export class CannaComponent {
   // @Input() empfängt Daten von der Eltern-Komponente (Dashboard)
@@ -32,7 +31,7 @@ export class CannaComponent {
 
   constructor(
     private readonly cdr: ChangeDetectorRef,
-    private readonly zone: NgZone
+    private readonly zone: NgZone,
   ) {}
 
   products: Consumable[] = [
@@ -87,7 +86,7 @@ export class CannaComponent {
   logConsumption() {
     this.logRequest.emit(this.selection);
   }
-  
+
   // Diese Methode wird vom Dashboard aufgerufen, um das Formular zurückzusetzen.
   public resetSelection(): void {
     this.selection = { product: null, device: null, location: null };
@@ -98,10 +97,9 @@ export class CannaComponent {
     const img = ev.target as HTMLImageElement;
     if (img) {
       img.src = `data:image/svg+xml;utf8,${encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="100%" height="100%" fill="#f0f0f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#9aa0a6">n/a</text></svg>`
+        `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="100%" height="100%" fill="#f0f0f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#9aa0a6">n/a</text></svg>`,
       )}`;
       img.alt = 'Platzhalter';
     }
   }
 }
-

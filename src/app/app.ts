@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/app.ts
 import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -32,11 +31,10 @@ export class AppComponent implements OnInit {
     if (this.isBrowser) {
       this.notify.setSource('assets/sounds/notification_dingdong.mp3', '20251003');
       // optional: früh Audio entsperren
-      window.addEventListener(
-        'pointerdown',
-        () => this.notify.ensureUnlockedFromGesture(),
-        { once: true, passive: true }
-      );
+      window.addEventListener('pointerdown', () => this.notify.ensureUnlockedFromGesture(), {
+        once: true,
+        passive: true,
+      });
     }
   }
 

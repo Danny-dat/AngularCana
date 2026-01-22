@@ -1,6 +1,7 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore,   Timestamp,
+import {
+  Firestore,
+  Timestamp,
   collection,
   documentId,
   getDocs,
@@ -8,7 +9,8 @@ import { Firestore,   Timestamp,
   orderBy,
   query,
   startAfter,
-  where, } from '@angular/fire/firestore';
+  where,
+} from '@angular/fire/firestore';
 
 export type PivotMetric = 'logs' | 'uniqueUsers';
 
@@ -106,7 +108,7 @@ export class AdminPivotService {
       where('timestamp', '>=', startTs),
       where('timestamp', '<=', endTs),
       orderBy('timestamp', 'asc'),
-      limit(pageSize)
+      limit(pageSize),
     );
 
     const out: ConsumptionLite[] = [];
@@ -122,15 +124,27 @@ export class AdminPivotService {
         out.push({
           id: d.id,
           userId: safeStr(data?.userId ?? data?.uid ?? '', ''),
-          userDisplayName: (typeof data?.userDisplayName === 'string' && data.userDisplayName.trim())
-            ? data.userDisplayName.trim()
-            : null,
-          product: (typeof data?.product === 'string' && data.product.trim()) ? data.product.trim() : null,
-          device: (typeof data?.device === 'string' && data.device.trim()) ? data.device.trim() : null,
-          location: (typeof data?.location === 'string' && data.location.trim()) ? data.location.trim() : null,
-          platform: (typeof data?.platform === 'string' && data.platform.trim()) ? data.platform.trim() : null,
+          userDisplayName:
+            typeof data?.userDisplayName === 'string' && data.userDisplayName.trim()
+              ? data.userDisplayName.trim()
+              : null,
+          product:
+            typeof data?.product === 'string' && data.product.trim() ? data.product.trim() : null,
+          device:
+            typeof data?.device === 'string' && data.device.trim() ? data.device.trim() : null,
+          location:
+            typeof data?.location === 'string' && data.location.trim()
+              ? data.location.trim()
+              : null,
+          platform:
+            typeof data?.platform === 'string' && data.platform.trim()
+              ? data.platform.trim()
+              : null,
           hasGeo: Boolean(data?.hasGeo ?? data?.locationGeo),
-          geoCellId: (typeof data?.geoCellId === 'string' && data.geoCellId.trim()) ? data.geoCellId.trim() : null,
+          geoCellId:
+            typeof data?.geoCellId === 'string' && data.geoCellId.trim()
+              ? data.geoCellId.trim()
+              : null,
           timestamp: ts,
         });
         if (out.length >= maxDocs) break;
@@ -144,7 +158,7 @@ export class AdminPivotService {
         where('timestamp', '<=', endTs),
         orderBy('timestamp', 'asc'),
         startAfter(last),
-        limit(pageSize)
+        limit(pageSize),
       );
     }
 
@@ -165,7 +179,7 @@ export class AdminPivotService {
     for (let i = 0; i < uniq.length; i += 10) chunks.push(uniq.slice(i, i + 10));
 
     const snaps = await Promise.all(
-      chunks.map((c) => getDocs(query(col, where(documentId(), 'in', c))))
+      chunks.map((c) => getDocs(query(col, where(documentId(), 'in', c)))),
     );
 
     for (const snap of snaps) {
@@ -183,7 +197,8 @@ export class AdminPivotService {
         map.set(d.id, {
           gender,
           city: typeof loc?.city === 'string' && loc.city.trim() ? loc.city.trim() : null,
-          country: typeof loc?.country === 'string' && loc.country.trim() ? loc.country.trim() : null,
+          country:
+            typeof loc?.country === 'string' && loc.country.trim() ? loc.country.trim() : null,
           displayName:
             typeof p?.displayName === 'string' && p.displayName.trim()
               ? p.displayName.trim()
@@ -264,11 +279,13 @@ export class AdminPivotService {
       // wenn keine Dimension gewählt ist -> alles in einen Bucket
       const values: Record<string, string> = {};
       const key = dims.length
-        ? dims.map((dim) => {
-            const v = dimValue(d, dim);
-            values[dim] = v;
-            return v;
-          }).join(sep)
+        ? dims
+            .map((dim) => {
+              const v = dimValue(d, dim);
+              values[dim] = v;
+              return v;
+            })
+            .join(sep)
         : '__all__';
 
       const b = buckets.get(key);

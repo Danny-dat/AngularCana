@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -6,7 +5,15 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { firstValueFrom } from 'rxjs';
 
 import { Auth, user } from '@angular/fire/auth';
-import { Firestore,addDoc, collection, doc, getDoc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
+import {
+  Firestore,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  Timestamp,
+} from '@angular/fire/firestore';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -53,7 +60,11 @@ type BanDoc = {
               <div class="row">
                 <div class="lbl">Status</div>
                 <div class="val">
-                  <span class="pill" [class.ban]="ban?.type==='ban'" [class.lock]="ban?.type==='lock'">
+                  <span
+                    class="pill"
+                    [class.ban]="ban?.type === 'ban'"
+                    [class.lock]="ban?.type === 'lock'"
+                  >
                     {{ statusLabel() }}
                   </span>
                 </div>
@@ -93,12 +104,20 @@ type BanDoc = {
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Nachricht an den Support / Admin</mat-label>
                 <textarea matInput rows="5" [formControl]="form.controls.message"></textarea>
-                <mat-hint>Bitte kurz beschreiben, warum du glaubst, dass die Sperre ein Fehler ist.</mat-hint>
+                <mat-hint
+                  >Bitte kurz beschreiben, warum du glaubst, dass die Sperre ein Fehler
+                  ist.</mat-hint
+                >
               </mat-form-field>
 
               <div class="form-actions">
-                <button mat-button (click)="showForm=false">Abbrechen</button>
-                <button mat-flat-button color="primary" [disabled]="form.invalid || submitting" (click)="submit()">
+                <button mat-button (click)="showForm = false">Abbrechen</button>
+                <button
+                  mat-flat-button
+                  color="primary"
+                  [disabled]="form.invalid || submitting"
+                  (click)="submit()"
+                >
                   {{ submitting ? 'Senden…' : 'Senden' }}
                 </button>
               </div>
@@ -112,7 +131,8 @@ type BanDoc = {
 
         <ng-template #notLoggedTpl>
           <div class="hint">
-            Du bist aktuell nicht eingeloggt. Bitte logge dich ein, um Details zu sehen oder ein Ticket zu erstellen.
+            Du bist aktuell nicht eingeloggt. Bitte logge dich ein, um Details zu sehen oder ein
+            Ticket zu erstellen.
           </div>
           <div class="actions">
             <button mat-flat-button color="primary" routerLink="/login">
@@ -329,7 +349,9 @@ export class AccountBlockedComponent {
       this.form.reset({ message: '' });
       this.showForm = false;
     } catch {
-      this.snack.open('Ticket konnte nicht erstellt werden (Rules/Permissions?)', 'OK', { duration: 4500 });
+      this.snack.open('Ticket konnte nicht erstellt werden (Rules/Permissions?)', 'OK', {
+        duration: 4500,
+      });
     } finally {
       this.submitting = false;
     }

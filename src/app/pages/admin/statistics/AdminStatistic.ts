@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import {
   Component,
   DestroyRef,
@@ -22,7 +21,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
 
 import { AdminStatsService } from '../services/admin-stats.service';
-import { AdminUserProfileStatsService, AdminUserProfileStats } from '../services/admin-user-profile-stats.service';
+import {
+  AdminUserProfileStatsService,
+  AdminUserProfileStats,
+} from '../services/admin-user-profile-stats.service';
 import {
   AdminAnalyticsService,
   DailyTotal,
@@ -173,7 +175,11 @@ export class AdminStatistic {
     { label: 'Bans', value: this.nf.format(this.bansCount()), icon: 'block' },
     { label: 'Locks', value: this.nf.format(this.locksCount()), icon: 'lock' },
     { label: 'Logs (7 Tage)', value: this.nf.format(this.consumptions7dCount()), icon: 'timeline' },
-    { label: 'Logs (30 Tage)', value: this.nf.format(this.consumptions30dCount()), icon: 'insights' },
+    {
+      label: 'Logs (30 Tage)',
+      value: this.nf.format(this.consumptions30dCount()),
+      icon: 'insights',
+    },
   ]);
 
   // ------- Window / Charts
@@ -214,30 +220,31 @@ export class AdminStatistic {
     return metric === 'uniqueUsers' ? [...dims, 'uniqueUsers', 'logs'] : [...dims, 'logs'];
   });
 
-  readonly pivotDimGroups: { label: string; options: { id: PivotDimensionId; label: string }[] }[] = [
-    {
-      label: 'Konsum-Log',
-      options: [
-        { id: 'product', label: 'Produkt' },
-        { id: 'device', label: 'Gerät' },
-        { id: 'location', label: 'Ort (Log)' },
-        { id: 'weekday', label: 'Wochentag' },
-        { id: 'hour', label: 'Uhrzeit' },
-        { id: 'platform', label: 'Plattform' },
-        { id: 'hasGeo', label: 'Geo vorhanden' },
-        { id: 'geoCell', label: 'Geo-Zelle' },
-        { id: 'user', label: 'User' },
-      ],
-    },
-    {
-      label: 'User Profil',
-      options: [
-        { id: 'userGender', label: 'Geschlecht' },
-        { id: 'userCity', label: 'Stadt' },
-        { id: 'userCountry', label: 'Land' },
-      ],
-    },
-  ];
+  readonly pivotDimGroups: { label: string; options: { id: PivotDimensionId; label: string }[] }[] =
+    [
+      {
+        label: 'Konsum-Log',
+        options: [
+          { id: 'product', label: 'Produkt' },
+          { id: 'device', label: 'Gerät' },
+          { id: 'location', label: 'Ort (Log)' },
+          { id: 'weekday', label: 'Wochentag' },
+          { id: 'hour', label: 'Uhrzeit' },
+          { id: 'platform', label: 'Plattform' },
+          { id: 'hasGeo', label: 'Geo vorhanden' },
+          { id: 'geoCell', label: 'Geo-Zelle' },
+          { id: 'user', label: 'User' },
+        ],
+      },
+      {
+        label: 'User Profil',
+        options: [
+          { id: 'userGender', label: 'Geschlecht' },
+          { id: 'userCity', label: 'Stadt' },
+          { id: 'userCountry', label: 'Land' },
+        ],
+      },
+    ];
 
   constructor() {
     // initial + on range change
@@ -278,7 +285,7 @@ export class AdminStatistic {
       await this.reload(this.rangeDays());
       if (res.processed > 0) {
         this.metaText.set(
-          `Sync: +${this.nf.format(res.processed)} neue Logs • letzter Cursor: ${res.lastProcessedAt?.toLocaleString('de-DE') ?? '—'}`
+          `Sync: +${this.nf.format(res.processed)} neue Logs • letzter Cursor: ${res.lastProcessedAt?.toLocaleString('de-DE') ?? '—'}`,
         );
       }
     } catch (e) {
@@ -352,7 +359,12 @@ export class AdminStatistic {
       const start = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 0, 0, 0, 0);
       start.setDate(start.getDate() - Math.max(days - 1, 0));
 
-      const docs = await this.pivot.loadConsumptionsInRange({ start, end, pageSize: 500, maxDocs: 8000 });
+      const docs = await this.pivot.loadConsumptionsInRange({
+        start,
+        end,
+        pageSize: 500,
+        maxDocs: 8000,
+      });
       this.pivotDocs.set(docs);
 
       // Profile lite nachladen (nur die UserIds, die wirklich im Zeitraum vorkommen)

@@ -1,6 +1,15 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore, doc, updateDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
+import {
+  Firestore,
+  doc,
+  updateDoc,
+  setDoc,
+  deleteDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  Timestamp,
+} from '@angular/fire/firestore';
 
 export type ModerationAction = 'BAN' | 'LOCK' | 'UNLOCK' | 'SOFT_DELETE' | 'RESTORE';
 
@@ -8,32 +17,57 @@ export type ModerationAction = 'BAN' | 'LOCK' | 'UNLOCK' | 'SOFT_DELETE' | 'REST
 export class AdminModerationService {
   private firestore = inject(Firestore);
 
-  async banUser(params: { targetUid: string; actorUid: string; reason: string; until?: Date | null }) {
+  async banUser(params: {
+    targetUid: string;
+    actorUid: string;
+    reason: string;
+    until?: Date | null;
+  }) {
     const { targetUid, actorUid, reason, until } = params;
 
-    await setDoc(doc(this.firestore, 'banlist', targetUid), {
-      type: 'ban',
-      until: until ? Timestamp.fromDate(until) : null,
-      reason: reason ?? '',
-      createdAt: serverTimestamp(),
-      createdBy: actorUid,
-    }, { merge: true });
+    await setDoc(
+      doc(this.firestore, 'banlist', targetUid),
+      {
+        type: 'ban',
+        until: until ? Timestamp.fromDate(until) : null,
+        reason: reason ?? '',
+        createdAt: serverTimestamp(),
+        createdBy: actorUid,
+      },
+      { merge: true },
+    );
 
-    await this.audit({ action: 'BAN', targetUid, actorUid, reason, meta: { until: until ? until.toISOString() : null } });
+    await this.audit({
+      action: 'BAN',
+      targetUid,
+      actorUid,
+      reason,
+      meta: { until: until ? until.toISOString() : null },
+    });
   }
 
   async lockUser(params: { targetUid: string; actorUid: string; reason: string; until: Date }) {
     const { targetUid, actorUid, reason, until } = params;
 
-    await setDoc(doc(this.firestore, 'banlist', targetUid), {
-      type: 'lock',
-      until: Timestamp.fromDate(until),
-      reason: reason ?? '',
-      createdAt: serverTimestamp(),
-      createdBy: actorUid,
-    }, { merge: true });
+    await setDoc(
+      doc(this.firestore, 'banlist', targetUid),
+      {
+        type: 'lock',
+        until: Timestamp.fromDate(until),
+        reason: reason ?? '',
+        createdAt: serverTimestamp(),
+        createdBy: actorUid,
+      },
+      { merge: true },
+    );
 
-    await this.audit({ action: 'LOCK', targetUid, actorUid, reason, meta: { until: until.toISOString() } });
+    await this.audit({
+      action: 'LOCK',
+      targetUid,
+      actorUid,
+      reason,
+      meta: { until: until.toISOString() },
+    });
   }
 
   async unlockUser(params: { targetUid: string; actorUid: string; reason?: string }) {
@@ -68,7 +102,13 @@ export class AdminModerationService {
     await this.audit({ action: 'RESTORE', targetUid, actorUid, reason: reason ?? '', meta: {} });
   }
 
-  private async audit(entry: { action: ModerationAction; targetUid: string; actorUid: string; reason: string; meta: any }) {
+  private async audit(entry: {
+    action: ModerationAction;
+    targetUid: string;
+    actorUid: string;
+    reason: string;
+    meta: any;
+  }) {
     await addDoc(collection(this.firestore, 'audit_logs'), {
       timestamp: serverTimestamp(),
       action: entry.action,

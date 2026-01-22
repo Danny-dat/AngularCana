@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { EventItem } from './events.service';
@@ -75,10 +74,19 @@ export class MapService {
 
   destroyMap(): void {
     if (!isPlatformBrowser(this.pid)) return;
-    try { this.clearRoute(); } catch {}
-    try { this.clearEvents(); } catch {}
-    try { if (this.eventsLayer && this.map) this.eventsLayer.removeFrom(this.map); } catch {}
-    try { this.map?.off(); this.map?.remove(); } catch {}
+    try {
+      this.clearRoute();
+    } catch {}
+    try {
+      this.clearEvents();
+    } catch {}
+    try {
+      if (this.eventsLayer && this.map) this.eventsLayer.removeFrom(this.map);
+    } catch {}
+    try {
+      this.map?.off();
+      this.map?.remove();
+    } catch {}
     this.routeLine = undefined;
     this.eventsLayer = undefined;
     this.map = undefined;
@@ -88,8 +96,11 @@ export class MapService {
   // ---------- Events ----------
   clearEvents() {
     if (!this.eventsLayer) return;
-    try { this.eventsLayer.clearLayers(); }
-    catch (err) { console.warn('[MapService] clearEvents failed:', err); }
+    try {
+      this.eventsLayer.clearLayers();
+    } catch (err) {
+      console.warn('[MapService] clearEvents failed:', err);
+    }
   }
 
   addEventMarker(e: EventItem, highlight = false) {
@@ -111,13 +122,17 @@ export class MapService {
       background:#fef3c7;border:2px solid #f59e0b;
       box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:16px;line-height:1">⭐</div>`;
     const starIcon = L.divIcon({
-      html: starHtml, className: 'ev-star-icon',
-      iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -16],
+      html: starHtml,
+      className: 'ev-star-icon',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -16],
     });
 
     const icon = highlight ? starIcon : (L.Marker as any).prototype.options.icon;
-    const m = L.marker([nLat, nLng], { title: e.name, icon })
-      .bindPopup(`<strong>${e.name}</strong><br>${e.address ?? ''}`);
+    const m = L.marker([nLat, nLng], { title: e.name, icon }).bindPopup(
+      `<strong>${e.name}</strong><br>${e.address ?? ''}`,
+    );
     m.addTo(this.eventsLayer);
     return m;
   }
@@ -125,16 +140,19 @@ export class MapService {
   showLikedEvents(events: EventItem[], uid: string) {
     if (!this.map || !this.L) return;
     const sUid = String(uid);
-    const liked = (events || []).filter(e => (e.upvotes || []).map(String).includes(sUid));
+    const liked = (events || []).filter((e) => (e.upvotes || []).map(String).includes(sUid));
 
     this.clearEvents();
-    liked.forEach(e => this.addEventMarker(e, true));
+    liked.forEach((e) => this.addEventMarker(e, true));
 
     if (liked.length === 1) {
-      const e = liked[0]; this.focus(Number(e.lat), Number(e.lng), 15);
+      const e = liked[0];
+      this.focus(Number(e.lat), Number(e.lng), 15);
     } else if (liked.length > 1) {
       const L = this.L!;
-      const b = L.latLngBounds(liked.map(e => [Number(e.lat), Number(e.lng)]) as import('leaflet').LatLngTuple[]);
+      const b = L.latLngBounds(
+        liked.map((e) => [Number(e.lat), Number(e.lng)]) as import('leaflet').LatLngTuple[],
+      );
       this.map!.fitBounds(b, { padding: [20, 20] });
     }
   }
@@ -142,11 +160,13 @@ export class MapService {
   fitToEvents(events: EventItem[]) {
     if (!this.map || !this.L) return;
     const valid = (events || []).filter(
-      e => Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng))
+      (e) => Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng)),
     );
     if (!valid.length) return;
     const L = this.L!;
-    const b = L.latLngBounds(valid.map(e => [Number(e.lat), Number(e.lng)]) as import('leaflet').LatLngTuple[]);
+    const b = L.latLngBounds(
+      valid.map((e) => [Number(e.lat), Number(e.lng)]) as import('leaflet').LatLngTuple[],
+    );
     this.map!.fitBounds(b, { padding: [20, 20] });
   }
 
@@ -163,8 +183,9 @@ export class MapService {
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
-      const coords: [number, number][] | undefined =
-        data?.routes?.[0]?.geometry?.coordinates?.map((c: [number, number]) => [c[1], c[0]]);
+      const coords: [number, number][] | undefined = data?.routes?.[0]?.geometry?.coordinates?.map(
+        (c: [number, number]) => [c[1], c[0]],
+      );
       if (!coords?.length) return;
 
       this.clearRoute();
@@ -174,7 +195,9 @@ export class MapService {
   }
 
   clearRoute() {
-    try { if (this.routeLine && this.map) this.map.removeLayer(this.routeLine); } catch {}
+    try {
+      if (this.routeLine && this.map) this.map.removeLayer(this.routeLine);
+    } catch {}
     this.routeLine = undefined;
   }
 }

@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -41,8 +40,12 @@ export class UserDataComponent implements OnInit, OnDestroy {
   uid: string | null = null;
 
   // Forms
-  profileForm = this.fb.group({    // Name ist Anzeigename + Username zugleich
-    displayName: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)]],
+  profileForm = this.fb.group({
+    // Name ist Anzeigename + Username zugleich
+    displayName: [
+      '',
+      [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9_]{3,20}$/)],
+    ],
     firstName: ['', [Validators.maxLength(40)]],
     lastName: ['', [Validators.maxLength(60)]],
     email: [{ value: '', disabled: true }],
@@ -120,7 +123,6 @@ export class UserDataComponent implements OnInit, OnDestroy {
     };
   }
 
-
   nameState = signal<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
 
   // Settings
@@ -187,7 +189,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
         map((v) => normalizeUnifiedUserName((v ?? '').toString())),
         debounceTime(300),
         distinctUntilChanged(),
-        filter(() => !!this.uid)
+        filter(() => !!this.uid),
       )
       .subscribe((handle) => {
         try {
@@ -206,7 +208,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
         map((v) => normalizeUnifiedUserName((v ?? '').toString())),
         debounceTime(450),
         distinctUntilChanged(),
-        filter(() => !!this.uid)
+        filter(() => !!this.uid),
       )
       .subscribe(async (handle) => {
         const ctrl = this.profileForm.controls.displayName;
@@ -242,7 +244,6 @@ export class UserDataComponent implements OnInit, OnDestroy {
           this.nameState.set('idle');
         }
       });
-
 
     // User + Daten laden
     this.subAuth = user(this.auth).subscribe(async (u) => {
@@ -292,7 +293,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
             showLocation: data.visibility?.showLocation ?? true,
             showSocials: data.visibility?.showSocials ?? true,
           },
-          { emitEvent: false }
+          { emitEvent: false },
         );
 
         // UI-Status für Name
@@ -336,7 +337,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
             notificationSound: settings.notificationSound ?? true,
             notificationVolumePct: initialPct,
           },
-          { emitEvent: false }
+          { emitEvent: false },
         );
 
         // Sound-Service gleich setzen
@@ -439,8 +440,16 @@ export class UserDataComponent implements OnInit, OnDestroy {
 
     try {
       const raw = this.profileForm.getRawValue();
-      await this.svc.saveUserData(this.uid, { displayName: handle, username: handle, usernameKey: key } as Partial<UserDataModel>);
-      await this.profileSvc.updatePublicProfile(this.uid, { displayName: handle, username: handle, usernameKey: key });
+      await this.svc.saveUserData(this.uid, {
+        displayName: handle,
+        username: handle,
+        usernameKey: key,
+      } as Partial<UserDataModel>);
+      await this.profileSvc.updatePublicProfile(this.uid, {
+        displayName: handle,
+        username: handle,
+        usernameKey: key,
+      });
       if (this.auth.currentUser)
         await updateProfile(this.auth.currentUser, {
           displayName: handle,
@@ -477,7 +486,10 @@ export class UserDataComponent implements OnInit, OnDestroy {
     try {
       const ok = await this.svc.isUsernameAvailable(handle, this.uid);
       if (!ok) {
-        this.profileForm.controls.displayName.setErrors({ ...(this.profileForm.controls.displayName.errors ?? {}), taken: true });
+        this.profileForm.controls.displayName.setErrors({
+          ...(this.profileForm.controls.displayName.errors ?? {}),
+          taken: true,
+        });
         this.nameState.set('taken');
         this.errorMsg.set('Dieser Name ist bereits vergeben.');
         this.savingProfile.set(false);
@@ -549,7 +561,8 @@ export class UserDataComponent implements OnInit, OnDestroy {
           : null,
       });
 
-      if (this.auth.currentUser) await updateProfile(this.auth.currentUser, { displayName: handle });
+      if (this.auth.currentUser)
+        await updateProfile(this.auth.currentUser, { displayName: handle });
 
       try {
         localStorage.setItem('displayName', handle);
@@ -592,7 +605,9 @@ export class UserDataComponent implements OnInit, OnDestroy {
       // 2) Theme separat in /users/{uid} speichern (nur wenn geändert)
       if (themeChanged) {
         await this.svc.saveUserData(this.uid, { theme: newTheme });
-        try { localStorage.setItem('ui:theme', String(newTheme)); } catch {}
+        try {
+          localStorage.setItem('ui:theme', String(newTheme));
+        } catch {}
       }
 
       // Lokal konsistent halten
@@ -609,7 +624,7 @@ export class UserDataComponent implements OnInit, OnDestroy {
 
       this.captureBaselineFromForm();
       this.settingsForm.markAsPristine();
-    } catch (e:any) {
+    } catch (e: any) {
       this.errorMsg.set(e?.message ?? 'Einstellungen konnten nicht gespeichert werden.');
     } finally {
       this.savingSettings.set(false);

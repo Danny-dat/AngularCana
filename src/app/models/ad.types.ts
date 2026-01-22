@@ -1,7 +1,6 @@
-/* istanbul ignore file */
 export interface AdSlotConfig {
   id: string;
-  imgUrl: string;       // endgültige URL (mit ?v= Cache-Bust)
+  imgUrl: string; // endgültige URL (mit ?v= Cache-Bust)
   linkUrl?: string | null;
   /** Link deaktivieren (falls du das Banner nur anzeigen willst) */
   linkEnabled?: boolean;
@@ -13,5 +12,5 @@ export interface AdSlotConfig {
   configUpdatedAt?: string;
   alt?: string;
   /** Letzte Bild-Aenderung (Version) */
-  updatedAt?: string;   // ISO
+  updatedAt?: string; // ISO
 }

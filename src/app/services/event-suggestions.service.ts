@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
@@ -130,7 +129,7 @@ export class EventSuggestionsService {
     // Safety: cap the live list so the admin UI doesn't grow without bounds (Spark-friendly)
     const q = query(this.suggestionsCol, orderBy('createdAt', 'desc'), limit(400));
     return collectionData(q, { idField: 'id' }).pipe(
-      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
+      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any),
     );
   }
 
@@ -139,10 +138,10 @@ export class EventSuggestionsService {
       this.suggestionsCol,
       where('status', '==', status),
       orderBy('createdAt', 'desc'),
-      limit(max)
+      limit(max),
     );
     return collectionData(q, { idField: 'id' }).pipe(
-      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
+      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any),
     );
   }
 
@@ -150,10 +149,10 @@ export class EventSuggestionsService {
     const q = query(
       this.suggestionsCol,
       where('status', '==', 'open'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
     );
     return collectionData(q, { idField: 'id' }).pipe(
-      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
+      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any),
     );
   }
 
@@ -161,10 +160,10 @@ export class EventSuggestionsService {
     const q = query(
       this.suggestionsCol,
       where('createdBy', '==', uid),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
     );
     return collectionData(q, { idField: 'id' }).pipe(
-      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any)
+      map((rows: any[]) => (rows || []).map((r) => ({ ...r, id: r.id })) as any),
     );
   }
 
