@@ -14,7 +14,6 @@ describe('Reports', () => {
 
     fixture = TestBed.createComponent(AdminReports);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

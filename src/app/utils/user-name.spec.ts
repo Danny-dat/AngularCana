@@ -11,6 +11,11 @@ describe('user-name utils', () => {
       expect(normalizeUnifiedUserName(input)).toBe('Ma_x_123');
     });
 
+    it('handles nullish input', () => {
+      expect(normalizeUnifiedUserName(undefined as any)).toBe('');
+      expect(normalizeUnifiedUserName(null as any)).toBe('');
+    });
+
     it('returns empty string for empty-ish values', () => {
       expect(normalizeUnifiedUserName('')).toBe('');
       // @ only

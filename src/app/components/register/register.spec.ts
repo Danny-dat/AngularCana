@@ -73,6 +73,16 @@ describe('RegisterComponent', () => {
     expect(component.isAvatarSelected('assets/avatars/b.png')).toBeFalse();
   });
 
+
+
+  it('isAvatarSelected treats nullish photoURL as empty string', () => {
+    fixture = TestBed.createComponent(RegisterComponent);
+    component = fixture.componentInstance;
+
+    (component.form as any).photoURL = null;
+    expect(component.isAvatarSelected('')).toBeTrue();
+    expect(component.isAvatarSelected('assets/avatars/a.png')).toBeFalse();
+  });
   it('doRegister: uses explicitly selected theme and bootstraps + navigates on success', async () => {
     fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;
@@ -156,6 +166,29 @@ describe('RegisterComponent', () => {
     expect(themeMock.setTheme).toHaveBeenCalledWith('dark');
   });
 
+
+
+  it('doRegister: defaults to light when system is not dark and localStorage theme is invalid', async () => {
+    fixture = TestBed.createComponent(RegisterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    spyOn(localStorage, 'getItem').and.returnValue('nope');
+    setMatchMedia(false);
+
+    component.form.email = 'test@example.com';
+    component.form.password = 'pw';
+    component.form.displayName = 'User';
+
+    authMock.register.and.resolveTo({ uid: 'uid-3b' } as any);
+    bootstrapMock.bootstrapNow.and.resolveTo();
+
+    await component.doRegister();
+
+    const arg = authMock.register.calls.mostRecent().args[0] as any;
+    expect(arg.theme).toBe('light');
+    expect(themeMock.setTheme).toHaveBeenCalledWith('light');
+  });
   it('doRegister: safely defaults to light when theme detection throws', async () => {
     fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;

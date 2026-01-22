@@ -7,7 +7,7 @@ import { from } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
 // Optional: Owner-Notbremse (falls Firestore mal klemmt)
-const OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
+const OWNER_UID = ['ZAz0Bnde5zYIS8qCDT86aOvEDX52', 'I1G1BWLcpUTcVU3smdRF1fmgPCR2', 'mUaEdJMTlVX5rRJBTsMEYialWtD2'];
 
 function checkAdmin() {
   const auth = inject(Auth);
@@ -19,7 +19,7 @@ function checkAdmin() {
       if (!u) return from([router.createUrlTree(['/login'])]);
 
       // Owner darf immer rein (optional)
-      if (u.uid === OWNER_UID) return from([true]);
+      if (OWNER_UID.includes(u.uid)) return from([true]);
 
       // Admin = admins/{uid} existiert
       const ref = doc(firestore, 'admins', u.uid);

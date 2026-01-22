@@ -103,6 +103,46 @@ describe('LoginComponent', () => {
     expect(component.isLoading).toBeFalse();
   });
 
+  it('uses email when displayName is null', async () => {
+    fixture = TestBed.createComponent(LoginComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    component.email = 'test@example.com';
+    component.password = 'pw';
+
+    authMock.login.and.resolveTo({
+      user: { uid: 'u123', displayName: null, email: 'mail@example.com' },
+    } as any);
+
+    const setItemSpy = spyOn(localStorage, 'setItem');
+    bootstrapMock.bootstrapNow.and.resolveTo();
+
+    await component.doLogin();
+
+    expect(setItemSpy).toHaveBeenCalledWith('displayName', 'mail@example.com');
+  });
+
+  it("falls back to 'User' when no displayName and no email", async () => {
+    fixture = TestBed.createComponent(LoginComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    component.email = 'test@example.com';
+    component.password = 'pw';
+
+    authMock.login.and.resolveTo({
+      user: { uid: 'u123', displayName: null, email: null },
+    } as any);
+
+    const setItemSpy = spyOn(localStorage, 'setItem');
+    bootstrapMock.bootstrapNow.and.resolveTo();
+
+    await component.doLogin();
+
+    expect(setItemSpy).toHaveBeenCalledWith('displayName', 'User');
+  });
+
   it('returns early when AuthService returns null (blocked flow) and does not navigate', async () => {
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;

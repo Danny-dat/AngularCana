@@ -15,23 +15,33 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-
             "outputMode": "static",
-            "index": { "input": "src/index.html", "output": "index.html" },
-
+            "index": {
+              "input": "src/index.html",
+              "output": "index.html"
+            },
             "assets": [
               "src/favicon.ico",
-              { "glob": "**/*", "input": "src/assets", "output": "assets" },
-              { "glob": "**/*", "input": "public" },
-              { "glob": "**/*", "input": "node_modules/leaflet/dist/images", "output": "assets/leaflet" }
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "assets"
+              },
+              {
+                "glob": "**/*",
+                "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/leaflet/dist/images",
+                "output": "assets/leaflet"
+              }
             ],
-
             "styles": [
               "src/custom-theme.scss",
               "src/styles.css",
               "leaflet/dist/leaflet.css"
             ],
-
             "allowedCommonJsDependencies": [
               "leaflet",
               "qrcode",
@@ -44,61 +54,62 @@
           "configurations": {
             "production": {
               "outputHashing": "all",
-
               "optimization": {
                 "fonts": {
                   "inline": false
                 }
               },
-
               "budgets": [
-                { "type": "initial", "maximumWarning": "1.20mb", "maximumError": "1.50mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "6kb", "maximumError": "8kb" }
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.20mb",
+                  "maximumError": "1.50mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "8kb"
+                }
               ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "testing": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "polyfills": [
+                "zone.js",
+                "zone.js/testing"
+              ]
             }
           },
           "defaultConfiguration": "production"
         },
-
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
-            "production": { "buildTarget": "cannatrack-angular:build:production" },
-            "development": { "buildTarget": "cannatrack-angular:build:development" }
+            "production": {
+              "buildTarget": "cannatrack-angular:build:production"
+            },
+            "development": {
+              "buildTarget": "cannatrack-angular:build:development"
+            }
           },
           "defaultConfiguration": "development"
         },
-
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
         },
-
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "codeCoverage": true,
-            "codeCoverageExclude": [
-              "src/main.ts",
-              "src/main.server.ts",
-              "src/server.ts",
-              "src/environments/**",
-              "src/app/app.config*.ts",
-              "src/app/app.routes*.ts",
-              "src/app/app.ts"
-            ],
+            "buildTarget": "cannatrack-angular:build:testing",
             "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              "src/favicon.ico",
-              { "glob": "**/*", "input": "src/assets", "output": "assets" },
-              { "glob": "**/*", "input": "public" }
-            ],
-            "styles": ["src/styles.css", "leaflet/dist/leaflet.css"],
-            "polyfills": ["zone.js", "zone.js/testing"]
+            "runner": "karma"
           }
         }
       }
