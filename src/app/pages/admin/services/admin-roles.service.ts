@@ -1,9 +1,9 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
-  Firestore, doc, setDoc, deleteDoc, updateDoc, collection, addDoc
+  Firestore, doc, setDoc, deleteDoc, updateDoc, collection, addDoc, arrayUnion, arrayRemove, serverTimestamp
 } from '@angular/fire/firestore';
-import { arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+
 
 @Injectable({ providedIn: 'root' })
 export class AdminRolesService {

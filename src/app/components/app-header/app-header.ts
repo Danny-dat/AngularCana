@@ -12,7 +12,7 @@ import { AppNotification } from '../../models/notification-module';
 import { Observable, Subscription, fromEvent } from 'rxjs';
 import { vibrate } from '../../utils/notify';
 import { NotificationSoundService } from '../../services/notification-sound.service';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from '@angular/fire/firestore';
 import { AppSidenav } from '../app-sidenav/app-sidenav';
 
 @Component({

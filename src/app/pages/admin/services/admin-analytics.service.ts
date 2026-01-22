@@ -1,8 +1,6 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore } from '@angular/fire/firestore';
-import {
-  Timestamp,
+import { Firestore,  Timestamp,
   serverTimestamp,
   getDoc,
   setDoc,
@@ -16,8 +14,7 @@ import {
   writeBatch,
   increment,
   collectionGroup,
-  documentId,
-} from 'firebase/firestore';
+  documentId, } from '@angular/fire/firestore';
 
 import { geoCellE2, keyify } from '../../../utils/analytics-utils';
 

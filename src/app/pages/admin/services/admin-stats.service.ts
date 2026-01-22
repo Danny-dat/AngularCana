@@ -1,7 +1,13 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection } from '@angular/fire/firestore';
-import { getCountFromServer, query, where, Timestamp } from 'firebase/firestore';
+import {
+  Firestore,
+  collection,
+  getCountFromServer,
+  query,
+  where,
+  Timestamp,
+} from '@angular/fire/firestore';
 import { timer, from, Observable, of, combineLatest } from 'rxjs';
 import { switchMap, map, shareReplay, catchError } from 'rxjs/operators';
 
@@ -14,10 +20,10 @@ export class AdminStatsService {
       switchMap(() =>
         from(getCountFromServer(buildQuery())).pipe(
           map((snap) => snap.data().count),
-          catchError(() => of(0))
-        )
+          catchError(() => of(0)),
+        ),
       ),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
   }
 
@@ -29,11 +35,11 @@ export class AdminStatsService {
 
   /** Bans / Locks (Collection: banlist/{uid}) */
   bansCount$ = this.count$(() =>
-    query(collection(this.firestore, 'banlist'), where('type', '==', 'ban'))
+    query(collection(this.firestore, 'banlist'), where('type', '==', 'ban')),
   );
 
   locksCount$ = this.count$(() =>
-    query(collection(this.firestore, 'banlist'), where('type', '==', 'lock'))
+    query(collection(this.firestore, 'banlist'), where('type', '==', 'lock')),
   );
 
   /**
@@ -43,10 +49,7 @@ export class AdminStatsService {
    */
   onlineNowCount$ = this.count$(() => {
     const since = Timestamp.fromMillis(Date.now() - 45_000);
-return query(
-  collection(this.firestore, 'presence'),
-  where('lastActiveAt', '>=', since)
-);
+    return query(collection(this.firestore, 'presence'), where('lastActiveAt', '>=', since));
   }, 30_000);
 
   /** Aktiv in den letzten 24h/7d (Presence lastActiveAt) */
@@ -80,13 +83,13 @@ return query(
 
   /** Reports erledigt (status == 'resolved') */
   reportsResolvedCount$ = this.count$(() =>
-    query(collection(this.firestore, 'reports'), where('status', '==', 'resolved'))
+    query(collection(this.firestore, 'reports'), where('status', '==', 'resolved')),
   );
 
   /** Offene Reports = total - resolved (zählt auch alte Docs ohne status als "offen") */
   reportsOpenCount$ = combineLatest([this.reportsTotalCount$, this.reportsResolvedCount$]).pipe(
     map(([total, resolved]) => Math.max(0, total - resolved)),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   /** Events (Map-Marker) */
@@ -94,7 +97,7 @@ return query(
 
   /** Event-Vorschläge offen */
   eventSuggestionsOpenCount$ = this.count$(() =>
-    query(collection(this.firestore, 'event_suggestions'), where('status', '==', 'open'))
+    query(collection(this.firestore, 'event_suggestions'), where('status', '==', 'open')),
   );
 
   // =========================
@@ -106,6 +109,6 @@ return query(
 
   /** Anzahl aktiv geschalteter Promo-Slots (linkEnabled == true) */
   promoSlotsActiveCount$ = this.count$(() =>
-    query(collection(this.firestore, 'adSlots'), where('linkEnabled', '==', true))
+    query(collection(this.firestore, 'adSlots'), where('linkEnabled', '==', true)),
   );
 }

@@ -16,7 +16,7 @@ import {
   doc,
   setDoc,
   serverTimestamp,
-  getDoc, // AngularFire getDoc
+  getDoc,
 } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';

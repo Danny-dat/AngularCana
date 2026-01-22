@@ -1,7 +1,6 @@
 /* istanbul ignore file */
 import { Injectable, inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, getDoc, setDoc, serverTimestamp } from '@angular/fire/firestore';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where } from '@angular/fire/firestore';
 
 export type Gender = 'unspecified' | 'male' | 'female' | 'diverse';
 

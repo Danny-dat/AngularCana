@@ -2,12 +2,9 @@ import { TestBed } from '@angular/core/testing';
 
 import { AdminUserProfileStatsService } from './admin-user-profile-stats.service';
 
-import { provideFirebaseApp } from '@angular/fire/app';
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
-import { provideFirestore, getFirestore, Firestore } from '@angular/fire/firestore';
-
-import { initializeApp } from 'firebase/app';
-import { disableNetwork } from 'firebase/firestore';
+import { provideFirestore, getFirestore, Firestore, disableNetwork } from '@angular/fire/firestore';
 
 describe('AdminUserProfileStatsService', () => {
   let service: AdminUserProfileStatsService;

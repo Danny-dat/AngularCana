@@ -13,10 +13,9 @@ import { of } from 'rxjs';
 
 import { provideFirebaseApp } from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { provideFirestore, getFirestore, disableNetwork } from '@angular/fire/firestore';
 
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
-import { disableNetwork } from 'firebase/firestore';
 
 declare const require: any;
 

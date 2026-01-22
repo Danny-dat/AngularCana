@@ -28,7 +28,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from '@angular/fire/firestore';
 
 import { EventsService, EventItem } from '../../../services/events.service';
 import {

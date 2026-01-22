@@ -1,12 +1,9 @@
 /* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { FirebaseApp } from '@angular/fire/app';
-import { Auth } from '@angular/fire/auth';
-import { Firestore, collection, addDoc } from '@angular/fire/firestore';
+import { FirebaseApp, initializeApp, deleteApp } from '@angular/fire/app';
+import { Auth, getAuth, createUserWithEmailAndPassword, signOut  } from '@angular/fire/auth';
+import { Firestore, collection, addDoc, getFirestore, doc, setDoc, serverTimestamp } from '@angular/fire/firestore';
 
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../../../utils/user-name';
 

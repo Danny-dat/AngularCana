@@ -8,12 +8,12 @@ export const ADMIN_ROUTES: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'admins',
-        loadComponent: () =>
-          import('./admins/admin-admins').then((m) => m.AdminAdminsComponent),
+        loadComponent: () => import('./admins/admin-admins').then((m) => m.AdminAdminsComponent),
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./dashboard/dashboard').then((m) => m.AdminDashboardComponent),
+        loadComponent: () =>
+          import('./dashboard/AdminDashboard').then((m) => m.AdminDashboardComponent),
       },
       { path: 'users', loadComponent: () => import('./users/users').then((m) => m.AdminUsers) },
       {

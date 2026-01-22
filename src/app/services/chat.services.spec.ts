@@ -1,9 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ChatService } from './chat.services';
 
-import { Firestore } from '@angular/fire/firestore';
+import { Firestore, disableNetwork } from '@angular/fire/firestore';
 import { FIREBASE_TEST_PROVIDERS } from '../../testing/firebase-test-providers';
-import { disableNetwork } from 'firebase/firestore';
 
 describe('ChatServices', () => {
   let service: ChatService;
