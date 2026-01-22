@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideLocationMocks } from '@angular/common/testing';
-import { provideRouter, Router, Routes } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { provideRouter, Router, Routes, NavigationEnd } from '@angular/router';
+import { BehaviorSubject, firstValueFrom, filter } from 'rxjs';
 
 import { AppHeaderComponent } from './app-header';
 
@@ -42,8 +42,12 @@ class MockNotificationSoundService {
 
 class MockThemeService {
   private cur: 'light' | 'dark' = 'light';
-  getTheme() { return this.cur; }
-  setTheme(t: 'light' | 'dark') { this.cur = t; }
+  getTheme() {
+    return this.cur;
+  }
+  setTheme(t: 'light' | 'dark') {
+    this.cur = t;
+  }
 }
 
 class MockUserDataService {
@@ -67,17 +71,24 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
       localStorage.removeItem('pref-theme');
     } catch {}
 
-    // ✅ Auth-Mock: user(this.auth) braucht onIdTokenChanged UND storage-Handler braucht currentUser
+    // ✅ Auth-Mock robuster:
+    // AngularFire kann je nach Version auth.onIdTokenChanged ODER auth._delegate.onIdTokenChanged nutzen
     const mockUser = { uid: 'u1', displayName: null, email: null } as any;
 
     const authMock: any = {
       currentUser: mockUser,
+
+      onIdTokenChanged: (cb: any) => {
+        cb(mockUser);
+        return () => {};
+      },
+
       _delegate: {
         onIdTokenChanged: (cb: any) => {
-          cb(mockUser);      // -> "eingeloggt"
-          return () => {};   // unsubscribe
+          cb(mockUser);
+          return () => {};
         },
-        signOut: () => Promise.resolve(), // für logout() (optional, aber sauber)
+        signOut: () => Promise.resolve(),
       },
     };
 
@@ -91,7 +102,6 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
         { provide: ThemeService, useClass: MockThemeService },
         { provide: UserDataService, useClass: MockUserDataService },
         { provide: Auth, useValue: authMock },
-        // Firestore wird hier nicht gebraucht, aber App kann es injizieren
         { provide: Firestore, useValue: {} as any },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -108,7 +118,9 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   });
 
   afterEach(() => {
-    try { fixture.destroy(); } catch {}
+    try {
+      fixture.destroy();
+    } catch {}
   });
 
   it('should create', () => {
@@ -118,17 +130,18 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   it('shows default "User" and updates from localStorage', async () => {
     expect(component.userDisplayName).toBe('User');
 
-    spyOn(localStorage, 'getItem').and.callFake((key: string) =>
-      key === 'displayName' ? 'LocalName' : null,
-    );
+    localStorage.setItem('displayName', 'LocalName');
 
-    // Wichtig: storage-Handler liest localStorage.getItem() (nicht ev.newValue)
-    window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
-
-    await Promise.resolve();
+    (component as any).applyLocalOrAuthName(null, null);
     fixture.detectChanges();
 
     expect(component.userDisplayName).toBe('LocalName');
+
+    window.dispatchEvent(new CustomEvent('displayNameChanged', { detail: 'EventName' }));
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component.userDisplayName).toBe('EventName');
   });
 
   it('renders badge and plays sound when unreadCount increases', async () => {
@@ -151,10 +164,11 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   it('toggles notifications dropdown and closes on outside click', async () => {
     expect(component.showNotifications).toBeFalse();
 
-    const bellBtn: HTMLButtonElement =
+    const bellBtn: HTMLButtonElement | null =
       fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+    expect(bellBtn).toBeTruthy();
 
-    bellBtn.click();
+    bellBtn!.click();
     await Promise.resolve();
     fixture.detectChanges();
     expect(component.showNotifications).toBeTrue();
@@ -166,7 +180,6 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   });
 
   it('calls markAsRead when a notification item is clicked', async () => {
-    // optional: typ setzen, falls dein Template openNotification() nutzt
     noti.notifications$.next([
       { id: 'n1', message: 'Hello', read: false, timestamp: new Date(), type: 'friend_request' },
     ]);
@@ -174,17 +187,18 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
     await Promise.resolve();
     fixture.detectChanges();
 
-    const bellBtn: HTMLButtonElement =
+    const bellBtn: HTMLButtonElement | null =
       fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+    expect(bellBtn).toBeTruthy();
 
-    bellBtn.click();
+    bellBtn!.click();
     await Promise.resolve();
     fixture.detectChanges();
 
-    const item: HTMLElement = fixture.nativeElement.querySelector('.dropdown .item');
+    const item: HTMLElement | null = fixture.nativeElement.querySelector('.dropdown .item');
     expect(item).toBeTruthy();
 
-    item.click();
+    item!.click();
     await Promise.resolve();
     fixture.detectChanges();
 
@@ -193,8 +207,9 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
 
   it('navigates to /login on logout and clears localStorage', async () => {
     const removeSpy = spyOn(localStorage, 'removeItem').and.stub();
-    const navigateSpy = spyOn((component as any).router, 'navigateByUrl')
-      .and.returnValue(Promise.resolve(true));
+    const navigateSpy = spyOn((component as any).router, 'navigateByUrl').and.returnValue(
+      Promise.resolve(true),
+    );
 
     await component.logout();
     fixture.detectChanges();
@@ -204,10 +219,13 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   });
 
   it('updates pageTitle from route data on navigation (/users → "Benutzer")', async () => {
-    await router.navigateByUrl('/users');
-    await Promise.resolve();
-    fixture.detectChanges();
+    // Warten bis Navigation wirklich fertig ist, sonst bleibt manchmal "Dashboard"
+    const navDone = firstValueFrom(router.events.pipe(filter((e) => e instanceof NavigationEnd)));
 
+    await router.navigateByUrl('/users');
+    await navDone;
+
+    fixture.detectChanges();
     expect(component.pageTitle).toBe('Benutzer');
   });
 });

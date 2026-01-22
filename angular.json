@@ -37,11 +37,7 @@
                 "output": "assets/leaflet"
               }
             ],
-            "styles": [
-              "src/custom-theme.scss",
-              "src/styles.css",
-              "leaflet/dist/leaflet.css"
-            ],
+            "styles": ["src/custom-theme.scss", "src/styles.css", "leaflet/dist/leaflet.css"],
             "allowedCommonJsDependencies": [
               "leaflet",
               "qrcode",
@@ -81,10 +77,7 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "polyfills": [
-                "zone.js",
-                "zone.js/testing"
-              ]
+              "polyfills": ["zone.js", "zone.js/testing"]
             }
           },
           "defaultConfiguration": "production"
@@ -105,11 +98,12 @@
           "builder": "@angular/build:extract-i18n"
         },
         "test": {
-          "builder": "@angular/build:unit-test",
+          "builder": "@angular/build:karma",
           "options": {
-            "buildTarget": "cannatrack-angular:build:testing",
+            "main": "src/test.ts",
+            "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "runner": "karma"
+            "karmaConfig": "karma.conf.js"
           }
         }
       }
