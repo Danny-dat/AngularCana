@@ -64,8 +64,8 @@ type EventFormValue = {
     MatSnackBarModule,
     MatSelectModule,
   ],
-  templateUrl: './events.html',
-  styleUrl: './events.css',
+  templateUrl: './AdminEvents.html',
+  styleUrl: './AdminEvents.css',
 })
 export class AdminEvents {
   private eventsSvc = inject(EventsService);

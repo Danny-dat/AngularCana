@@ -25,7 +25,10 @@ export const ADMIN_ROUTES: Routes = [
         path: 'reports',
         loadComponent: () => import('./reports/reports').then((m) => m.AdminReports),
       },
-      { path: 'events', loadComponent: () => import('./events/events').then((m) => m.AdminEvents) },
+      {
+        path: 'events',
+        loadComponent: () => import('./events/AdminEvents').then((m) => m.AdminEvents),
+      },
       { path: 'promo', loadComponent: () => import('./promo/promo').then((m) => m.AdminPromo) },
       {
         path: 'statistics',
