@@ -109,8 +109,7 @@
           "options": {
             "buildTarget": "cannatrack-angular:build:testing",
             "tsConfig": "tsconfig.spec.json",
-            "runner": "karma",
-            "runnerConfig": "karma.conf.js"
+            "runner": "karma"
           }
         }
       }
