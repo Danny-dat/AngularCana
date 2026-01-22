@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +22,16 @@ jobs:
 
       - name: Install deps
         run: npm ci --no-audit --no-fund
+
+      - name: Create environment.ts for CI
+        run: |
+          mkdir -p src/environments
+          if [ -f "src/environments/environment.example.ts" ]; then
+            cp src/environments/environment.example.ts src/environments/environment.ts
+          else
+            echo "Missing src/environments/environment.example.ts"
+            exit 1
+          fi
 
       - name: Run unit tests (with 100% coverage gate)
         run: npm run test:ci
