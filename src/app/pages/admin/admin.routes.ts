@@ -32,7 +32,7 @@ export const ADMIN_ROUTES: Routes = [
       { path: 'promo', loadComponent: () => import('./promo/promo').then((m) => m.AdminPromo) },
       {
         path: 'statistics',
-        loadComponent: () => import('./statistics/statistics').then((m) => m.AdminStatistic),
+        loadComponent: () => import('./statistics/AdminStatistic').then((m) => m.AdminStatistic),
       },
     ],
   },
