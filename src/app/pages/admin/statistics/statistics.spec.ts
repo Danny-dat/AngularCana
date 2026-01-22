@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AdminStatistic } from './statistics';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 
 describe('Statistics', () => {
   let component: AdminStatistic;
@@ -8,9 +10,12 @@ describe('Statistics', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AdminStatistic]
-    })
-    .compileComponents();
+      imports: [AdminStatistic],
+      providers: [
+        { provide: Auth, useValue: {} as any },
+        { provide: Firestore, useValue: {} as any },
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AdminStatistic);
     component = fixture.componentInstance;

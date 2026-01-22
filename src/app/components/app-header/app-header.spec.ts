@@ -9,15 +9,15 @@ import { AppHeaderComponent } from './app-header';
 // Services, die die Komponente injiziert:
 import { NotificationService } from '../../services/notification.service';
 import { NotificationSoundService } from '../../services/notification-sound.service';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 
 // ---- Dummy-Komponente für Routing-Tests ----
 @Component({ standalone: true, template: '' })
 class DummyCmp {}
 
 // Test-Routen: eine Route mit data.title, um den Seitentitel zu prüfen
-const routes: Routes = [
-  { path: 'users', component: DummyCmp, data: { title: 'Benutzer' } },
-];
+const routes: Routes = [{ path: 'users', component: DummyCmp, data: { title: 'Benutzer' } }];
 
 // ---- Mocks ----
 class MockNotificationService {
@@ -45,6 +45,8 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
         provideLocationMocks(),
         { provide: NotificationService, useClass: MockNotificationService },
         { provide: NotificationSoundService, useClass: MockNotificationSoundService },
+        { provide: Auth, useValue: {} as any },
+        { provide: Firestore, useValue: {} as any },
       ],
       // Unbekannte Elemente (z. B. <app-app-sidenav>) im Template ignorieren
       schemas: [NO_ERRORS_SCHEMA],
@@ -68,7 +70,9 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
     // Standardwert (falls kein Name gesetzt)
     expect(component.userDisplayName).toBeTruthy();
 
-    spyOn(localStorage, 'getItem').and.callFake((key: string) => (key === 'displayName' ? 'LocalName' : null as any));
+    spyOn(localStorage, 'getItem').and.callFake((key: string) =>
+      key === 'displayName' ? 'LocalName' : (null as any),
+    );
     window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
     await Promise.resolve();
     fixture.detectChanges();
@@ -130,7 +134,9 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
 
   it('navigates to /login on logout and clears localStorage', async () => {
     const removeSpy = spyOn(localStorage, 'removeItem').and.stub();
-    const navigateSpy = spyOn((component as any).router, 'navigateByUrl').and.returnValue(Promise.resolve(true));
+    const navigateSpy = spyOn((component as any).router, 'navigateByUrl').and.returnValue(
+      Promise.resolve(true),
+    );
 
     await component.logout();
     fixture.detectChanges();
