@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -42,17 +41,24 @@ export type AddAdminDialogResult = { uid: string; note: string };
       </button>
     </div>
   `,
-  styles: [`
-    .content { display: grid; gap: 12px; }
-    .full { width: 100%; }
-  `]
+  styles: [
+    `
+      .content {
+        display: grid;
+        gap: 12px;
+      }
+      .full {
+        width: 100%;
+      }
+    `,
+  ],
 })
 export class AddAdminDialogComponent {
   ref = inject(MatDialogRef<AddAdminDialogComponent, AddAdminDialogResult>);
 
   uidCtrl = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.minLength(8)]
+    validators: [Validators.required, Validators.minLength(8)],
   });
 
   noteCtrl = new FormControl('', { nonNullable: true });

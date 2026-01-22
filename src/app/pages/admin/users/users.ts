@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,12 +5,24 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { combineLatest, Observable, firstValueFrom } from 'rxjs';
 import { map, shareReplay, startWith } from 'rxjs/operators';
 
-import { FirebaseApp,initializeApp, deleteApp  } from '@angular/fire/app';
-import { Auth, user,  createUserWithEmailAndPassword,
+import { FirebaseApp, initializeApp, deleteApp } from '@angular/fire/app';
+import {
+  Auth,
+  user,
+  createUserWithEmailAndPassword,
   getAuth,
   signOut,
-  sendPasswordResetEmail, } from '@angular/fire/auth';
-import { Firestore, getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from '@angular/fire/firestore';
+  sendPasswordResetEmail,
+} from '@angular/fire/auth';
+import {
+  Firestore,
+  getFirestore,
+  doc,
+  setDoc,
+  addDoc,
+  collection,
+  serverTimestamp,
+} from '@angular/fire/firestore';
 
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
@@ -86,7 +97,7 @@ export class AdminUsers {
         (r) =>
           r.uid.toLowerCase().includes(query) ||
           r.displayName.toLowerCase().includes(query) ||
-          (r.username ?? '').toLowerCase().includes(query)
+          (r.username ?? '').toLowerCase().includes(query),
       );
     }),
     map((rows): GroupedRows => {
@@ -96,7 +107,7 @@ export class AdminUsers {
       const deleted = rows.filter((r) => r.status === 'deleted');
       return { all: rows, active, locked, banned, deleted };
     }),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   constructor() {
@@ -203,7 +214,13 @@ export class AdminUsers {
             location: { city: null, country: null },
             birthday: null,
             gender: 'unspecified',
-            socials: { instagram: null, tiktok: null, youtube: null, discord: null, telegram: null },
+            socials: {
+              instagram: null,
+              tiktok: null,
+              youtube: null,
+              discord: null,
+              telegram: null,
+            },
             visibility: { showBio: true, showWebsite: true, showLocation: true, showSocials: true },
           },
 
@@ -214,7 +231,7 @@ export class AdminUsers {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       // Public Profile (optional)
@@ -231,7 +248,7 @@ export class AdminUsers {
           locationText: null,
           socials: null,
         },
-        { merge: true }
+        { merge: true },
       );
 
       return uid;
@@ -244,7 +261,9 @@ export class AdminUsers {
   private randomPassword(): string {
     const bytes = new Uint8Array(18);
     crypto.getRandomValues(bytes);
-    const base = btoa(String.fromCharCode(...bytes)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+    const base = btoa(String.fromCharCode(...bytes))
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 20);
     return `${base}!`;
   }
 }

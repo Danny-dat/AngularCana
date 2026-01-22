@@ -15,11 +15,9 @@ import { provideFirestore, getFirestore, disableNetwork } from '@angular/fire/fi
 
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
 
-getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting(),
-  { teardown: { destroyAfterEach: true } }
-);
+getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
+  teardown: { destroyAfterEach: true },
+});
 
 // ---- GLOBAL TEST PROVIDERS (für ALLE Specs) ----
 const firebaseConfig = {
@@ -30,7 +28,8 @@ const firebaseConfig = {
 };
 
 function getOrInitApp() {
-  return getApps().length ? getApp() : initializeFirebaseApp(firebaseConfig);
+  const apps = getApps();
+  return apps.length > 0 ? apps[0] : initializeFirebaseApp(firebaseConfig);
 }
 
 const GLOBAL_PROVIDERS: any[] = [
@@ -54,7 +53,7 @@ const originalConfigure = TestBed.configureTestingModule.bind(TestBed);
 
 function isProbablyService(x: any): boolean {
   // Services haben typischerweise ɵprov, aber kein ɵcmp/ɵdir/ɵpipe/ɵmod
-  return !!x?.ɵprov && !x?.ɵcmp && !x?.ɵdir && !x?.ɵpipe && !x?.ɵmod;
+  return !!x?.ɵprov;
 }
 
 (TestBed as any).configureTestingModule = (moduleDef: any = {}) => {
@@ -62,12 +61,7 @@ function isProbablyService(x: any): boolean {
   const movedServices = imports.filter(isProbablyService);
 
   moduleDef.imports = imports.filter((i: any) => !isProbablyService(i));
-  moduleDef.providers = [
-    ...(moduleDef.providers ?? []),
-    ...movedServices,
-    ...GLOBAL_PROVIDERS,
-  ];
+  moduleDef.providers = [...(moduleDef.providers ?? []), ...movedServices, ...GLOBAL_PROVIDERS];
 
   return originalConfigure(moduleDef);
 };
-

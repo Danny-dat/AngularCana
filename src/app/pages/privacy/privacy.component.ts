@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -14,6 +13,6 @@ export class PrivacyComponent {
   controller = {
     name: 'Highlights',
     address: 'Musterstraße 1, 12345 Musterstadt',
-    email: 'privacy@highlights.example'
+    email: 'privacy@highlights.example',
   };
 }

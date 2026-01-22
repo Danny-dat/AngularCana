@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
@@ -13,7 +12,9 @@ import {
   limit,
   CollectionReference,
   DocumentData,
-  arrayUnion, arrayRemove, writeBatch
+  arrayUnion,
+  arrayRemove,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { ChatMessage, UID } from '../models/social.models';
 
@@ -55,7 +56,7 @@ export class ChatService {
     await setDoc(
       doc(this.chatsCol, id),
       { type: 'direct', participants: [a, b].sort(), createdAt: TS(), updatedAt: TS() },
-      { merge: true } as any
+      { merge: true } as any,
     );
     return id;
   }
@@ -88,7 +89,7 @@ export class ChatService {
           createdAt: TS(),
           updatedAt: TS(),
         },
-        { merge: true } as any
+        { merge: true } as any,
       );
       return groupId;
     } else {
@@ -106,12 +107,16 @@ export class ChatService {
 
   async addMember(groupId: string, uid: UID) {
     const chatRef = doc(this.chatsCol, groupId);
-    await setDoc(chatRef as any, { participants: arrayUnion(uid), updatedAt: TS() }, { merge: true } as any);
+    await setDoc(chatRef as any, { participants: arrayUnion(uid), updatedAt: TS() }, {
+      merge: true,
+    } as any);
   }
 
   async removeMember(groupId: string, uid: UID) {
     const chatRef = doc(this.chatsCol, groupId);
-    await setDoc(chatRef as any, { participants: arrayRemove(uid), updatedAt: TS() }, { merge: true } as any);
+    await setDoc(chatRef as any, { participants: arrayRemove(uid), updatedAt: TS() }, {
+      merge: true,
+    } as any);
   }
 
   async renameGroup(groupId: string, name: string) {
@@ -133,7 +138,7 @@ export class ChatService {
         createdAt: TS(),
         updatedAt: TS(),
       },
-      { merge: true } as any
+      { merge: true } as any,
     );
     return channelId;
   }
@@ -153,7 +158,7 @@ export class ChatService {
             ...data,
             createdAt: data.createdAt?.toDate?.() ?? data.createdAt,
           };
-        })
+        }),
       );
     });
   }
@@ -195,11 +200,9 @@ export class ChatService {
     const batch = writeBatch(this.afs as any);
     batch.set(throttleRef as any, { lastSentAt: TS() }, { merge: true } as any);
     batch.set(msgRef as any, payload);
-    batch.set(
-      chatRef as any,
-      { lastMessage: body, lastSenderId: fromUid, updatedAt: TS() },
-      { merge: true } as any
-    );
+    batch.set(chatRef as any, { lastMessage: body, lastSenderId: fromUid, updatedAt: TS() }, {
+      merge: true,
+    } as any);
     await batch.commit();
 
     if (shouldNotify(fromUid, toUid)) {
@@ -236,8 +239,13 @@ export class ChatService {
     const batch = writeBatch(this.afs as any);
     batch.set(
       chatRef as any,
-      { participants: arrayUnion(fromUid), lastMessage: body, lastSenderId: fromUid, updatedAt: TS() },
-      { merge: true } as any
+      {
+        participants: arrayUnion(fromUid),
+        lastMessage: body,
+        lastSenderId: fromUid,
+        updatedAt: TS(),
+      },
+      { merge: true } as any,
     );
     batch.set(throttleRef as any, { lastSentAt: TS() }, { merge: true } as any);
     batch.set(msgRef as any, payload);
@@ -271,7 +279,9 @@ export class ChatService {
     };
 
     await addDoc(msgsCol, payload);
-    await setDoc(chatRef as any, { lastMessage: body, lastSenderId: senderId, updatedAt: TS() }, { merge: true } as any);
+    await setDoc(chatRef as any, { lastMessage: body, lastSenderId: senderId, updatedAt: TS() }, {
+      merge: true,
+    } as any);
   }
 
   private async touchChat(chatId: string) {
@@ -280,10 +290,8 @@ export class ChatService {
   }
 
   async markRead(chatId: string, myUid: UID) {
-    await setDoc(
-      doc(this.chatsCol, chatId) as any,
-      { [`reads.${myUid}`]: TS(), updatedAt: TS() },
-      { merge: true } as any
-    );
+    await setDoc(doc(this.chatsCol, chatId) as any, { [`reads.${myUid}`]: TS(), updatedAt: TS() }, {
+      merge: true,
+    } as any);
   }
 }

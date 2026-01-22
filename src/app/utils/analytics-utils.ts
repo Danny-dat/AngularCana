@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/utils/analytics-utils.ts
 
 /**
@@ -12,9 +11,7 @@ export function keyify(input: string): string {
   if (!s) return 'unknown';
 
   // Unicode-normalisieren + Diakritika entfernen
-  const noDia = s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  const noDia = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const key = noDia
     .toLowerCase()

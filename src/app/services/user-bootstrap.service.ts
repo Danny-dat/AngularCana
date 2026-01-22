@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Auth, user, updateProfile } from '@angular/fire/auth';
@@ -25,7 +24,9 @@ export class UserBootstrapService {
   private profile = inject(ProfileService);
   private destroyRef = inject(DestroyRef);
   private platformId = inject(PLATFORM_ID);
-  private get isBrowser() { return isPlatformBrowser(this.platformId); }
+  private get isBrowser() {
+    return isPlatformBrowser(this.platformId);
+  }
 
   /** verhindert parallel laufende Boots für denselben User */
   private bootInFlight: Promise<void> | null = null;
@@ -38,7 +39,7 @@ export class UserBootstrapService {
       .pipe(
         map((u) => u?.uid ?? ''),
         distinctUntilChanged(),
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((uid) => {
         void this.bootstrapNow(uid);
@@ -97,7 +98,7 @@ export class UserBootstrapService {
     const settings = await this.userData.loadUserSettings(uid);
 
     // 2) DisplayName/Handle sauber ableiten
-    const email = au?.email ?? (data.email ?? null);
+    const email = au?.email ?? data.email ?? null;
     const baseName =
       (data.username ?? '').toString().trim() ||
       (data.displayName ?? '').toString().trim() ||
@@ -130,12 +131,9 @@ export class UserBootstrapService {
     try {
       localStorage.setItem(
         'settings:consumptionThreshold',
-        String(settings?.consumptionThreshold ?? 3)
+        String(settings?.consumptionThreshold ?? 3),
       );
-      localStorage.setItem(
-        'notify:sound',
-        settings?.notificationSound === false ? 'off' : 'on'
-      );
+      localStorage.setItem('notify:sound', settings?.notificationSound === false ? 'off' : 'on');
       if (typeof settings?.notificationVolume === 'number') {
         localStorage.setItem('notify:volume', String(settings.notificationVolume));
       }

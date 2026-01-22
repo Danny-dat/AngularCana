@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
@@ -43,12 +42,11 @@ export class EventsService {
         (docs || [])
           .map((doc) => this.normalizeEvent(doc))
           // nur valide Koordinaten durchlassen
-          .filter((e): e is EventItem => Number.isFinite(e.lat) && Number.isFinite(e.lng))
-      )
+          .filter((e): e is EventItem => Number.isFinite(e.lat) && Number.isFinite(e.lng)),
+      ),
     );
   }
 
-  
   async voteEvent(eventId: string, uid: string, type: 'up' | 'down'): Promise<void> {
     const ref = doc(this.fs, 'events', eventId);
 
@@ -82,7 +80,13 @@ export class EventsService {
   // Admin: CRUD
   // ─────────────────────────────────────────────
 
-  async createEvent(params: { name: string; address?: string | null; lat: number; lng: number; [k: string]: any }) {
+  async createEvent(params: {
+    name: string;
+    address?: string | null;
+    lat: number;
+    lng: number;
+    [k: string]: any;
+  }) {
     const name = (params.name ?? '').trim();
     if (!name) throw new Error('NAME_REQUIRED');
 
@@ -150,10 +154,19 @@ export class EventsService {
 
     if (lat == null && lng == null && loc != null) {
       if (Array.isArray(loc) && loc.length >= 2) {
-        lat = loc[0]; lng = loc[1];
+        lat = loc[0];
+        lng = loc[1];
       } else {
         lat = loc?.lat ?? loc?.Lat ?? loc?.latitude ?? loc?.Latitude ?? loc?._lat ?? loc?.y;
-        lng = loc?.lng ?? loc?.Lng ?? loc?.long ?? loc?.Long ?? loc?.longitude ?? loc?.Longitude ?? loc?._long ?? loc?.x;
+        lng =
+          loc?.lng ??
+          loc?.Lng ??
+          loc?.long ??
+          loc?.Long ??
+          loc?.longitude ??
+          loc?.Longitude ??
+          loc?._long ??
+          loc?.x;
 
         if (typeof loc?.toJSON === 'function') {
           const j = loc.toJSON();

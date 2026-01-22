@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Auth } from '@angular/fire/auth';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -214,10 +213,7 @@ export class EventsComponent {
       return;
     }
 
-    const display =
-      this.auth.currentUser?.displayName ||
-      this.auth.currentUser?.email ||
-      uid;
+    const display = this.auth.currentUser?.displayName || this.auth.currentUser?.email || uid;
 
     this.suggestBusy.set(true);
     try {
@@ -270,7 +266,9 @@ export class EventsComponent {
     const d = this.asDate((e as any).startAt);
     if (!d) return '';
     try {
-      return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+      return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(
+        d,
+      );
     } catch {
       return d.toLocaleString();
     }
@@ -288,9 +286,9 @@ export class EventsComponent {
     let res = this.eventsSig();
 
     if (q) {
-      res = res.filter((e) =>
-        (e.name ?? '').toLowerCase().includes(q) ||
-        (e.address ?? '').toLowerCase().includes(q)
+      res = res.filter(
+        (e) =>
+          (e.name ?? '').toLowerCase().includes(q) || (e.address ?? '').toLowerCase().includes(q),
       );
     }
     if (mine && me) res = res.filter((e) => e.upvotes?.includes(me));
@@ -302,7 +300,10 @@ export class EventsComponent {
       .filter((e) => this.isActiveEvent(e))
       .slice()
       // aktiv: bald zuerst (Events ohne startAt kommen nach hinten)
-      .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b) || (a.name ?? '').localeCompare(b.name ?? ''))
+      .sort(
+        (a, b) =>
+          this.startKeyMs(a) - this.startKeyMs(b) || (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
   );
 
   inactiveFiltered = computed(() =>
@@ -310,10 +311,15 @@ export class EventsComponent {
       .filter((e) => !this.isActiveEvent(e))
       .slice()
       // nicht aktiv: zuletzt zuerst
-      .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a) || (a.name ?? '').localeCompare(b.name ?? ''))
+      .sort(
+        (a, b) =>
+          this.startKeyMs(b) - this.startKeyMs(a) || (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
   );
 
-  filtered = computed(() => (this.tab() === 'active' ? this.activeFiltered() : this.inactiveFiltered()));
+  filtered = computed(() =>
+    this.tab() === 'active' ? this.activeFiltered() : this.inactiveFiltered(),
+  );
 
   activeCount = computed(() => this.activeFiltered().length);
   inactiveCount = computed(() => this.inactiveFiltered().length);
@@ -406,7 +412,7 @@ export class EventsComponent {
   private async openMaps(
     e: EventItem,
     mode: 'walking' | 'driving' | 'bicycling' | 'transit' = 'walking',
-    popup?: Window | null
+    popup?: Window | null,
   ) {
     const dest = `${Number(e.lat)},${Number(e.lng)}`;
 
@@ -414,7 +420,7 @@ export class EventsComponent {
     const pos = await this.getPosition(4000).catch(() => null);
 
     let url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-      dest
+      dest,
     )}&travelmode=${mode}`;
     if (pos?.coords) {
       const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
@@ -460,7 +466,7 @@ export class EventsComponent {
             resolve(null);
           }
         },
-        { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60_000 }
+        { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60_000 },
       );
     });
   }

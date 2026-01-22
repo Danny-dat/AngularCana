@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -48,12 +47,7 @@ export type BanDialogResult = { reason: string; until: Date | null };
       >
         <mat-label>Bis (optional)</mat-label>
 
-        <input
-          matInput
-          [matDatepicker]="picker"
-          [formControl]="untilCtrl"
-          autocomplete="off"
-        />
+        <input matInput [matDatepicker]="picker" [formControl]="untilCtrl" autocomplete="off" />
 
         <!-- eigener Button: zuverlässig klickbar -->
         <button
@@ -74,34 +68,38 @@ export type BanDialogResult = { reason: string; until: Date | null };
 
     <div mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">Abbrechen</button>
-      <button
-        mat-flat-button
-        color="warn"
-        [disabled]="reasonCtrl.invalid"
-        (click)="submit()"
-      >
+      <button mat-flat-button color="warn" [disabled]="reasonCtrl.invalid" (click)="submit()">
         Bann setzen
       </button>
     </div>
   `,
-  styles: [`
-    :host{ display:block; }
+  styles: [
+    `
+      :host {
+        display: block;
+      }
 
-    .content{
-      display:grid;
-      gap:14px;
-      padding-top: 8px;
-    }
+      .content {
+        display: grid;
+        gap: 14px;
+        padding-top: 8px;
+      }
 
-    .full{ width:100%; }
+      .full {
+        width: 100%;
+      }
 
-    .field { display: grid; gap: 6px; }
-    .field-label {
-      font-size: 12px;
-      opacity: .75;
-      margin-left: 4px;
-    }
-  `],
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field-label {
+        font-size: 12px;
+        opacity: 0.75;
+        margin-left: 4px;
+      }
+    `,
+  ],
 })
 export class BanDialogComponent {
   ref = inject(MatDialogRef<BanDialogComponent, BanDialogResult>);

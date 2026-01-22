@@ -1,8 +1,15 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
 import { FirebaseApp, initializeApp, deleteApp } from '@angular/fire/app';
-import { Auth, getAuth, createUserWithEmailAndPassword, signOut  } from '@angular/fire/auth';
-import { Firestore, collection, addDoc, getFirestore, doc, setDoc, serverTimestamp } from '@angular/fire/firestore';
+import { Auth, getAuth, createUserWithEmailAndPassword, signOut } from '@angular/fire/auth';
+import {
+  Firestore,
+  collection,
+  addDoc,
+  getFirestore,
+  doc,
+  setDoc,
+  serverTimestamp,
+} from '@angular/fire/firestore';
 
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { normalizeUnifiedUserName, normalizeUnifiedUserNameKey } from '../../../utils/user-name';
@@ -37,20 +44,28 @@ export class AdminUserProvisioningService {
       const usernameKey = normalizeUnifiedUserNameKey(displayName);
 
       // /users/{uid} (als der neue User selbst -> Rules passen)
-      await setDoc(doc(fs2, 'users', uid), {
-        profile: { displayName, username: displayName, usernameKey },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      await setDoc(
+        doc(fs2, 'users', uid),
+        {
+          profile: { displayName, username: displayName, usernameKey },
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
 
       // /profiles_public/{uid} (optional, aber nice fürs Admin-Listing)
-      await setDoc(doc(fs2, 'profiles_public', uid), {
-        displayName,
-        username: displayName,
-        usernameKey,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      await setDoc(
+        doc(fs2, 'profiles_public', uid),
+        {
+          displayName,
+          username: displayName,
+          usernameKey,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
 
       // Optional: Passwort reset mail (der User setzt sein eigenes Passwort)
       if (sendReset) {
@@ -78,6 +93,10 @@ export class AdminUserProvisioningService {
     const bytes = new Uint8Array(18);
     crypto.getRandomValues(bytes);
     // URL-safe-ish
-    return btoa(String.fromCharCode(...bytes)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20) + '!';
+    return (
+      btoa(String.fromCharCode(...bytes))
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 20) + '!'
+    );
   }
 }

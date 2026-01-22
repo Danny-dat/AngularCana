@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -53,27 +52,28 @@ export class AdminDashboardComponent {
     this.stats.onlineNowCount$,
   ]).pipe(
     map(([users, openReports, events, promoActive, promoTotal, onlineNow]) => {
-      const promoValue = promoTotal > 0
-        ? `${this.nf.format(promoActive)}/${this.nf.format(promoTotal)}`
-        : this.nf.format(promoActive);
+      const promoValue =
+        promoTotal > 0
+          ? `${this.nf.format(promoActive)}/${this.nf.format(promoTotal)}`
+          : this.nf.format(promoActive);
 
       return [
-      { label: 'Users', value: this.nf.format(users), icon: 'group', link: '/admin/users' },
-      {
-        label: 'Offene Reports',
-        value: this.nf.format(openReports),
-        icon: 'rule',
-        link: '/admin/reports',
-      },
-      { label: 'Events', value: this.nf.format(events), icon: 'event', link: '/admin/events' },
-      { label: 'Promo Slots', value: promoValue, icon: 'local_offer', link: '/admin/promo' },
-      {
-        label: 'Online jetzt',
-        value: this.nf.format(onlineNow),
-        icon: 'wifi',
-        link: '/admin/statistics',
-      },
-    ];
+        { label: 'Users', value: this.nf.format(users), icon: 'group', link: '/admin/users' },
+        {
+          label: 'Offene Reports',
+          value: this.nf.format(openReports),
+          icon: 'rule',
+          link: '/admin/reports',
+        },
+        { label: 'Events', value: this.nf.format(events), icon: 'event', link: '/admin/events' },
+        { label: 'Promo Slots', value: promoValue, icon: 'local_offer', link: '/admin/promo' },
+        {
+          label: 'Online jetzt',
+          value: this.nf.format(onlineNow),
+          icon: 'wifi',
+          link: '/admin/statistics',
+        },
+      ];
     }),
     startWith([
       { label: 'Users', value: '…', icon: 'group', link: '/admin/users' },
@@ -82,7 +82,7 @@ export class AdminDashboardComponent {
       { label: 'Promo Slots', value: '…', icon: 'local_offer', link: '/admin/promo' },
       { label: 'Online jetzt', value: '…', icon: 'wifi', link: '/admin/statistics' },
     ]),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   quick: Array<{
@@ -92,7 +92,12 @@ export class AdminDashboardComponent {
     queryParams?: Record<string, any>;
   }> = [
     // öffnet direkt den "User anlegen" Dialog (users Seite liest queryParam)
-    { text: 'Neuen User anlegen', icon: 'person_add', link: '/admin/users', queryParams: { create: 1 } },
+    {
+      text: 'Neuen User anlegen',
+      icon: 'person_add',
+      link: '/admin/users',
+      queryParams: { create: 1 },
+    },
     { text: 'Reports prüfen', icon: 'rule', link: '/admin/reports' },
     { text: 'Events verwalten', icon: 'event', link: '/admin/events' },
     { text: 'Promo verwalten', icon: 'local_offer', link: '/admin/promo' },
@@ -135,14 +140,15 @@ export class AdminDashboardComponent {
       },
       { title: 'Moderation aktiv', meta: 'Bans/L... ', count: 0, link: '/admin/users' },
     ]),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   /** Neueste Reports (live) */
-  recentReports$: Observable<RecentReportVm[]> = (collectionData(
-    query(collection(this.afs, 'reports'), orderBy('createdAt', 'desc'), limit(5)),
-    { idField: 'id' }
-  ) as Observable<any[]>).pipe(
+  recentReports$: Observable<RecentReportVm[]> = (
+    collectionData(query(collection(this.afs, 'reports'), orderBy('createdAt', 'desc'), limit(5)), {
+      idField: 'id',
+    }) as Observable<any[]>
+  ).pipe(
     map((rows) =>
       (rows || []).map((r) => {
         const createdAt = this.toDateSafe(r?.createdAt);
@@ -155,17 +161,19 @@ export class AdminDashboardComponent {
           when: createdAt ? createdAt.toLocaleString('de-DE') : '—',
           link: '/admin/reports',
         } satisfies RecentReportVm;
-      })
+      }),
     ),
     catchError(() => of([] as RecentReportVm[])),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   /** Letzte Aktivitäten (Audit Logs) */
-  activity$: Observable<ActivityVm[]> = (collectionData(
-    query(collection(this.afs, 'audit_logs'), orderBy('timestamp', 'desc'), limit(8)),
-    { idField: 'id' }
-  ) as Observable<any[]>).pipe(
+  activity$: Observable<ActivityVm[]> = (
+    collectionData(
+      query(collection(this.afs, 'audit_logs'), orderBy('timestamp', 'desc'), limit(8)),
+      { idField: 'id' },
+    ) as Observable<any[]>
+  ).pipe(
     map((rows) =>
       (rows || []).map((a) => {
         const d = this.toDateSafe(a?.timestamp);
@@ -184,10 +192,10 @@ export class AdminDashboardComponent {
           detail,
           when: d ? d.toLocaleString('de-DE') : '—',
         } satisfies ActivityVm;
-      })
+      }),
     ),
     catchError(() => of([] as ActivityVm[])),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   private toDateSafe(v: any): Date | null {
@@ -225,7 +233,9 @@ export class AdminDashboardComponent {
                 ? 'Illegale Inhalte'
                 : cat === 'other'
                   ? 'Sonstiges'
-                  : (r?.reasonCategory ? String(r.reasonCategory) : 'Report');
+                  : r?.reasonCategory
+                    ? String(r.reasonCategory)
+                    : 'Report';
 
     const msg = (r?.messageText ?? '').toString().trim();
     const snippet = msg ? ` · ${msg.slice(0, 42)}${msg.length > 42 ? '…' : ''}` : '';

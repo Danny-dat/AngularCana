@@ -1,6 +1,7 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore,  Timestamp,
+import {
+  Firestore,
+  Timestamp,
   serverTimestamp,
   getDoc,
   setDoc,
@@ -14,11 +15,19 @@ import { Firestore,  Timestamp,
   writeBatch,
   increment,
   collectionGroup,
-  documentId, } from '@angular/fire/firestore';
+  documentId,
+} from '@angular/fire/firestore';
 
 import { geoCellE2, keyify } from '../../../utils/analytics-utils';
 
-export type BreakdownKind = 'products' | 'devices' | 'locations' | 'pairs' | 'hours' | 'weekdays' | 'geo';
+export type BreakdownKind =
+  | 'products'
+  | 'devices'
+  | 'locations'
+  | 'pairs'
+  | 'hours'
+  | 'weekdays'
+  | 'geo';
 
 export interface DailyTotal {
   day: string; // YYYY-MM-DD
@@ -120,13 +129,18 @@ export class AdminAnalyticsService {
    * Summiert ein Breakdown (z.B. products/devices/locations/pairs/hours) über einen Day-Range.
    * Nutzt collectionGroup, damit es nur 1 Query pro Breakdown ist.
    */
-  async loadBreakdown(kind: BreakdownKind, startDay: string, endDay: string, topN = 12): Promise<RankingItem[]> {
+  async loadBreakdown(
+    kind: BreakdownKind,
+    startDay: string,
+    endDay: string,
+    topN = 12,
+  ): Promise<RankingItem[]> {
     const cg = collectionGroup(this.fs as any, kind);
     const q = query(
       cg,
       where('day', '>=', startDay),
       where('day', '<=', endDay),
-      orderBy('day', 'asc')
+      orderBy('day', 'asc'),
     );
 
     const snap = await getDocs(q);
@@ -177,7 +191,12 @@ export class AdminAnalyticsService {
     while (batches < maxBatches) {
       const col = collection(this.fs as any, 'consumptions');
       const q = lastProcessedAt
-        ? query(col, where('timestamp', '>', lastProcessedAt), orderBy('timestamp', 'asc'), limit(batchSize))
+        ? query(
+            col,
+            where('timestamp', '>', lastProcessedAt),
+            orderBy('timestamp', 'asc'),
+            limit(batchSize),
+          )
         : query(col, orderBy('timestamp', 'asc'), limit(batchSize));
 
       const snap = await getDocs(q);
@@ -202,7 +221,9 @@ export class AdminAnalyticsService {
 
       for (const d of snap.docs) {
         const data: any = d.data();
-        const ts: Timestamp | null = data?.timestamp?.toMillis ? (data.timestamp as Timestamp) : null;
+        const ts: Timestamp | null = data?.timestamp?.toMillis
+          ? (data.timestamp as Timestamp)
+          : null;
         if (!ts) continue;
 
         if (!maxTsThisBatch || ts.toMillis() > maxTsThisBatch.toMillis()) {
@@ -231,21 +252,21 @@ export class AdminAnalyticsService {
           ['stats_daily', day, 'products', productKey],
           { day, key: productKey, label: productLabel, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         addOp(
           ['stats_daily', day, 'devices', deviceKey],
           { day, key: deviceKey, label: deviceLabel, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         addOp(
           ['stats_daily', day, 'locations', locationKey],
           { day, key: locationKey, label: locationLabel, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         const pairKey = `${productKey}__${deviceKey}`.slice(0, 120);
@@ -254,21 +275,21 @@ export class AdminAnalyticsService {
           ['stats_daily', day, 'pairs', pairKey],
           { day, key: pairKey, label: pairLabel, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         addOp(
           ['stats_daily', day, 'hours', hour],
           { day, key: hour, label: `${hour} Uhr`, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         addOp(
           ['stats_daily', day, 'weekdays', weekday],
           { day, key: weekday, label: weekday, updatedAt: serverTimestamp() },
           'count',
-          1
+          1,
         );
 
         // Geo (nur grob & nur wenn vorhanden)
@@ -288,7 +309,7 @@ export class AdminAnalyticsService {
               updatedAt: serverTimestamp(),
             },
             'count',
-            1
+            1,
           );
         }
       }
@@ -304,7 +325,7 @@ export class AdminAnalyticsService {
             updatedAt: serverTimestamp(),
           },
           'totalCount',
-          inc
+          inc,
         );
       }
 
@@ -351,7 +372,7 @@ export class AdminAnalyticsService {
           updatedAt: serverTimestamp(),
           totalProcessed: increment(processedTotal),
         },
-        { merge: true }
+        { merge: true },
       );
     }
 

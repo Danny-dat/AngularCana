@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/services/theme.service.ts
 import { Injectable, Renderer2, RendererFactory2 } from '@angular/core';
 
@@ -27,6 +26,8 @@ export class ThemeService {
     this.r.removeClass(body, 'theme-light');
     this.r.removeClass(body, 'theme-dark');
     this.r.addClass(body, mode === 'dark' ? 'theme-dark' : 'theme-light');
-    try { localStorage.setItem(this.KEY, mode); } catch {}
+    try {
+      localStorage.setItem(this.KEY, mode);
+    } catch {}
   }
 }

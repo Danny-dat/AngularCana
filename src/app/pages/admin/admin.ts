@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -44,12 +43,12 @@ export class AdminPage {
 
   // Sidebar navigation
   nav: AdminNavItem[] = [
-    { label: 'Dashboard',  link: '/admin/dashboard',  icon: 'dashboard' },
-    { label: 'Admins',     link: '/admin/admins',     icon: 'admin_panel_settings' },
-    { label: 'Users',      link: '/admin/users',      icon: 'group' },
-    { label: 'Reports',    link: '/admin/reports',    icon: 'description' },
-    { label: 'Events',     link: '/admin/events',     icon: 'event' },
-    { label: 'Promo',      link: '/admin/promo',      icon: 'local_offer' },
+    { label: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
+    { label: 'Admins', link: '/admin/admins', icon: 'admin_panel_settings' },
+    { label: 'Users', link: '/admin/users', icon: 'group' },
+    { label: 'Reports', link: '/admin/reports', icon: 'description' },
+    { label: 'Events', link: '/admin/events', icon: 'event' },
+    { label: 'Promo', link: '/admin/promo', icon: 'local_offer' },
     { label: 'Statistics', link: '/admin/statistics', icon: 'insights' },
   ];
 

@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/services/ad.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
@@ -55,8 +54,8 @@ export class AdService {
     this.initialized = true;
 
     // 1) Defaults setzen
-    const defaults: AdSlotConfig[] = this.slotIds.map(id => this.defaultFor(id));
-    const base = Object.fromEntries(defaults.map(d => [d.id, d]));
+    const defaults: AdSlotConfig[] = this.slotIds.map((id) => this.defaultFor(id));
+    const base = Object.fromEntries(defaults.map((d) => [d.id, d]));
     this.slots$.next(base);
     if (this.DEBUG) console.debug('[AdService] init → defaults', base);
 
@@ -74,18 +73,25 @@ export class AdService {
   /** Observable für einen Slot – liefert immer *mindestens* den Default */
   slot$(id: string) {
     return this.slots$.pipe(
-      map(all => all[id] ?? (this.slotIds.includes(id as any) ? this.defaultFor(id as any) : undefined)),
-      tap(cfg => { if (this.DEBUG) console.debug('[AdService] slot update:', id, cfg); })
+      map(
+        (all) =>
+          all[id] ?? (this.slotIds.includes(id as any) ? this.defaultFor(id as any) : undefined),
+      ),
+      tap((cfg) => {
+        if (this.DEBUG) console.debug('[AdService] slot update:', id, cfg);
+      }),
     );
   }
 
   /** Lädt für alle Slots das beste verfügbare Override und merged */
   private async loadOverrides(base: Record<string, AdSlotConfig>) {
-    const results = await Promise.all(this.slotIds.map(id => {
-      const current = base[id];
-      const order = this.extOrderFor(current?.activeExt);
-      return this.fetchOverride(id, order, current?.configUpdatedAt);
-    }));
+    const results = await Promise.all(
+      this.slotIds.map((id) => {
+        const current = base[id];
+        const order = this.extOrderFor(current?.activeExt);
+        return this.fetchOverride(id, order, current?.configUpdatedAt);
+      }),
+    );
     const merged = { ...base };
     for (const r of results) {
       if (!r) continue;
@@ -99,7 +105,7 @@ export class AdService {
   private async fetchOverride(
     id: (typeof this.slotIds)[number],
     extOrder: ReadonlyArray<(typeof this.EXT_ORDER)[number]>,
-    versionHint?: string
+    versionHint?: string,
   ): Promise<AdSlotConfig | null> {
     for (const ext of extOrder) {
       const url = `${this.OFFLINE_SAFE(this.OVERRIDE_BASE)}/${id}/banner.${ext}`;
@@ -121,12 +127,14 @@ export class AdService {
   private async headResponse(url: string): Promise<{ ok: boolean; headers: Headers } | null> {
     if (!this.http) return null;
     try {
-      const res = await firstValueFrom(this.http.head(url, { observe: 'response' })) as HttpResponse<unknown>;
+      const res = (await firstValueFrom(
+        this.http.head(url, { observe: 'response' }),
+      )) as HttpResponse<unknown>;
       const ok = res.status >= 200 && res.status < 300;
 
       // HttpHeaders → Headers-Wrapper
       const headers = new Headers();
-      res.headers.keys().forEach(k => {
+      res.headers.keys().forEach((k) => {
         const val = res.headers.get(k);
         if (val != null) headers.set(k, val);
       });
@@ -149,7 +157,7 @@ export class AdService {
 
     // nur erlaubte Endungen
     if (!base.includes(ext as any)) return base;
-    return [ext as any, ...base.filter(x => x !== (ext as any))];
+    return [ext as any, ...base.filter((x) => x !== (ext as any))];
   }
 
   /**
@@ -179,12 +187,13 @@ export class AdService {
           } as Partial<AdSlotConfig> & { id: string };
         }),
         catchError(() => of({ id, linkEnabled: true, linkUrl: null } as any)),
-        distinctUntilChanged((a: any, b: any) =>
-          (a?.linkEnabled ?? true) === (b?.linkEnabled ?? true)
-          && (a?.linkUrl ?? null) === (b?.linkUrl ?? null)
-          && (a?.activeExt ?? null) === (b?.activeExt ?? null)
-          && (a?.configUpdatedAt ?? '') === (b?.configUpdatedAt ?? '')
-        )
+        distinctUntilChanged(
+          (a: any, b: any) =>
+            (a?.linkEnabled ?? true) === (b?.linkEnabled ?? true) &&
+            (a?.linkUrl ?? null) === (b?.linkUrl ?? null) &&
+            (a?.activeExt ?? null) === (b?.activeExt ?? null) &&
+            (a?.configUpdatedAt ?? '') === (b?.configUpdatedAt ?? ''),
+        ),
       );
     });
 

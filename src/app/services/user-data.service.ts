@@ -1,6 +1,15 @@
-/* istanbul ignore file */
 import { Injectable, inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where } from '@angular/fire/firestore';
+import {
+  Firestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  where,
+} from '@angular/fire/firestore';
 
 export type Gender = 'unspecified' | 'male' | 'female' | 'diverse';
 
@@ -75,7 +84,7 @@ function getDefaultVisibility(): UserVisibilityModel {
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
   private db = inject(Firestore);
-  private env = inject(EnvironmentInjector); 
+  private env = inject(EnvironmentInjector);
 
   /** verhindert wiederholte Migrationen in einer Session */
   private migratedLegacy = new Set<string>();
@@ -153,7 +162,11 @@ export class UserDataService {
     const copyIfMissing = (key: string) => {
       const rootVal = data?.[key];
       if (rootVal === undefined || rootVal === null || rootVal === '') return;
-      if (currentProfile?.[key] === undefined || currentProfile?.[key] === null || currentProfile?.[key] === '') {
+      if (
+        currentProfile?.[key] === undefined ||
+        currentProfile?.[key] === null ||
+        currentProfile?.[key] === ''
+      ) {
         patchProfile[key] = rootVal;
       }
     };
@@ -187,7 +200,7 @@ export class UserDataService {
           profile: { ...currentProfile, ...patchProfile },
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
     } catch {
       // Migration ist "best effort" – UI funktioniert durch Fallbacks auch ohne.
@@ -311,7 +324,7 @@ export class UserDataService {
 
       // 1) Neu (case-insensitive): usernameKey
       const snapKey = await getDocs(
-        query(collection(this.db as any, 'profiles_public'), where('usernameKey', '==', key))
+        query(collection(this.db as any, 'profiles_public'), where('usernameKey', '==', key)),
       );
       if (!snapKey.empty) {
         return snapKey.docs.every((d) => d.id === myUid);
@@ -319,7 +332,7 @@ export class UserDataService {
 
       // 2) Legacy-Fallback: alte Doks hatten username meist schon lowercase
       const snapLegacy = await getDocs(
-        query(collection(this.db as any, 'profiles_public'), where('username', '==', key))
+        query(collection(this.db as any, 'profiles_public'), where('username', '==', key)),
       );
       if (snapLegacy.empty) return true;
       return snapLegacy.docs.every((d) => d.id === myUid);

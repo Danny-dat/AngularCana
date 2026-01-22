@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // auth.service.ts
 import { Injectable } from '@angular/core';
 import {
@@ -11,13 +10,7 @@ import {
   sendPasswordResetEmail,
   User,
 } from '@angular/fire/auth';
-import {
-  Firestore,
-  doc,
-  setDoc,
-  serverTimestamp,
-  getDoc,
-} from '@angular/fire/firestore';
+import { Firestore, doc, setDoc, serverTimestamp, getDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -71,7 +64,7 @@ export class AuthService {
     private auth: Auth,
     private firestore: Firestore,
     private router: Router,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
   ) {}
 
   get authState$(): Observable<User | null> {
@@ -116,7 +109,7 @@ export class AuthService {
     const cred = await createUserWithEmailAndPassword(this.auth, email, password);
 
     // Anzeigename + Username sind zusammengelegt (ein Handle)
-    const baseName = (displayName ?? '').trim() || ((email.split('@')[0] ?? '').toString());
+    const baseName = (displayName ?? '').trim() || (email.split('@')[0] ?? '').toString();
     let safeName = normalizeUnifiedUserName(baseName);
     if (!safeName) {
       // Fallback (sollte selten passieren)
@@ -198,7 +191,8 @@ export class AuthService {
         website: normUrl(website),
         location: { city: normStr(city), country: normStr(country) },
         birthday: normStr(birthday),
-        gender: (gender === 'male' || gender === 'female' || gender === 'diverse') ? gender : 'unspecified',
+        gender:
+          gender === 'male' || gender === 'female' || gender === 'diverse' ? gender : 'unspecified',
         socials: {
           instagram: normStr(instagram),
           tiktok: normStr(tiktok),
@@ -303,7 +297,7 @@ export class AuthService {
     const silent = !!opts?.silent;
 
     const now = Date.now();
-    if (this.accessOk === true && (now - this.lastAccessCheckMs) < this.ACCESS_CHECK_TTL_MS) {
+    if (this.accessOk === true && now - this.lastAccessCheckMs < this.ACCESS_CHECK_TTL_MS) {
       return true; // sofort, kein Netzwerk
     }
 
@@ -326,7 +320,7 @@ export class AuthService {
           this.snack.open(
             'Dein Account ist gesperrt oder gebannt. Details findest du auf der nächsten Seite.',
             'OK',
-            { duration: 6500 }
+            { duration: 6500 },
           );
           await this.router.navigateByUrl('/account-blocked');
         }
@@ -340,7 +334,9 @@ export class AuthService {
       }
 
       await this.logout();
-      this.snack.open('Login-Check fehlgeschlagen. Bitte erneut versuchen.', 'OK', { duration: 4000 });
+      this.snack.open('Login-Check fehlgeschlagen. Bitte erneut versuchen.', 'OK', {
+        duration: 4000,
+      });
       await this.router.navigateByUrl('/login');
       return false;
     }

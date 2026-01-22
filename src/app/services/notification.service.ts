@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 // src/app/services/notification.service.ts
 import {
   Injectable,
@@ -21,7 +20,7 @@ import {
   setDoc,
   serverTimestamp,
   writeBatch,
-  deleteDoc
+  deleteDoc,
 } from '@angular/fire/firestore';
 import { BehaviorSubject } from 'rxjs';
 import { FriendsService } from './friends.services';
@@ -47,7 +46,7 @@ export class NotificationService {
         colRef,
         where('recipientId', '==', userId),
         orderBy('timestamp', 'desc'),
-        limit(50)
+        limit(50),
       );
 
       const unsub = onSnapshot(
@@ -59,13 +58,13 @@ export class NotificationService {
               ...(d.data() as any),
             }));
             const filtered = all.filter(
-              (n) => !(n.type === 'chat_message' && isChatOpenWith?.(n.senderId))
+              (n) => !(n.type === 'chat_message' && isChatOpenWith?.(n.senderId)),
             );
             this.notifications$.next(filtered);
             this.unreadCount$.next(filtered.filter((n) => !n.read).length);
           });
         },
-        (err) => console.error('notifications snapshot error:', err)
+        (err) => console.error('notifications snapshot error:', err),
       );
 
       return () => unsub();

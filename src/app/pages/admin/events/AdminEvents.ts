@@ -1,12 +1,6 @@
-/* istanbul ignore file */
 import { Component, Inject, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { combineLatest, Observable, firstValueFrom, timer } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
@@ -80,7 +74,14 @@ export class AdminEvents {
 
   // Tables
   displayedEvents: string[] = ['name', 'startAt', 'address', 'coords', 'votes', 'actions'];
-  displayedSuggestions: string[] = ['createdAt', 'startAt', 'name', 'createdBy', 'status', 'actions'];
+  displayedSuggestions: string[] = [
+    'createdAt',
+    'startAt',
+    'name',
+    'createdBy',
+    'status',
+    'actions',
+  ];
 
   // Data
   private events$ = this.eventsSvc.listen();
@@ -105,36 +106,30 @@ export class AdminEvents {
         (e) =>
           (e.name ?? '').toLowerCase().includes(query) ||
           (e.address ?? '').toLowerCase().includes(query) ||
-          `${e.lat},${e.lng}`.includes(query)
+          `${e.lat},${e.lng}`.includes(query),
       );
-    })
+    }),
   );
 
   /** Admin: Events in Tabs (Aktiv / Nicht aktiv) */
-  eventsActive$: Observable<EventItem[]> = combineLatest([
-    this.eventsFiltered$,
-    this.now$,
-  ]).pipe(
+  eventsActive$: Observable<EventItem[]> = combineLatest([this.eventsFiltered$, this.now$]).pipe(
     map(([rows, nowMs]) =>
       (rows || [])
         .filter((e) => this.isEventActiveAdmin(e, nowMs))
         .slice()
         // aktiv: bald zuerst (Events ohne Datum nach hinten)
-        .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b))
-    )
+        .sort((a, b) => this.startKeyMs(a) - this.startKeyMs(b)),
+    ),
   );
 
-  eventsInactive$: Observable<EventItem[]> = combineLatest([
-    this.eventsFiltered$,
-    this.now$,
-  ]).pipe(
+  eventsInactive$: Observable<EventItem[]> = combineLatest([this.eventsFiltered$, this.now$]).pipe(
     map(([rows, nowMs]) =>
       (rows || [])
         .filter((e) => !this.isEventActiveAdmin(e, nowMs))
         .slice()
         // inaktiv: zuletzt zuerst
-        .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a))
-    )
+        .sort((a, b) => this.startKeyMs(b) - this.startKeyMs(a)),
+    ),
   );
 
   private filterSuggestions(rows: EventSuggestionRow[], q: string): EventSuggestionRow[] {
@@ -146,7 +141,7 @@ export class AdminEvents {
         (s.name ?? '').toLowerCase().includes(query) ||
         (s.address ?? '').toLowerCase().includes(query) ||
         (s.createdByName ?? '').toLowerCase().includes(query) ||
-        (s.createdBy ?? '').toLowerCase().includes(query)
+        (s.createdBy ?? '').toLowerCase().includes(query),
     );
   }
 
@@ -211,7 +206,9 @@ export class AdminEvents {
   async setEventActive(e: EventItem, active: boolean) {
     try {
       await this.eventsSvc.updateEvent(e.id, { status: active ? 'active' : 'inactive' } as any);
-      this.snack.open(active ? 'Event ist wieder aktiv' : 'Event wurde deaktiviert', 'OK', { duration: 2200 });
+      this.snack.open(active ? 'Event ist wieder aktiv' : 'Event wurde deaktiviert', 'OK', {
+        duration: 2200,
+      });
     } catch (err) {
       console.error(err);
       this.snack.open('Status-Update fehlgeschlagen (Rules?)', 'OK', { duration: 4000 });
@@ -224,9 +221,11 @@ export class AdminEvents {
 
   async onCreateEvent() {
     const res = await firstValueFrom(
-      this.dialog.open(EventEditDialogComponent, {
-        data: { mode: 'create' as const },
-      }).afterClosed()
+      this.dialog
+        .open(EventEditDialogComponent, {
+          data: { mode: 'create' as const },
+        })
+        .afterClosed(),
     );
     if (!res) return;
 
@@ -241,20 +240,22 @@ export class AdminEvents {
 
   async onEditEvent(e: EventItem) {
     const res = await firstValueFrom(
-      this.dialog.open(EventEditDialogComponent, {
-        data: {
-          mode: 'edit' as const,
-          event: {
-            id: e.id,
-            name: e.name,
-            address: e.address ?? '',
-            lat: e.lat,
-            lng: e.lng,
-            status: (e as any).status ?? 'active',
-            startAt: (e as any).startAt ?? null,
+      this.dialog
+        .open(EventEditDialogComponent, {
+          data: {
+            mode: 'edit' as const,
+            event: {
+              id: e.id,
+              name: e.name,
+              address: e.address ?? '',
+              lat: e.lat,
+              lng: e.lng,
+              status: (e as any).status ?? 'active',
+              startAt: (e as any).startAt ?? null,
+            },
           },
-        },
-      }).afterClosed()
+        })
+        .afterClosed(),
     );
     if (!res) return;
 
@@ -313,7 +314,7 @@ export class AdminEvents {
           maxWidth: '720px',
           width: '100%',
         })
-        .afterClosed()
+        .afterClosed(),
     );
     if (!patch) return;
 
@@ -339,9 +340,7 @@ export class AdminEvents {
   }
 
   async acceptSuggestionAsEvent(s: EventSuggestionRow) {
-    const ok = confirm(
-      `Vorschlag als Event übernehmen?\n\n${s.name}\n${s.address ?? ''}`
-    );
+    const ok = confirm(`Vorschlag als Event übernehmen?\n\n${s.name}\n${s.address ?? ''}`);
     if (!ok) return;
 
     try {
@@ -357,11 +356,9 @@ export class AdminEvents {
       this.snack.open('Als Event übernommen', 'OK', { duration: 2500 });
     } catch (e) {
       console.error(e);
-      this.snack.open(
-        'Übernehmen fehlgeschlagen (Koordinaten fehlen / Rules?)',
-        'OK',
-        { duration: 4500 }
-      );
+      this.snack.open('Übernehmen fehlgeschlagen (Koordinaten fehlen / Rules?)', 'OK', {
+        duration: 4500,
+      });
     }
   }
 }
@@ -428,7 +425,10 @@ export class AdminEvents {
             placeholder="Musterstraße 1, 12345 Musterstadt"
             [formControl]="form.controls.address"
           />
-          <mat-hint>Du kannst die Adresse komplett eintippen oder unten aus Straße/PLZ/Stadt zusammensetzen.</mat-hint>
+          <mat-hint
+            >Du kannst die Adresse komplett eintippen oder unten aus Straße/PLZ/Stadt
+            zusammensetzen.</mat-hint
+          >
         </mat-form-field>
 
         <button
@@ -456,7 +456,9 @@ export class AdminEvents {
         </div>
 
         @if (splitAddress) {
-          <div style="display:grid; grid-template-columns:1fr 120px 1fr; gap:12px; align-items:start;">
+          <div
+            style="display:grid; grid-template-columns:1fr 120px 1fr; gap:12px; align-items:start;"
+          >
             <mat-form-field appearance="outline">
               <mat-label>Straße</mat-label>
               <input matInput placeholder="Musterstraße 1" [formControl]="form.controls.street" />
@@ -811,7 +813,12 @@ type SuggestionEditResult = {
           <input matInput [formControl]="form.controls.address" />
         </mat-form-field>
 
-        <button mat-stroked-button type="button" (click)="checkAddress()" [disabled]="geoBusy || !form.controls.address.value">
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="checkAddress()"
+          [disabled]="geoBusy || !form.controls.address.value"
+        >
           <mat-icon>search</mat-icon>
           Adresse prüfen
         </button>
@@ -868,7 +875,9 @@ type SuggestionEditResult = {
 
     <div mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">Abbrechen</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Speichern</button>
+      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">
+        Speichern
+      </button>
     </div>
   `,
 })

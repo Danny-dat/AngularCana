@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -52,11 +51,21 @@ export type ReasonDialogResult = { reason: string };
       </button>
     </div>
   `,
-  styles: [`
-    .full{width:100%}
-    .content{display:grid;gap:12px}
-    .hint{opacity:.75;margin:0}
-  `]
+  styles: [
+    `
+      .full {
+        width: 100%;
+      }
+      .content {
+        display: grid;
+        gap: 12px;
+      }
+      .hint {
+        opacity: 0.75;
+        margin: 0;
+      }
+    `,
+  ],
 })
 export class ReasonDialogComponent {
   data = inject<ReasonDialogData>(MAT_DIALOG_DATA);
@@ -64,7 +73,7 @@ export class ReasonDialogComponent {
 
   reasonCtrl = new FormControl('', {
     nonNullable: true,
-    validators: (this.data.required ?? true) ? [Validators.required, Validators.minLength(3)] : []
+    validators: (this.data.required ?? true) ? [Validators.required, Validators.minLength(3)] : [],
   });
 
   submit() {

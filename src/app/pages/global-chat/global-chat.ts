@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject, signal, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
@@ -202,7 +201,7 @@ export class GlobalChatPage implements AfterViewInit, OnDestroy {
         } catch {
           this.nameCache.set(uid, uid);
         }
-      })
+      }),
     );
 
     // Namen in Messages eintragen

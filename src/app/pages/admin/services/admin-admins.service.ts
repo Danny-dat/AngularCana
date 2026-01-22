@@ -1,6 +1,13 @@
-/* istanbul ignore file */
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, doc, setDoc, deleteDoc, collectionData, serverTimestamp } from '@angular/fire/firestore';
+import {
+  Firestore,
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  collectionData,
+  serverTimestamp,
+} from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 
 export type AdminRow = {

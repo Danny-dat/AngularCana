@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Injectable } from '@angular/core';
 
 export type Gender = 'male' | 'female';
@@ -7,16 +6,16 @@ export type Frequency = 'once' | 'often' | 'daily';
 export interface ThcInput {
   gender: Gender;
   age: number;
-  weight: number;        // kg
-  bodyFat: number;       // %
+  weight: number; // kg
+  bodyFat: number; // %
   frequency: Frequency;
-  amount: number;        // g
+  amount: number; // g
   thcPercentage: number; // %
   lastConsumption: string | Date; // ISO oder Date
 }
 
 export interface ThcResult {
-  value?: number;        // ng/ml
+  value?: number; // ng/ml
   status?: 'green' | 'orange' | 'red';
   waitTime?: string | null;
   error?: string;
@@ -25,17 +24,28 @@ export interface ThcResult {
 @Injectable({ providedIn: 'root' })
 export class ThcCalculatorService {
   calculate(input: Partial<ThcInput>): ThcResult {
-    const { gender, age, weight, bodyFat, frequency, amount, thcPercentage, lastConsumption } = input;
+    const { gender, age, weight, bodyFat, frequency, amount, thcPercentage, lastConsumption } =
+      input;
 
     // Basic checks (wie im alten Projekt – „sinnvolle“ Werte)
     if (
       !lastConsumption ||
-      gender !== 'male' && gender !== 'female' ||
-      !isFinite(Number(age)) || Number(age) < 18 || Number(age) > 100 ||
-      !isFinite(Number(weight)) || Number(weight) < 40 || Number(weight) > 300 ||
-      !isFinite(Number(bodyFat)) || Number(bodyFat) < 5 || Number(bodyFat) > 50 ||
-      !isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 10 ||
-      !isFinite(Number(thcPercentage)) || Number(thcPercentage) <= 0 || Number(thcPercentage) > 100
+      (gender !== 'male' && gender !== 'female') ||
+      !isFinite(Number(age)) ||
+      Number(age) < 18 ||
+      Number(age) > 100 ||
+      !isFinite(Number(weight)) ||
+      Number(weight) < 40 ||
+      Number(weight) > 300 ||
+      !isFinite(Number(bodyFat)) ||
+      Number(bodyFat) < 5 ||
+      Number(bodyFat) > 50 ||
+      !isFinite(Number(amount)) ||
+      Number(amount) <= 0 ||
+      Number(amount) > 10 ||
+      !isFinite(Number(thcPercentage)) ||
+      Number(thcPercentage) <= 0 ||
+      Number(thcPercentage) > 100
     ) {
       return { error: 'Bitte alle Felder sinnvoll ausfüllen.' };
     }
@@ -46,9 +56,9 @@ export class ThcCalculatorService {
     if (hours < 0) return { error: 'Der Zeitpunkt des Konsums liegt in der Zukunft.' };
 
     // Grenzwerte/Parameter (wie vorher)
-    const LIMIT_RED = 3.5;         // ng/ml (kritischer Grenzwert)
-    const LIMIT_ORANGE = 2.0;      // ng/ml (Warnbereich)
-    const BIOAVAILABILITY = 0.25;  // grober Mittelwert
+    const LIMIT_RED = 3.5; // ng/ml (kritischer Grenzwert)
+    const LIMIT_ORANGE = 2.0; // ng/ml (Warnbereich)
+    const BIOAVAILABILITY = 0.25; // grober Mittelwert
 
     // mg aufgenommenes THC
     const totalThcMg = Number(amount) * 1000 * (Number(thcPercentage) / 100);
@@ -60,7 +70,8 @@ export class ThcCalculatorService {
     const baseLbm = Number(weight) * (1 - bodyFatFrac);
     const genderAdj = gender === 'female' ? 0.92 : 1.0;
     const lbm = baseLbm * genderAdj;
-    if (!isFinite(lbm) || lbm <= 0) return { error: 'Körperfett/Gewicht ergeben keine plausible LBM.' };
+    if (!isFinite(lbm) || lbm <= 0)
+      return { error: 'Körperfett/Gewicht ergeben keine plausible LBM.' };
 
     // Peak ~ proportional zur Dosis/Verteilung
     const cPeak = (absorbedThcMg / lbm) * 3;

@@ -1,6 +1,11 @@
-/* istanbul ignore file */
 // src/app/app.config.ts
-import { ApplicationConfig, importProvidersFrom, inject, PLATFORM_ID, provideAppInitializer } from '@angular/core';
+import {
+  ApplicationConfig,
+  importProvidersFrom,
+  inject,
+  PLATFORM_ID,
+  provideAppInitializer,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -48,7 +53,7 @@ export const appConfig: ApplicationConfig = {
       }
       return fs;
     }),
-    
+
     provideAppInitializer(() => {
       const ads = inject(AdService);
       const platformId = inject(PLATFORM_ID);

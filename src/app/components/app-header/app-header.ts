@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd, ActivatedRoute } from '@angular/router';
@@ -45,7 +44,6 @@ export class AppHeaderComponent {
   userDisplayName = '';
   themeMode: Theme = 'light';
   private currentUid = '';
-
 
   private unsubNoti?: () => void;
   private subAuth?: Subscription;
@@ -106,7 +104,7 @@ export class AppHeaderComponent {
     // 3) Live-Updates im selben Tab (von UserDataComponent gefeuert)
     this.subNameEvent = fromEvent<CustomEvent<string>>(
       window as any,
-      'displayNameChanged'
+      'displayNameChanged',
     ).subscribe((ev) => {
       const name = (ev.detail ?? '').trim();
       if (name) this.userDisplayName = name;
@@ -138,7 +136,7 @@ export class AppHeaderComponent {
           if (dataTitle) return dataTitle;
           const urlSeg = r?.snapshot.url?.[0]?.path || 'Dashboard';
           return urlSeg.charAt(0).toUpperCase() + urlSeg.slice(1);
-        })
+        }),
       )
       .subscribe((t) => (this.pageTitle = t));
 
@@ -183,7 +181,9 @@ export class AppHeaderComponent {
 
     this.theme.setTheme(next);
     this.themeMode = next;
-    try { localStorage.setItem('ui:theme', next); } catch {}
+    try {
+      localStorage.setItem('ui:theme', next);
+    } catch {}
 
     const uid = this.auth.currentUser?.uid || this.currentUid;
     if (uid) {
@@ -207,9 +207,7 @@ export class AppHeaderComponent {
       this.docClickSub = fromEvent<MouseEvent>(document, 'click').subscribe((evt) => {
         const anyEvt = evt as any;
         const path: EventTarget[] =
-          (typeof anyEvt.composedPath === 'function' && anyEvt.composedPath()) ||
-          anyEvt.path ||
-          [];
+          (typeof anyEvt.composedPath === 'function' && anyEvt.composedPath()) || anyEvt.path || [];
 
         const hostEl = this.bellWrap?.nativeElement;
         const clickedInside =
@@ -256,7 +254,7 @@ export class AppHeaderComponent {
       case 'chat_message':
         if (n.senderId) {
           this.router.navigate(['/social'], {
-            queryParams: { openChatWith: n.senderId }
+            queryParams: { openChatWith: n.senderId },
           });
         } else {
           this.router.navigate(['/social']);
@@ -265,7 +263,7 @@ export class AppHeaderComponent {
 
       case 'friend_request':
         this.router.navigate(['/social'], {
-          queryParams: { tab: 'requests' }
+          queryParams: { tab: 'requests' },
         });
         break;
 

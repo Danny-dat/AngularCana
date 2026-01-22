@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Auth, user } from '@angular/fire/auth';
@@ -35,17 +34,15 @@ export class AdminAdminsComponent {
 
   private readonly OWNER_UID = 'ZAz0Bnde5zYIS8qCDT86aOvEDX52';
 
-  rows$: Observable<(AdminRow & { isOwner: boolean })[]> = this.adminsService
-    .admins$()
-    .pipe(
-      map((rows) =>
-        [...rows]
-          // Owner nicht anzeigen (soll „unsichtbar“ bleiben)
-          .filter((r) => r.uid !== this.OWNER_UID)
-          .map((r) => ({ ...r, isOwner: false }))
-          .sort((a, b) => a.uid.localeCompare(b.uid))
-      )
-    );
+  rows$: Observable<(AdminRow & { isOwner: boolean })[]> = this.adminsService.admins$().pipe(
+    map((rows) =>
+      [...rows]
+        // Owner nicht anzeigen (soll „unsichtbar“ bleiben)
+        .filter((r) => r.uid !== this.OWNER_UID)
+        .map((r) => ({ ...r, isOwner: false }))
+        .sort((a, b) => a.uid.localeCompare(b.uid)),
+    ),
+  );
 
   private ok(msg: string) {
     this.snack.open(msg, 'OK', { duration: 2500 });

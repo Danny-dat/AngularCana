@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import {
   Component,
   OnDestroy,
@@ -54,14 +53,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly notifications: NotificationService,
     @Inject(PLATFORM_ID) private readonly pid: Object,
     private readonly zone: NgZone,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   isSaving = false;
   justSaved = false;
   savedAt: Date | null = null;
   toast: Toast | null = null;
-  
+
   private autoResetTimer?: any;
   private autoToastTimer?: any;
   private authUnsub?: () => void;
@@ -94,13 +93,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.applyEventMarkers(user.uid);
         }, 60_000);
 
-        this.eventsSub = this.eventsSvc
-          .listen()
-          .subscribe((events: EventItem[]) => {
-            this.latestEvents = events || [];
-            this.applyEventMarkers(user.uid);
-            this.mapService.invalidateSizeSoon(100);
-          });
+        this.eventsSub = this.eventsSvc.listen().subscribe((events: EventItem[]) => {
+          this.latestEvents = events || [];
+          this.applyEventMarkers(user.uid);
+          this.mapService.invalidateSizeSoon(100);
+        });
       });
     });
   }
@@ -149,7 +146,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.toast = null;
           this.cdr.markForCheck();
         }),
-      ms
+      ms,
     );
   }
 
@@ -164,7 +161,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.justSaved = false;
           this.cdr.markForCheck();
         }),
-      1500
+      1500,
     );
   }
 
@@ -176,12 +173,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       new Promise<GeolocationPosition | null>((resolve) => {
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve(pos),
-          () => resolve(null)
+          () => resolve(null),
         );
       }),
-      new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), timeoutMs)
-      ),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
     ]);
   }
 
@@ -230,12 +225,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async logConsumption(selection: ConsumptionSelection) {
-    if (
-      !selection.product ||
-      !selection.device ||
-      !selection.location
-    )
-      return;
+    if (!selection.product || !selection.device || !selection.location) return;
 
     const user = this.auth.currentUser;
     if (!user?.uid) {
@@ -255,16 +245,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     try {
       const pos = await this.getPosition();
-      const geo = pos
-        ? new GeoPoint(pos.coords.latitude, pos.coords.longitude)
-        : null;
+      const geo = pos ? new GeoPoint(pos.coords.latitude, pos.coords.longitude) : null;
 
       // DisplayName einmal lesen (für Payload + Notification)
       const userSnap = await runInInjectionContext(this.env, () =>
-        getDoc(doc(this.firestore, `users/${user.uid}`))
+        getDoc(doc(this.firestore, `users/${user.uid}`)),
       );
       const displayName: string | null = userSnap.exists()
-        ? (userSnap.data() as any)['displayName'] ?? null
+        ? ((userSnap.data() as any)['displayName'] ?? null)
         : null;
 
       const productLabel = selection.product!;
@@ -306,7 +294,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       };
 
       await runInInjectionContext(this.env, () =>
-        addDoc(collection(this.firestore, 'consumptions'), payload)
+        addDoc(collection(this.firestore, 'consumptions'), payload),
       );
 
       this.bumpToday(user.uid);
@@ -320,25 +308,18 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
       this.buttonSavedPulse();
-      this.showToast(
-        'success',
-        geo ? 'Gespeichert (inkl. Standort).' : 'Gespeichert.'
-      );
+      this.showToast('success', geo ? 'Gespeichert (inkl. Standort).' : 'Gespeichert.');
       this.mapService.invalidateSizeSoon();
     } catch (e: any) {
       const code = e?.code || 'unknown';
       const msg =
-        code === 'permission-denied'
-          ? 'Keine Schreibrechte.'
-          : 'Speichern fehlgeschlagen.';
+        code === 'permission-denied' ? 'Keine Schreibrechte.' : 'Speichern fehlgeschlagen.';
       console.error('[logConsumption] FAILED:', code, e);
       this.showToast('error', msg);
     } finally {
       this.isSaving = false;
-      this.cannaComponent?.resetSelection(); 
+      this.cannaComponent?.resetSelection();
       this.cdr.markForCheck();
     }
   }
-
 }
-

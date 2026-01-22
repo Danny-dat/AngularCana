@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 import { inject } from '@angular/core';
 import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { Auth, user } from '@angular/fire/auth';
@@ -7,7 +6,11 @@ import { from } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
 // Optional: Owner-Notbremse (falls Firestore mal klemmt)
-const OWNER_UID = ['ZAz0Bnde5zYIS8qCDT86aOvEDX52', 'I1G1BWLcpUTcVU3smdRF1fmgPCR2', 'mUaEdJMTlVX5rRJBTsMEYialWtD2'];
+const OWNER_UID = [
+  'ZAz0Bnde5zYIS8qCDT86aOvEDX52',
+  'I1G1BWLcpUTcVU3smdRF1fmgPCR2',
+  'mUaEdJMTlVX5rRJBTsMEYialWtD2',
+];
 
 function checkAdmin() {
   const auth = inject(Auth);
@@ -15,7 +18,7 @@ function checkAdmin() {
   const router = inject(Router);
 
   return user(auth).pipe(
-    switchMap(u => {
+    switchMap((u) => {
       if (!u) return from([router.createUrlTree(['/login'])]);
 
       // Owner darf immer rein (optional)
@@ -24,9 +27,9 @@ function checkAdmin() {
       // Admin = admins/{uid} existiert
       const ref = doc(firestore, 'admins', u.uid);
       return from(getDoc(ref)).pipe(
-        map(snap => (snap.exists() ? true : router.createUrlTree(['/dashboard'])))
+        map((snap) => (snap.exists() ? true : router.createUrlTree(['/dashboard']))),
       );
-    })
+    }),
   );
 }
 
