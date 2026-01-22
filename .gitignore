@@ -1,72 +1,75 @@
-# dependencies
+# =========================
+# Node / Dependencies
+# =========================
 node_modules/
-
-# Angular build output
-dist/
-.angular/
-
-# coverage output
-coverage/
-
-# environment files (often contain secrets)
-src/environments/*
-!src/environments/environments.ts
-!src/environments/environment*.ts
-
-# logs
+.node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# =========================
+# Angular build / cache
+# =========================
+dist/
+.angular/
+out-tsc/
+tmp/
+.bazel-out/
+.sass-cache/
+.connect.lock
+/libpeerconnection.log
+testem.log
+/typings
+/.angular/cache
+
+# =========================
+# Coverage / Test artifacts
+# =========================
+coverage/
+__screenshots__/
+
+# =========================
+# Environment files (keep template, ignore real env)
+# =========================
+# Keep only the example/template in git
+src/environments/environment.ts
+src/environments/environments.ts
+
+# If you also have other local env variants, ignore them:
+src/environments/environment.local.ts
+src/environments/environment.*.local.ts
+
+# DO NOT ignore these (should be committed)
+!src/environments/environment.example.ts
+!src/environments/environment.prod.ts
+!src/environments/environment.staging.ts
+
+# =========================
 # OS files
+# =========================
 .DS_Store
 Thumbs.db
-.angular
-.github
-.vscode
 
-
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
-# Compiled output
-/dist
-/tmp
-/out-tsc
-/bazel-out
-
-# Node
-/node_modules
-npm-debug.log
-yarn-error.log
-.node_modules
-
-# IDEs and editors
+# =========================
+# IDEs / Editors
+# =========================
 .idea/
 .project
 .classpath
-.c9/
-*.launch
 .settings/
+*.launch
 *.sublime-workspace
 
-# Visual Studio Code
+# VS Code (keep shared settings optional)
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-.history/*
+.history/
 
-# Miscellaneous
-/.angular/cache
-.sass-cache/
-/connect.lock
-/coverage
-/libpeerconnection.log
-testem.log
-/typings
-__screenshots__/
-/src/environments/environments.ts
-/src/environments/*.ts
-
-# System files
+# =========================
+# GitHub / CI
+# =========================
+# IMPORTANT: do NOT ignore .github, otherwise workflows won't run
+# (leave it tracked)
