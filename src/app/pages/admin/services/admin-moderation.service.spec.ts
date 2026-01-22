@@ -5,24 +5,19 @@ import { Auth } from '@angular/fire/auth';
 import { Firestore } from '@angular/fire/firestore';
 
 describe('AdminModerationService', () => {
-  let component: AdminModerationService;
-  let fixture: ComponentFixture<AdminModerationService>;
-
+  let service: AdminModerationService;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AdminModerationService],
       providers: [
         { provide: Auth, useValue: {} as any },
         { provide: Firestore, useValue: {} as any },
       ],
-    }).compileComponents();
+    });
 
-    fixture = TestBed.createComponent(AdminModerationService);
-    component = fixture.componentInstance;
+    service = TestBed.inject(AdminModerationService);
   });
 
   it('should be created', () => {
-    const service = TestBed.inject(AdminModerationService);
     expect(service).toBeTruthy();
   });
 });

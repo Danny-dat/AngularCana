@@ -1,27 +1,35 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideLocationMocks } from '@angular/common/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { AdminUserProvisioningService } from './admin-user-provisioning.service';
-import { Auth } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+import {
+  FIREBASE_TEST_PROVIDERS,
+  disableFirestoreNetworkForTests,
+} from '../../../../testing/firebase-test-providers';
 
 describe('AdminUserProvisioningService', () => {
-      let component: AdminUserProvisioningService;
-  let fixture: ComponentFixture<AdminUserProvisioningService>;
+  let service: AdminUserProvisioningService;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AdminUserProvisioningService],
+    TestBed.configureTestingModule({
       providers: [
-        { provide: Auth, useValue: {} as any },
-        { provide: Firestore, useValue: {} as any },
+        provideRouter([]),
+        provideLocationMocks(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...FIREBASE_TEST_PROVIDERS,
+        AdminUserProvisioningService,
       ],
-    }).compileComponents();
+    });
 
-    fixture = TestBed.createComponent(AdminUserProvisioningService);
-    component = fixture.componentInstance;
+    await disableFirestoreNetworkForTests();
+    service = TestBed.inject(AdminUserProvisioningService);
   });
+
   it('should be created', () => {
-    const service = TestBed.inject(AdminUserProvisioningService);
     expect(service).toBeTruthy();
   });
 });

@@ -1,28 +1,40 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
 import { AdminUserProfileStatsService } from './admin-user-profile-stats.service';
-import { Auth } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+
+import { provideFirebaseApp } from '@angular/fire/app';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { provideFirestore, getFirestore, Firestore } from '@angular/fire/firestore';
+
+import { initializeApp } from 'firebase/app';
+import { disableNetwork } from 'firebase/firestore';
 
 describe('AdminUserProfileStatsService', () => {
-      let component: AdminUserProfileStatsService;
-  let fixture: ComponentFixture<AdminUserProfileStatsService>;
+  let service: AdminUserProfileStatsService;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AdminUserProfileStatsService],
+    TestBed.configureTestingModule({
       providers: [
-        { provide: Auth, useValue: {} as any },
-        { provide: Firestore, useValue: {} as any },
-      ],
-    }).compileComponents();
+        provideFirebaseApp(() =>
+          initializeApp({
+            projectId: 'demo-unit-test',
+            apiKey: 'fake',
+            appId: '1:123:web:abc',
+          })
+        ),
+        provideAuth(() => getAuth()),
+        provideFirestore(() => getFirestore()),
 
-    fixture = TestBed.createComponent(AdminUserProfileStatsService);
-    component = fixture.componentInstance;
+        AdminUserProfileStatsService,
+      ],
+    });
+
+    await disableNetwork(TestBed.inject(Firestore) as any);
+
+    service = TestBed.inject(AdminUserProfileStatsService);
   });
 
   it('should be created', () => {
-    const service = TestBed.inject(AdminUserProfileStatsService);
     expect(service).toBeTruthy();
   });
 });

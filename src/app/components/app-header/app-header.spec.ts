@@ -4,11 +4,15 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideLocationMocks } from '@angular/common/testing';
 import { provideRouter, Router, Routes } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+
 import { AppHeaderComponent } from './app-header';
 
-// Services, die die Komponente injiziert:
+// Services
 import { NotificationService } from '../../services/notification.service';
 import { NotificationSoundService } from '../../services/notification-sound.service';
+import { ThemeService } from '../../services/theme.service';
+import { UserDataService } from '../../services/user-data.service';
+
 import { Auth } from '@angular/fire/auth';
 import { Firestore } from '@angular/fire/firestore';
 
@@ -16,8 +20,12 @@ import { Firestore } from '@angular/fire/firestore';
 @Component({ standalone: true, template: '' })
 class DummyCmp {}
 
-// Test-Routen: eine Route mit data.title, um den Seitentitel zu prüfen
-const routes: Routes = [{ path: 'users', component: DummyCmp, data: { title: 'Benutzer' } }];
+// ✅ Test-Routen (wichtig: login/social existieren, damit Navigation nicht crasht)
+const routes: Routes = [
+  { path: 'users', component: DummyCmp, data: { title: 'Benutzer' } },
+  { path: 'login', component: DummyCmp, data: { title: 'Login' } },
+  { path: 'social', component: DummyCmp, data: { title: 'Social' } },
+];
 
 // ---- Mocks ----
 class MockNotificationService {
@@ -25,9 +33,21 @@ class MockNotificationService {
   notifications$ = new BehaviorSubject<any[]>([]);
   listen = jasmine.createSpy('listen').and.callFake((_uid: string) => () => {});
   markAsRead = jasmine.createSpy('markAsRead').and.returnValue(Promise.resolve());
+  delete = jasmine.createSpy('delete').and.returnValue(Promise.resolve());
 }
+
 class MockNotificationSoundService {
   play = jasmine.createSpy('play').and.returnValue(Promise.resolve());
+}
+
+class MockThemeService {
+  private cur: 'light' | 'dark' = 'light';
+  getTheme() { return this.cur; }
+  setTheme(t: 'light' | 'dark') { this.cur = t; }
+}
+
+class MockUserDataService {
+  saveUserData = jasmine.createSpy('saveUserData').and.returnValue(Promise.resolve());
 }
 
 describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
@@ -38,6 +58,29 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   let sound: MockNotificationSoundService;
 
   beforeEach(async () => {
+    // Keys, die die Komponente nutzt, sauber halten
+    try {
+      localStorage.removeItem('displayName');
+      localStorage.removeItem('username');
+      localStorage.removeItem('notify:sound');
+      localStorage.removeItem('ui:theme');
+      localStorage.removeItem('pref-theme');
+    } catch {}
+
+    // ✅ Auth-Mock: user(this.auth) braucht onIdTokenChanged UND storage-Handler braucht currentUser
+    const mockUser = { uid: 'u1', displayName: null, email: null } as any;
+
+    const authMock: any = {
+      currentUser: mockUser,
+      _delegate: {
+        onIdTokenChanged: (cb: any) => {
+          cb(mockUser);      // -> "eingeloggt"
+          return () => {};   // unsubscribe
+        },
+        signOut: () => Promise.resolve(), // für logout() (optional, aber sauber)
+      },
+    };
+
     await TestBed.configureTestingModule({
       imports: [AppHeaderComponent, DummyCmp],
       providers: [
@@ -45,10 +88,12 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
         provideLocationMocks(),
         { provide: NotificationService, useClass: MockNotificationService },
         { provide: NotificationSoundService, useClass: MockNotificationSoundService },
-        { provide: Auth, useValue: {} as any },
+        { provide: ThemeService, useClass: MockThemeService },
+        { provide: UserDataService, useClass: MockUserDataService },
+        { provide: Auth, useValue: authMock },
+        // Firestore wird hier nicht gebraucht, aber App kann es injizieren
         { provide: Firestore, useValue: {} as any },
       ],
-      // Unbekannte Elemente (z. B. <app-app-sidenav>) im Template ignorieren
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
@@ -62,18 +107,24 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    try { fixture.destroy(); } catch {}
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
   it('shows default "User" and updates from localStorage', async () => {
-    // Standardwert (falls kein Name gesetzt)
-    expect(component.userDisplayName).toBeTruthy();
+    expect(component.userDisplayName).toBe('User');
 
     spyOn(localStorage, 'getItem').and.callFake((key: string) =>
-      key === 'displayName' ? 'LocalName' : (null as any),
+      key === 'displayName' ? 'LocalName' : null,
     );
+
+    // Wichtig: storage-Handler liest localStorage.getItem() (nicht ev.newValue)
     window.dispatchEvent(new StorageEvent('storage', { key: 'displayName' }));
+
     await Promise.resolve();
     fixture.detectChanges();
 
@@ -100,7 +151,9 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
   it('toggles notifications dropdown and closes on outside click', async () => {
     expect(component.showNotifications).toBeFalse();
 
-    const bellBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+    const bellBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+
     bellBtn.click();
     await Promise.resolve();
     fixture.detectChanges();
@@ -112,12 +165,18 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
     expect(component.showNotifications).toBeFalse();
   });
 
-  it('calls markRead when a notification item is clicked', async () => {
-    noti.notifications$.next([{ id: 'n1', message: 'Hello', read: false, timestamp: new Date() }]);
+  it('calls markAsRead when a notification item is clicked', async () => {
+    // optional: typ setzen, falls dein Template openNotification() nutzt
+    noti.notifications$.next([
+      { id: 'n1', message: 'Hello', read: false, timestamp: new Date(), type: 'friend_request' },
+    ]);
+
     await Promise.resolve();
     fixture.detectChanges();
 
-    const bellBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+    const bellBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.bell-wrap .icon-btn');
+
     bellBtn.click();
     await Promise.resolve();
     fixture.detectChanges();
@@ -134,14 +193,12 @@ describe('AppHeaderComponent (provideRouter, ohne ESM-Spies)', () => {
 
   it('navigates to /login on logout and clears localStorage', async () => {
     const removeSpy = spyOn(localStorage, 'removeItem').and.stub();
-    const navigateSpy = spyOn((component as any).router, 'navigateByUrl').and.returnValue(
-      Promise.resolve(true),
-    );
+    const navigateSpy = spyOn((component as any).router, 'navigateByUrl')
+      .and.returnValue(Promise.resolve(true));
 
     await component.logout();
     fixture.detectChanges();
 
-    // Wir testen das beobachtbare Verhalten (Navigation + LocalStorage)
     expect(removeSpy).toHaveBeenCalledWith('displayName');
     expect(navigateSpy).toHaveBeenCalledWith('/login');
   });
