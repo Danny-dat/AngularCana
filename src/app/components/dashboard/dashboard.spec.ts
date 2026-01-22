@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, PLATFORM_ID } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { of } from 'rxjs';
@@ -16,7 +17,7 @@ import {
   disableFirestoreNetworkForTests,
 } from '../../../testing/firebase-test-providers';
 
-// ───────── Mocks ─────────
+// -------------------- Mocks --------------------
 class MockMapService {
   initializeMap = jasmine.createSpy('initializeMap').and.resolveTo();
   invalidateSizeSoon = jasmine.createSpy('invalidateSizeSoon');
@@ -35,49 +36,30 @@ class MockNotificationService {
     .and.returnValue(Promise.resolve());
 }
 
-class MockAdminStatsService {
-  usersCount$ = of(0);
-  adminsCount$ = of(0);
-  bansCount$ = of(0);
-  locksCount$ = of(0);
-
-  onlineNowCount$ = of(0);
-  active24hCount$ = of(0);
-  active7dCount$ = of(0);
-
-  consumptions7dCount$ = of(0);
-  consumptions30dCount$ = of(0);
-
-  reportsTotalCount$ = of(0);
-  reportsResolvedCount$ = of(0);
-  reportsOpenCount$ = of(0);
-
-  eventsCount$ = of(0);
-  eventSuggestionsOpenCount$ = of(0);
-
-  promoSlotsCount$ = of(0);
-  promoSlotsActiveCount$ = of(0);
-}
+class MockAdminStatsService {}
 
 describe('Dashboard', () => {
   let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
 
   beforeEach(async () => {
+    TestBed.overrideComponent(DashboardComponent, {
+      set: {
+        imports: [CommonModule],
+        template: '<div></div>',
+      },
+    });
+
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
         provideLocationMocks(),
-
         { provide: PLATFORM_ID, useValue: 'server' },
-
         { provide: MapService, useClass: MockMapService },
         { provide: EventsService, useClass: MockEventsService },
         { provide: NotificationService, useClass: MockNotificationService },
-
         { provide: AdminStatsService, useClass: MockAdminStatsService },
-
         ...FIREBASE_TEST_PROVIDERS,
       ],
       schemas: [NO_ERRORS_SCHEMA],
