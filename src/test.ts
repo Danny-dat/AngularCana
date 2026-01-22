@@ -23,58 +23,107 @@ declare const jasmine: any;
 // =====================================================
 // ✅ Deterministische Tests: Random zuverlässig AUS (Engine + UI)
 // =====================================================
-function forceJasmineDeterministic() {
-  // 1) Reporter-UI-State löschen (Random Checkbox etc.)
+function patchJasmineEnv(win: any) {
   try {
-    Object.keys(localStorage)
-      .filter(k => k.toLowerCase().includes('jasmine'))
-      .forEach(k => localStorage.removeItem(k));
-  } catch {}
+    const env = win?.jasmine?.getEnv?.();
+    if (!env) return;
 
-  // 2) Jasmine Engine: random AUS
-  try {
-    jasmine?.getEnv?.().configure({ random: false });
-  } catch {}
-
-  // 3) UI-Checkbox "run tests in random order" zwangsweise AUS + sperren
-  const apply = () => {
-    // Manche Jasmine-Versionen nutzen id="random"
-    const cb =
-      document.querySelector<HTMLInputElement>('input#random') ??
-      document.querySelector<HTMLInputElement>('input[name="random"]');
-
-    if (cb) {
-      cb.checked = false;
-      cb.defaultChecked = false;
-      cb.disabled = true; // verhindert versehentliches Wieder-aktivieren
+    // configure() dauerhaft so patchen, dass random niemals true wird
+    if (!env.__randomPatched) {
+      const orig = env.configure.bind(env);
+      env.configure = (cfg: any) => orig({ ...(cfg ?? {}), random: false });
+      env.__randomPatched = true;
     }
 
-    // Falls per URL ?random=true gesetzt wurde, rauspatchen
+    env.configure({ random: false });
+  } catch {
+    // ignore
+  }
+}
+
+function clearJasmineUiState(win: any) {
+  try {
+    Object.keys(win.localStorage)
+      .filter(k => k.toLowerCase().includes('jasmine'))
+      .forEach(k => win.localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}
+
+function forceRandomCheckboxOffInTopUI() {
+  const topWin: any = (window.top && window.top !== window) ? window.top : window;
+
+  const apply = () => {
+    // 1) UI-Checkbox im Top-DOM finden und ausschalten
     try {
-      const url = new URL(window.location.href);
+      const doc: Document = topWin.document;
+
+      const cb =
+        doc.querySelector<HTMLInputElement>('input#random') ??
+        doc.querySelector<HTMLInputElement>('input[name="random"]');
+
+      if (cb) {
+        cb.checked = false;
+        cb.defaultChecked = false;
+        cb.disabled = true; // sperren
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) Falls ?random=true im URL Query steht -> neutralisieren
+    try {
+      const url = new URL(topWin.location.href);
       if (url.searchParams.get('random') === 'true') {
         url.searchParams.set('random', 'false');
-        history.replaceState({}, '', url.toString());
+        topWin.history.replaceState({}, '', url.toString());
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
+
+    // 3) Jasmine-Engine in topWin (falls vorhanden) patchen
+    patchJasmineEnv(topWin);
+
+    // 4) Zusätzlich: alle iframes im Top-Doc durchsuchen und patchen (falls jasmine dort sitzt)
+    try {
+      const frames = Array.from(topWin.document.querySelectorAll('iframe'));
+      for (const f of frames) {
+        const cw = (f as HTMLIFrameElement).contentWindow;
+        if (cw) patchJasmineEnv(cw);
+      }
+    } catch {
+      // ignore
+    }
   };
 
-  // sofort + mehrfach (UI wird oft später gerendert)
-  apply();
-  setTimeout(apply, 0);
-  setTimeout(apply, 200);
-  setTimeout(apply, 1000);
+  // gespeicherte Reporter-Optionen löschen (Top + Frame)
+  clearJasmineUiState(topWin);
+  clearJasmineUiState(window);
 
-  // falls der Reporter/Options-Block dynamisch neu rendert
+  // sofort + mehrfach (weil UI/Reporter oft später gerendert wird)
+  apply();
+  topWin.setTimeout(apply, 0);
+  topWin.setTimeout(apply, 200);
+  topWin.setTimeout(apply, 1000);
+
+  // wenn UI/Reporter neu rendert: wieder anwenden
   try {
-    new MutationObserver(apply).observe(document.documentElement, {
+    new topWin.MutationObserver(apply).observe(topWin.document.documentElement, {
       childList: true,
       subtree: true,
     });
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
 
-forceJasmineDeterministic();
+// 1) Engine im aktuellen Test-Frame patchen (hier läuft test.ts)
+patchJasmineEnv(window);
+
+// 2) UI + Top-Window patchen (Checkbox & ggf. top jasmine)
+forceRandomCheckboxOffInTopUI();
 
 // =====================================================
 
@@ -104,10 +153,7 @@ const GLOBAL_PROVIDERS: any[] = [
   {
     provide: ActivatedRoute,
     useValue: {
-      snapshot: {
-        paramMap: convertToParamMap({}),
-        queryParamMap: convertToParamMap({}),
-      },
+      snapshot: { paramMap: convertToParamMap({}), queryParamMap: convertToParamMap({}) },
       paramMap: of(convertToParamMap({})),
       queryParamMap: of(convertToParamMap({})),
       data: of({}),
