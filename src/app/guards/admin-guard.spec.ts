@@ -8,20 +8,13 @@ import { Auth } from '@angular/fire/auth';
 import { Firestore } from '@angular/fire/firestore';
 
 describe('adminGuard', () => {
-  let component: admin-guard;
-  let fixture: ComponentFixture<admin.guard>;
-
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [admin.guard],
       providers: [
         { provide: Auth, useValue: {} as any },
         { provide: Firestore, useValue: {} as any },
       ],
     }).compileComponents();
-
-    fixture = TestBed.createComponent(admin.guard);
-    component = fixture.componentInstance;
   });
 
   it('should redirect to /login when no user is signed in', async () => {
