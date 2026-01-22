@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 
 import { AccountBlockedComponent } from './account-blocked';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 
 describe('AccountBlockedComponent', () => {
   let fixture: ComponentFixture<AccountBlockedComponent>;
@@ -9,6 +11,10 @@ describe('AccountBlockedComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AccountBlockedComponent],
+      providers: [
+        { provide: Auth, useValue: {} as any },
+        { provide: Firestore, useValue: {} as any },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountBlockedComponent);

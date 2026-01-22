@@ -7,7 +7,7 @@ import { authGuard } from './guards/auth-guard';
 
 import { AppLayoutComponent } from './layouts/app-layout';
 import { PublicLayoutComponent } from './layouts/public-layout';
-import { adminGuard, adminMatchGuard } from './guards/admin.guard';
+import { adminGuard, adminMatchGuard } from './guards/admin-guard';
 
 // Helper für Platzhalterseiten
 const comingSoon = (title: string) => () =>
@@ -45,7 +45,7 @@ export const routes: Routes = [
   {
     path: 'account-blocked',
     loadComponent: () =>
-      import('./pages/admin/dialogs/account-blocked').then(m => m.AccountBlockedComponent),
+      import('./pages/admin/dialogs/account-blocked').then((m) => m.AccountBlockedComponent),
   },
   // --- App-Layout: mit Header ---
   {
@@ -61,7 +61,8 @@ export const routes: Routes = [
       {
         path: 'chat',
         canActivate: [authGuard],
-        loadComponent: () => import('./pages/global-chat/global-chat').then((m) => m.GlobalChatPage),
+        loadComponent: () =>
+          import('./pages/global-chat/global-chat').then((m) => m.GlobalChatPage),
         data: { title: 'Globaler Chat' },
       },
       {
@@ -111,8 +112,8 @@ export const routes: Routes = [
         canMatch: [adminMatchGuard], // verhindert schon das Matching
         canActivate: [authGuard, adminGuard], // doppelt sicher
         loadComponent: () => import('./pages/admin/admin').then((m) => m.AdminPage),
-        loadChildren: () =>import('./pages/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-        data: { title: 'Admin Bereich'},
+        loadChildren: () => import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+        data: { title: 'Admin Bereich' },
       },
 
       // Öffentlich, aber mit Header:
