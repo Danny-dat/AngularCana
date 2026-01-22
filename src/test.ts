@@ -7,7 +7,8 @@ import {
 } from '@angular/platform-browser-dynamic/testing';
 
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { provideFirebaseApp } from '@angular/fire/app';
@@ -17,68 +18,117 @@ import { provideFirestore, getFirestore, disableNetwork } from '@angular/fire/fi
 import { getApp, getApps, initializeApp as initializeFirebaseApp } from 'firebase/app';
 
 declare const require: any;
+declare const jasmine: any;
 
-/**
- * ✅ Force deterministic order in Karma/Jasmine Browser UI
- * Angular 20 + @angular/build:unit-test (runner=karma) can ignore karma.conf.js settings.
- * This patch forces random=false right before Karma starts executing specs.
- */
+// =====================================================
+// ✅ FIX: Random AUS erzwingen (wichtig: Top-Window __karma__ patchen!)
+// =====================================================
 (function forceNoRandomJasmine() {
-  const w = window as any;
+  const topWin: any = (window.top && window.top !== window) ? window.top : window;
 
-  // 1) Remove persisted Jasmine UI settings (random checkbox can be "sticky")
+  // gespeicherte Jasmine UI-Optionen löschen (Checkbox “klebt” sonst)
   try {
-    Object.keys(localStorage)
-      .filter((k) => k.toLowerCase().includes('jasmine'))
-      .forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* ignore */
-  }
+    Object.keys(topWin.localStorage)
+      .filter(k => k.toLowerCase().includes('jasmine'))
+      .forEach(k => topWin.localStorage.removeItem(k));
+  } catch {}
 
-  const apply = () => {
-    const j = w.jasmine;
-    const env = j?.getEnv?.();
-    if (env?.configure) {
+  const patchJasmineEnv = (win: any) => {
+    try {
+      const env = win?.jasmine?.getEnv?.();
+      if (!env) return;
+
+      if (!env.__noRandomPatched) {
+        // configure nie random:true erlauben
+        const origConfigure = env.configure?.bind(env);
+        if (typeof origConfigure === 'function') {
+          env.configure = (cfg: any) => origConfigure({ ...(cfg ?? {}), random: false });
+        }
+
+        // execute: direkt vor Start nochmal random:false setzen
+        const origExecute = env.execute?.bind(env);
+        if (typeof origExecute === 'function') {
+          env.execute = (...args: any[]) => {
+            try { env.configure({ random: false }); } catch {}
+            return origExecute(...args);
+          };
+        }
+
+        env.__noRandomPatched = true;
+      }
+
+      // sofort setzen
       env.configure({ random: false });
+    } catch {}
+  };
+
+  const patchKarmaTopConfig = () => {
+    try {
+      const k = topWin.__karma__;
+      if (!k) return;
+
+      k.config = k.config || {};
+      k.config.client = k.config.client || {};
+      k.config.client.jasmine = k.config.client.jasmine || {};
+      k.config.client.jasmine.random = false;
+
+      // sehr wichtig: direkt vor Start nochmal erzwingen
+      if (!k.__noRandomPatched && typeof k.start === 'function') {
+        const origStart = k.start.bind(k);
+        k.start = (...args: any[]) => {
+          try {
+            k.config.client.jasmine.random = false;
+          } catch {}
+          try {
+            // env im Test-Frame + alle Frames patchen
+            patchJasmineEnv(window);
+            for (const fw of Array.from(topWin.frames as any)) patchJasmineEnv(fw);
+          } catch {}
+          return origStart(...args);
+        };
+        k.__noRandomPatched = true;
+      }
+    } catch {}
+  };
+
+  const patchTopUiCheckbox = () => {
+    try {
+      const doc: Document = topWin.document;
+      const cb =
+        doc.querySelector<HTMLInputElement>('input#random') ??
+        doc.querySelector<HTMLInputElement>('input[name="random"]');
+
+      if (cb) {
+        cb.checked = false;
+        cb.defaultChecked = false;
+        cb.disabled = true;
+      }
+    } catch {}
+  };
+
+  // mehrfach versuchen, weil Runner/iframes/karma-config zeitversetzt kommen
+  const deadline = Date.now() + 15000;
+  const tick = () => {
+    patchKarmaTopConfig();
+    patchTopUiCheckbox();
+
+    // aktuelle Umgebung patchen
+    patchJasmineEnv(window);
+
+    // alle Frames im Top-Window patchen (da sitzt oft jasmine)
+    try {
+      for (const fw of Array.from(topWin.frames as any)) patchJasmineEnv(fw);
+    } catch {}
+
+    if (Date.now() < deadline) {
+      setTimeout(tick, 50);
     }
   };
 
-  // 2) Try once immediately (may be overwritten later by adapter)
-  try {
-    apply();
-  } catch {
-    /* ignore */
-  }
-
-  // 3) Patch Karma start: apply right before execution (wins)
-  try {
-    const karma = w.__karma__;
-    if (karma) {
-      // also try to influence the adapter config if present
-      try {
-        if (karma.config?.client?.jasmine) {
-          karma.config.client.jasmine.random = false;
-        }
-      } catch {
-        /* ignore */
-      }
-
-      const origStart = karma.start;
-      if (typeof origStart === 'function') {
-        karma.start = (...args: any[]) => {
-          try {
-            apply();
-          } catch {
-            /* ignore */
-          }
-          return origStart.apply(karma, args);
-        };
-      }
-    }
-  } catch {
-    /* ignore */
-  }
+  tick();
 })();
+
+// =====================================================
 
 getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
@@ -117,7 +167,6 @@ const GLOBAL_PROVIDERS: any[] = [
   provideAuth(() => getAuth()),
   provideFirestore(() => {
     const fs = getFirestore();
-    // optional: Firestore-Netzwerk aus (verhindert unnötige Verbindungsversuche in Unit-Tests)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     disableNetwork(fs).catch(() => {});
     return fs;
@@ -128,7 +177,6 @@ const GLOBAL_PROVIDERS: any[] = [
 const originalConfigure = TestBed.configureTestingModule.bind(TestBed);
 
 function isProbablyService(x: any): boolean {
-  // Services haben typischerweise ɵprov, aber kein ɵcmp/ɵdir/ɵpipe/ɵmod
   return !!x?.ɵprov && !x?.ɵcmp && !x?.ɵdir && !x?.ɵpipe && !x?.ɵmod;
 }
 
@@ -139,13 +187,13 @@ function isProbablyService(x: any): boolean {
   moduleDef.imports = imports.filter((i: any) => !isProbablyService(i));
   moduleDef.providers = [
     ...(moduleDef.providers ?? []),
-    ...movedServices,    // <- Services aus imports nach providers
-    ...GLOBAL_PROVIDERS, // <- globale Provider für alles
+    ...movedServices,
+    ...GLOBAL_PROVIDERS,
   ];
 
   return originalConfigure(moduleDef);
 };
 
-// ---- Specs laden (Standard Angular CLI) ----
+// ---- Specs laden (stabil!) ----
 const context = require.context('./', true, /\.spec\.ts$/);
-context.keys().forEach(context);
+context.keys().sort().forEach(context);
