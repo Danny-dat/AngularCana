@@ -1,19 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 
 import { SessionService } from './session.service';
-import { Auth } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+
+import {
+  FIREBASE_TEST_PROVIDERS,
+  disableFirestoreNetworkForTests,
+} from '../../testing/firebase-test-providers';
 
 describe('SessionService', () => {
   let service: SessionService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [
-        { provide: Auth, useValue: {} as any },
-        { provide: Firestore, useValue: {} as any },
-      ],
+      providers: [...FIREBASE_TEST_PROVIDERS],
     });
+
+    await disableFirestoreNetworkForTests();
+
     service = TestBed.inject(SessionService);
   });
 

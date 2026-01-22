@@ -1,19 +1,32 @@
 import { TestBed } from '@angular/core/testing';
 
 import { NotificationService } from './notification.service';
-import { Auth } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+import { FriendsService } from './friends.services';
+
+import {
+  FIREBASE_TEST_PROVIDERS,
+  disableFirestoreNetworkForTests,
+} from '../../testing/firebase-test-providers';
 
 describe('NotificationService', () => {
   let service: NotificationService;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
       providers: [
-        { provide: Auth, useValue: {} as any },
-        { provide: Firestore, useValue: {} as any },
+        ...FIREBASE_TEST_PROVIDERS,
+
+        {
+          provide: FriendsService,
+          useValue: {
+            listFriends: jasmine.createSpy('listFriends').and.resolveTo([]),
+          },
+        },
       ],
-    });
+    }).compileComponents?.();
+
+    await disableFirestoreNetworkForTests();
+
     service = TestBed.inject(NotificationService);
   });
 

@@ -1,19 +1,24 @@
 import { TestBed } from '@angular/core/testing';
 
 import { PresenceService } from './presence.service';
-import { Auth } from '@angular/fire/auth';
-import { Firestore } from '@angular/fire/firestore';
+
+import {
+  FIREBASE_TEST_PROVIDERS,
+  disableFirestoreNetworkForTests,
+} from '../../testing/firebase-test-providers';
 
 describe('PresenceService', () => {
   let service: PresenceService;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
       providers: [
-        { provide: Auth, useValue: {} as any },
-        { provide: Firestore, useValue: {} as any },
+        ...FIREBASE_TEST_PROVIDERS,
       ],
-    });
+    }).compileComponents?.();
+
+    await disableFirestoreNetworkForTests();
+
     service = TestBed.inject(PresenceService);
   });
 
