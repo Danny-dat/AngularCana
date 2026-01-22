@@ -23,15 +23,22 @@ jobs:
       - name: Install deps
         run: npm ci --no-audit --no-fund
 
-      - name: Create environment.ts for CI
+      - name: Create environments.ts for CI
+        shell: bash
         run: |
           mkdir -p src/environments
-          if [ -f "src/environments/environment.example.ts" ]; then
-            cp src/environments/environment.example.ts src/environments/environment.ts
-          else
-            echo "Missing src/environments/environment.example.ts"
-            exit 1
-          fi
+          cat > src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: true,
+            useEmulators: false,
+            firebase: {
+              projectId: 'demo-unit-test',
+              apiKey: 'fake',
+              appId: '1:123:web:abc',
+              authDomain: 'demo-unit-test.firebaseapp.com',
+            },
+          };
+          EOF
 
       - name: Run unit tests (with 100% coverage gate)
         run: npm run test:ci
