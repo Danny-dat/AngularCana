@@ -24,7 +24,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 type BanDoc = {
   type: 'ban' | 'lock';
-  until?: any | null; // Timestamp | null
+  until?: any | null;
   reason?: string;
   createdAt?: any;
   createdBy?: string;

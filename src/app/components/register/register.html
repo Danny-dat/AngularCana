@@ -10,6 +10,7 @@
 
     <input
       [(ngModel)]="form.email"
+      #email="ngModel"
       name="email"
       type="email"
       autocomplete="email"
@@ -17,9 +18,17 @@
       required
       [disabled]="isLoading"
     />
+    <div class="field-hint">Wird für Login & Passwort-Reset verwendet. Beispiel: name@example.com</div>
+    @if (email.invalid && (email.dirty || email.touched)) {
+      <div class="field-error">
+        @if (email.errors?.['required']) { Bitte E-Mail eingeben. }
+        @if (email.errors?.['email']) { Bitte eine gültige E-Mail eingeben. }
+      </div>
+    }
 
     <input
       [(ngModel)]="form.password"
+      #password="ngModel"
       name="password"
       type="password"
       autocomplete="new-password"
@@ -28,9 +37,19 @@
       required
       [disabled]="isLoading"
     />
+    <div class="field-hint">Mindestens 6 Zeichen. Tipp: 10+ Zeichen mit Zahl/Sonderzeichen.</div>
+    @if (password.invalid && (password.dirty || password.touched)) {
+      <div class="field-error">
+        @if (password.errors?.['required']) { Bitte Passwort eingeben. }
+        @if (password.errors?.['minlength']) {
+          Passwort zu kurz (min. {{ password.errors?.['minlength']?.requiredLength }} Zeichen).
+        }
+      </div>
+    }
 
     <input
       [(ngModel)]="form.displayName"
+      #displayName="ngModel"
       name="displayName"
       type="text"
       autocomplete="nickname"
@@ -40,6 +59,16 @@
       required
       [disabled]="isLoading"
     />
+    <div class="field-hint">
+      3–20 Zeichen, nur <strong>A–Z</strong>, <strong>0–9</strong> und <strong>_</strong>.
+      Keine Umlaute/Leerzeichen/Bindestriche.
+    </div>
+    @if (displayName.invalid && (displayName.dirty || displayName.touched)) {
+      <div class="field-error">
+        @if (displayName.errors?.['required']) { Bitte Anzeigenamen eingeben. }
+        @if (displayName.errors?.['pattern']) { Format ungültig – erlaubt sind nur A–Z, 0–9 und _. }
+      </div>
+    }
 
     <input
       [(ngModel)]="form.phoneNumber"
@@ -49,6 +78,7 @@
       placeholder="Telefonnummer (optional)"
       [disabled]="isLoading"
     />
+    <div class="field-hint">Optional. Empfehlung: im internationalen Format, z.B. +491234567890</div>
 
     <div class="section-title">Design</div>
 
@@ -70,32 +100,44 @@
         Dunkel
       </button>
     </div>
+    <div class="field-hint">Optional. Wenn du nichts auswählst, wird Standard/Letzte Einstellung verwendet.</div>
 
     <details class="opt-section" open>
       <summary>Profil (optional)</summary>
 
-      <div class="two-col">
-        <input
-          [(ngModel)]="form.firstName"
-          name="firstName"
-          type="text"
-          placeholder="Vorname (optional)"
-          maxlength="40"
-          [disabled]="isLoading"
-        />
+      <p class="field-hint" style="margin-top: 0;">
+        Alles hier ist optional. Du kannst es später unter <strong>Meine Daten</strong> ändern.
+      </p>
 
-        <input
-          [(ngModel)]="form.lastName"
-          name="lastName"
-          type="text"
-          placeholder="Nachname (optional)"
-          maxlength="60"
-          [disabled]="isLoading"
-        />
+      <div class="two-col">
+        <div>
+          <input
+            [(ngModel)]="form.firstName"
+            name="firstName"
+            type="text"
+            placeholder="Vorname (optional)"
+            maxlength="40"
+            [disabled]="isLoading"
+          />
+          <div class="field-hint">Optional.</div>
+        </div>
+
+        <div>
+          <input
+            [(ngModel)]="form.lastName"
+            name="lastName"
+            type="text"
+            placeholder="Nachname (optional)"
+            maxlength="60"
+            [disabled]="isLoading"
+          />
+          <div class="field-hint">Optional.</div>
+        </div>
       </div>
 
       <div class="avatar-block">
         <div class="label">Avatar (optional)</div>
+        <div class="field-hint" style="margin-top:-6px;">Optional. Wähle ein Preset oder „Kein“.</div>
 
         <div class="avatar-grid">
           @for (a of avatarPresets; track a.id) {
@@ -131,6 +173,10 @@
         maxlength="280"
         [disabled]="isLoading"
       ></textarea>
+      <div class="field-hint hint-row">
+        <span>Optional. Max. 280 Zeichen.</span>
+        <span class="counter">{{ (form.bio?.length || 0) }}/280</span>
+      </div>
 
       <input
         [(ngModel)]="form.website"
@@ -140,47 +186,64 @@
         placeholder="Webseite (optional)"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Am besten mit https:// beginnen (z.B. https://example.com)</div>
 
       <div class="two-col">
-        <input
-          [(ngModel)]="form.city"
-          name="city"
-          type="text"
-          placeholder="Stadt (optional)"
-          maxlength="80"
-          [disabled]="isLoading"
-        />
+        <div>
+          <input
+            [(ngModel)]="form.city"
+            name="city"
+            type="text"
+            placeholder="Stadt (optional)"
+            maxlength="80"
+            [disabled]="isLoading"
+          />
+          <div class="field-hint">Optional.</div>
+        </div>
 
-        <input
-          [(ngModel)]="form.country"
-          name="country"
-          type="text"
-          placeholder="Land (optional)"
-          maxlength="80"
-          [disabled]="isLoading"
-        />
+        <div>
+          <input
+            [(ngModel)]="form.country"
+            name="country"
+            type="text"
+            placeholder="Land (optional)"
+            maxlength="80"
+            [disabled]="isLoading"
+          />
+          <div class="field-hint">Optional.</div>
+        </div>
       </div>
 
       <div class="two-col">
-        <input
-          [(ngModel)]="form.birthday"
-          name="birthday"
-          type="date"
-          placeholder="Geburtstag"
-          [disabled]="isLoading"
-        />
+        <div>
+          <input
+            [(ngModel)]="form.birthday"
+            name="birthday"
+            type="date"
+            placeholder="Geburtstag"
+            [disabled]="isLoading"
+          />
+          <div class="field-hint">Optional. Wird nur gespeichert, wenn du es angibst.</div>
+        </div>
 
-        <select [(ngModel)]="form.gender" name="gender" [disabled]="isLoading">
-          <option value="unspecified">Geschlecht (keine Angabe)</option>
-          <option value="male">männlich</option>
-          <option value="female">weiblich</option>
-          <option value="diverse">divers</option>
-        </select>
+        <div>
+          <select [(ngModel)]="form.gender" name="gender" [disabled]="isLoading">
+            <option value="unspecified">Geschlecht (keine Angabe)</option>
+            <option value="male">männlich</option>
+            <option value="female">weiblich</option>
+            <option value="diverse">divers</option>
+          </select>
+          <div class="field-hint">Optional.</div>
+        </div>
       </div>
     </details>
 
     <details class="opt-section">
       <summary>Socials (optional)</summary>
+
+      <p class="field-hint" style="margin-top: 0;">
+        Optional. Am besten nur Username angeben (ohne @). YouTube gerne auch als Link.
+      </p>
 
       <input
         [(ngModel)]="form.instagram"
@@ -190,6 +253,7 @@
         maxlength="60"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Beispiel: username</div>
 
       <input
         [(ngModel)]="form.tiktok"
@@ -199,6 +263,7 @@
         maxlength="60"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Beispiel: username</div>
 
       <input
         [(ngModel)]="form.youtube"
@@ -208,6 +273,7 @@
         maxlength="120"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Link oder Channel-Name.</div>
 
       <input
         [(ngModel)]="form.discord"
@@ -217,6 +283,7 @@
         maxlength="60"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Beispiel: Name#1234 oder neuer Username.</div>
 
       <input
         [(ngModel)]="form.telegram"
@@ -226,10 +293,15 @@
         maxlength="60"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. Beispiel: username</div>
     </details>
 
     <details class="opt-section">
       <summary>Privatsphäre (Public Profil)</summary>
+
+      <p class="field-hint" style="margin-top: 0;">
+        Diese Einstellungen steuern, was in <em>profiles_public</em> landet.
+      </p>
 
       <label class="check-row">
         <input [(ngModel)]="form.showBio" name="showBio" type="checkbox" [disabled]="isLoading" />
@@ -252,7 +324,7 @@
       </label>
 
       <p class="muted">
-        Hinweis: Diese Einstellungen steuern, was in <em>profiles_public</em> landet.
+        Tipp: Wenn „Socials öffentlich“ aus ist, werden deine Social-Felder im Public Profil nicht angezeigt.
       </p>
     </details>
 
@@ -262,6 +334,7 @@
       <label class="field-label">Konsum-Limit (0–20)</label>
       <input
         [(ngModel)]="form.consumptionThreshold"
+        #limit="ngModel"
         name="consumptionThreshold"
         type="number"
         min="0"
@@ -270,11 +343,18 @@
         placeholder="z.B. 3"
         [disabled]="isLoading"
       />
+      <div class="field-hint">Optional. 0 = deaktiviert. Empfehlung: klein starten (z.B. 3).</div>
+      @if (limit.invalid && (limit.dirty || limit.touched)) {
+        <div class="field-error">
+          @if (limit.errors?.['min'] || limit.errors?.['max']) { Bitte einen Wert zwischen 0 und 20 eingeben. }
+        </div>
+      }
 
       <label class="check-row">
         <input [(ngModel)]="form.notificationSound" name="notificationSound" type="checkbox" [disabled]="isLoading" />
         <span>Sound bei Benachrichtigungen</span>
       </label>
+      <div class="field-hint">Optional. Wenn aus, werden Benachrichtigungen stumm angezeigt.</div>
 
       <label class="field-label">Lautstärke (0–100)</label>
       <div class="two-col volume-row">
@@ -289,6 +369,7 @@
 
         <input
           [(ngModel)]="form.notificationVolumePct"
+          #vol="ngModel"
           name="notificationVolumePctNumber"
           type="number"
           min="0"
@@ -297,7 +378,19 @@
           [disabled]="isLoading"
         />
       </div>
+      <div class="field-hint">Aktuell: {{ form.notificationVolumePct }}% (0–100)</div>
+      @if (vol.invalid && (vol.dirty || vol.touched)) {
+        <div class="field-error">
+          @if (vol.errors?.['min'] || vol.errors?.['max']) { Bitte einen Wert zwischen 0 und 100 eingeben. }
+        </div>
+      }
     </details>
+
+    @if (f.dirty && !f.form.valid) {
+      <div class="field-hint">
+        💡 Hinweis: Der Button ist deaktiviert, solange ein Pflichtfeld ungültig ist (rot markiert).
+      </div>
+    }
 
     <button type="submit" [disabled]="isLoading || !f.form.valid">
       {{ isLoading ? 'Registriere…' : 'Registrieren' }}
