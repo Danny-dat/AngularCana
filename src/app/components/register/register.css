@@ -180,3 +180,54 @@
 }
 
 .volume-row input[type="range"]{ width: 100%; }
+
+
+/* ===== Hinweise & Validation ===== */
+.field-hint{
+  margin: -10px auto 12px;
+  width: calc(100% - 24px);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-muted, #6b7280);
+}
+
+.field-error{
+  margin: -10px auto 12px;
+  width: calc(100% - 24px);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #b91c1c;
+}
+
+.hint-row{
+  display:flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.counter{
+  opacity: .9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* rote Umrandung wenn Feld ungültig und angefasst */
+.landing-form input.ng-invalid.ng-touched,
+.landing-form textarea.ng-invalid.ng-touched,
+.landing-form select.ng-invalid.ng-touched{
+  border-color: #ef4444;
+}
+
+/* optional: grün wenn gültig */
+.landing-form input.ng-valid.ng-touched,
+.landing-form textarea.ng-valid.ng-touched,
+.landing-form select.ng-valid.ng-touched{
+  border-color: rgba(54, 165, 70, 0.55);
+}
+
+/* Disabled Button sichtbar */
+.landing-form button:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
