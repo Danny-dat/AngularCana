@@ -1,13 +1,22 @@
-import { Injectable, inject } from '@angular/core';
+import { EnvironmentInjector, Injectable, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { normalizeUnifiedUserNameKey } from '../utils/user-name';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
   private db = inject(Firestore);
+  private injector = inject(EnvironmentInjector);
+
+  /**
+   * AngularFire (zone wrappers) erwartet, dass Firebase-APIs innerhalb eines Injection-Context
+   * aufgerufen werden. Deshalb kapseln wir *jeden* Firebase-Aufruf in runInInjectionContext.
+   */
+  private af<T>(fn: () => T): T {
+    return runInInjectionContext(this.injector, fn);
+  }
 
   private pubDoc(uid: string) {
-    return doc(this.db, `profiles_public/${uid}`);
+    return this.af(() => doc(this.db, `profiles_public/${uid}`));
   }
 
   /** optional – falls du beim Login initial befüllen willst */
@@ -18,7 +27,7 @@ export class ProfileService {
     photoURL?: string | null;
   }) {
     const ref = this.pubDoc(user.uid);
-    const snap = await getDoc(ref);
+    const snap = await this.af(() => getDoc(ref));
 
     const name =
       user.displayName ||
@@ -28,17 +37,19 @@ export class ProfileService {
     const key = normalizeUnifiedUserNameKey(name);
 
     if (!snap.exists()) {
-      await setDoc(
-        ref,
-        {
-          displayName: name,
-          username: name,
-          usernameKey: key,
-          photoURL: user.photoURL || null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { merge: true },
+      await this.af(() =>
+        setDoc(
+          ref,
+          {
+            displayName: name,
+            username: name,
+            usernameKey: key,
+            photoURL: user.photoURL || null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          { merge: true },
+        ),
       );
     } else {
       // Falls Felder fehlen, ergänzen wir sie best-effort
@@ -48,7 +59,7 @@ export class ProfileService {
       if (!data?.username && name) patch.username = name;
       if (!data?.usernameKey && key) patch.usernameKey = key;
       if (Object.keys(patch).length > 1) {
-        await setDoc(ref, patch, { merge: true });
+        await this.af(() => setDoc(ref, patch, { merge: true }));
       }
     }
   }
@@ -76,6 +87,7 @@ export class ProfileService {
       const base = (p.username ?? p.displayName ?? '').toString();
       if (base) p.usernameKey = normalizeUnifiedUserNameKey(base);
     }
-    await setDoc(this.pubDoc(uid), { ...p, updatedAt: new Date() }, { merge: true });
+    const ref = this.pubDoc(uid);
+    await this.af(() => setDoc(ref, { ...p, updatedAt: new Date() }, { merge: true }));
   }
 }

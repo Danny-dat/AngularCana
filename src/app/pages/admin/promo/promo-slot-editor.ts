@@ -1,9 +1,18 @@
 // src/app/pages/admin/promo/promo-slot-editor.ts
-import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  EnvironmentInjector,
+  Input,
+  OnDestroy,
+  OnInit,
+  inject,
+  runInInjectionContext,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Firestore, doc, docData, setDoc, serverTimestamp } from '@angular/fire/firestore';
+import { Storage, ref as storageRef, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 
 import { Observable, Subscription, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
@@ -23,6 +32,8 @@ import type { AdSlotConfig } from '../../../models/ad.types';
 type AdSlotDoc = {
   linkUrl?: string | null;
   linkEnabled?: boolean;
+  imgUrl?: string | null;
+  storagePath?: string | null;
   activeExt?: AdSlotConfig['activeExt'] | null;
   updatedAt?: any;
 };
@@ -55,13 +66,26 @@ const IMAGE_RULES = {
 })
 export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   private afs = inject(Firestore, { optional: true });
+  private storage = inject(Storage, { optional: true });
   private snack = inject(MatSnackBar, { optional: true });
+  private injector = inject(EnvironmentInjector);
+
+  /**
+   * AngularFire (zone wrappers) erwartet, dass Firebase-APIs innerhalb eines Injection-Context
+   * aufgerufen werden. Daher kapseln wir Firebase-Aufrufe hier.
+   */
+  private af<T>(fn: () => T): T {
+    return runInInjectionContext(this.injector, fn);
+  }
+
+  readonly storageEnabled = !!this.storage;
 
   @Input({ required: true }) slotId!: string;
   @Input() title = '';
   @Input() subtitle = '';
 
   private sub?: Subscription;
+  private linkSub?: Subscription;
 
   readonly allowed = IMAGE_RULES.allowedMime
     .map((m) => m.replace('image/', '').toUpperCase().replace('SVG+XML', 'SVG'))
@@ -77,6 +101,8 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
     linkEnabled: boolean;
     linkUrl: string | null;
     activeExt: AdSlotConfig['activeExt'];
+    imgUrl?: string | null;
+    storagePath?: string | null;
     updatedAt?: string | null;
   }>;
 
@@ -99,15 +125,25 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
     linkEnabled: boolean;
     linkUrl: string | null;
     activeExt: AdSlotConfig['activeExt'];
+    imgUrl?: string | null;
+    storagePath?: string | null;
     updatedAt?: string | null;
   } = {
     linkEnabled: true,
     linkUrl: null,
     activeExt: 'webp',
+    imgUrl: null,
+    storagePath: null,
     updatedAt: null,
   };
 
   ngOnInit(): void {
+    // "Link aktiv" steuert den Enabled-State des URL-Controls (statt [disabled] im Template)
+    this.linkSub = this.form.controls.linkEnabled.valueChanges.subscribe((enabled) => {
+      this.setLinkUrlEnabled(!!enabled);
+    });
+    this.setLinkUrlEnabled(!!this.form.controls.linkEnabled.value);
+
     if (!this.afs) {
       // z.B. in Unit-Tests ohne AngularFire Provider
       this.doc$ = of({
@@ -127,6 +163,8 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       this.current = {
         linkEnabled: d.linkEnabled ?? true,
         linkUrl: d.linkUrl ?? null,
+        imgUrl: d.imgUrl ?? null,
+        storagePath: d.storagePath ?? null,
         activeExt: (d.activeExt ?? 'svg') as any,
         updatedAt: d.updatedAt ?? null,
       };
@@ -139,17 +177,32 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
         },
         { emitEvent: false },
       );
+
+      // patchValue mit emitEvent:false → enabled/disabled manuell nachziehen
+      this.setLinkUrlEnabled(!!this.current.linkEnabled);
     });
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.linkSub?.unsubscribe();
     if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
+  }
+
+  private setLinkUrlEnabled(enabled: boolean) {
+    const ctrl = this.form.controls.linkUrl;
+    if (enabled) ctrl.enable({ emitEvent: false });
+    else ctrl.disable({ emitEvent: false });
   }
 
   serverTargetPath(): string {
     const ext = this.nextExt();
     return `/assets/promo/${this.slotId}/banner.${ext}`;
+  }
+
+  storageTargetPath(): string {
+    const ext = this.nextExt();
+    return `promo/${this.slotId}/banner.${ext}`;
   }
 
   assetsTargetPath(): string {
@@ -223,22 +276,64 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
     try {
       const afs = this.afs;
       if (!afs) return;
+
+      // Wenn ein neues Bild ausgewaehlt ist, laden wir es direkt nach Firebase Storage hoch.
+      let uploadedImgUrl: string | null = null;
+      let uploadedPath: string | null = null;
+      if (this.selectedFile) {
+        // TS: class properties werden nicht sicher "narrowed" → local copy
+        const storage = this.storage;
+        if (!storage) {
+          this.snack?.open('Firebase Storage ist nicht konfiguriert (provideStorage fehlt).', 'OK', {
+            duration: 3000,
+          });
+          return;
+        }
+
+        const ext = this.nextExt();
+        const path = `promo/${this.slotId}/banner.${ext}`;
+
+        const prepared = await this.prepareFile(this.selectedFile);
+        const ref = this.af(() => storageRef(storage, path));
+
+        // Content-Type: SVG bleibt SVG; sonst WEBP
+        const contentType =
+          this.selectedFile.type === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+
+        await this.af(() =>
+          uploadBytes(ref, prepared, {
+            contentType,
+            cacheControl: 'public,max-age=31536000',
+          } as any),
+        );
+
+        const url = await this.af(() => getDownloadURL(ref));
+        // Cache-Bust fuer Browser/Proxy
+        const v = Date.now();
+        uploadedImgUrl = `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(v)}`;
+        uploadedPath = path;
+      }
+
       const linkEnabled = !!this.form.controls.linkEnabled.value;
       const linkUrl = (this.form.controls.linkUrl.value ?? '').trim();
 
       // Wenn Link deaktiviert -> URL null
       const finalUrl = linkEnabled ? linkUrl || null : null;
 
-      const r = doc(afs, 'adSlots', this.slotId);
-      await setDoc(
-        r,
-        {
-          linkEnabled,
-          linkUrl: finalUrl,
-          activeExt: this.nextExt(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
+      const r = this.af(() => doc(afs, 'adSlots', this.slotId));
+      await this.af(() =>
+        setDoc(
+          r,
+          {
+            linkEnabled,
+            linkUrl: finalUrl,
+            activeExt: this.nextExt(),
+            // Wenn ein Upload stattgefunden hat, ueberschreiben wir imgUrl/storagePath.
+            ...(uploadedImgUrl ? { imgUrl: uploadedImgUrl, storagePath: uploadedPath } : {}),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
       );
 
       this.snack?.open('Promo gespeichert ✅', 'OK', { duration: 2000 });
@@ -247,6 +342,29 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
       this.resetSelection();
     } catch {
       this.snack?.open('Speichern fehlgeschlagen ❌', 'OK', { duration: 3000 });
+    }
+  }
+
+  /** Setzt das Banner zurueck auf Fallback (/assets) */
+  async clearImage() {
+    try {
+      const afs = this.afs;
+      if (!afs) return;
+      const r = this.af(() => doc(afs, 'adSlots', this.slotId));
+      await this.af(() =>
+        setDoc(
+          r,
+          {
+            imgUrl: null,
+            storagePath: null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+      );
+      this.snack?.open('Banner zurueckgesetzt ✅', 'OK', { duration: 2000 });
+    } catch {
+      this.snack?.open('Zuruecksetzen fehlgeschlagen ❌', 'OK', { duration: 3000 });
     }
   }
 
@@ -289,17 +407,21 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
     linkEnabled: boolean;
     linkUrl: string | null;
     activeExt: AdSlotConfig['activeExt'];
+    imgUrl?: string | null;
+    storagePath?: string | null;
     updatedAt?: string | null;
   }> {
     const afs = this.afs;
     if (!afs) {
       return of({ linkEnabled: true, linkUrl: null, activeExt: 'webp', updatedAt: null } as any);
     }
-    const r = doc(afs, 'adSlots', this.slotId);
-    return (docData(r) as Observable<AdSlotDoc>).pipe(
+    const r = this.af(() => doc(afs, 'adSlots', this.slotId));
+    return (this.af(() => docData(r)) as Observable<AdSlotDoc>).pipe(
       map((d) => ({
         linkEnabled: typeof d?.linkEnabled === 'boolean' ? d.linkEnabled : true,
         linkUrl: (d?.linkUrl ?? null) as string | null,
+        imgUrl: (d?.imgUrl ?? null) as string | null,
+        storagePath: (d?.storagePath ?? null) as string | null,
         activeExt: (d?.activeExt ?? 'webp') as any,
         updatedAt: this.toIsoSafe(d?.updatedAt) ?? null,
       })),

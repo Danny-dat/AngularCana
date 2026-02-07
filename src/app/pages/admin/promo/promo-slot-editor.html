@@ -22,7 +22,15 @@
 
       <div class="paths">
         <div class="path-row">
-          <div class="lbl">Server-Pfad (Override):</div>
+          <div class="lbl">Firebase Storage (live):</div>
+          <code>{{ storageTargetPath() }}</code>
+          <button mat-icon-button type="button" (click)="copyPath(storageTargetPath())" aria-label="Pfad kopieren">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+
+        <div class="path-row">
+          <div class="lbl">Optional: Hosting-Override:</div>
           <code>{{ serverTargetPath() }}</code>
           <button mat-icon-button type="button" (click)="copyPath(serverTargetPath())" aria-label="Pfad kopieren">
             <mat-icon>content_copy</mat-icon>
@@ -38,7 +46,11 @@
         </div>
 
         <div class="small">
-          Hinweis: Im Browser kannst du keine Dateien direkt auf den Server schreiben. Nutze „Download“, lade die Datei per FTP nach <b>{{ serverTargetPath() }}</b> hoch (ueberschreibt die alte), dann hier <b>Speichern</b> klicken.
+          @if (storageEnabled) {
+            Hinweis: <b>Speichern</b> laedt (wenn ein Bild ausgewaehlt ist) automatisch nach Firebase Storage hoch und ist sofort live.
+          } @else {
+            Hinweis: Im Browser kannst du keine Dateien direkt auf den Server schreiben. Nutze „Download“, lade die Datei per FTP nach <b>{{ serverTargetPath() }}</b> hoch (ueberschreibt die alte), dann hier <b>Speichern</b> klicken.
+          }
         </div>
       </div>
     </div>
@@ -80,7 +92,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Weiterleitungs-Link (https://...)</mat-label>
-          <input matInput formControlName="linkUrl" [disabled]="!form.controls.linkEnabled.value" />
+          <input matInput formControlName="linkUrl" />
           <mat-hint>Wenn deaktiviert, ist das Banner nicht klickbar.</mat-hint>
           <mat-error *ngIf="form.controls.linkEnabled.value && form.controls.linkUrl.invalid">
             Bitte gueltige URL eintragen (mind. http(s)://...)
@@ -88,9 +100,16 @@
         </mat-form-field>
 
         <div class="btns">
-          <button mat-stroked-button type="button" (click)="downloadPrepared()" [disabled]="!selectedFile || !!fileError">
-            <mat-icon>download</mat-icon>
-            Datei vorbereiten
+          @if (!storageEnabled) {
+            <button mat-stroked-button type="button" (click)="downloadPrepared()" [disabled]="!selectedFile || !!fileError">
+              <mat-icon>download</mat-icon>
+              Datei vorbereiten
+            </button>
+          }
+
+          <button mat-stroked-button type="button" (click)="clearImage()" [disabled]="!current.imgUrl">
+            <mat-icon>restore</mat-icon>
+            Banner zuruecksetzen
           </button>
 
           <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
@@ -100,7 +119,7 @@
         </div>
 
         <div class="small">
-          <b>Empfehlung (damit der Server nicht zugemuellt wird):</b> Nutze nur <code>banner.webp</code> (oder <code>banner.svg</code>) und ueberschreibe die Datei jedes Mal. Dann bleibt der Ordner sauber.
+          <b>Empfehlung:</b> Nutze nur <code>banner.webp</code> (oder <code>banner.svg</code>) und ueberschreibe die Datei jedes Mal. Dann bleiben Ordner und Caches sauber.
         </div>
       </div>
     </div>
