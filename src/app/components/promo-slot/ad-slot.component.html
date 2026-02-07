@@ -1,9 +1,9 @@
 <div class="promo-slot">
-  <span class="ad-label">Anzeige</span>
+  <span class="promo-label">Anzeige</span>
 
   @if (vm$ | async; as vm) {
     @if ((vm.linkEnabled ?? true) && vm.linkUrl) {
-      <a class="ad-link" [href]="vm.linkUrl" target="_blank" rel="noopener noreferrer">
+      <a class="promo-img" [href]="vm.linkUrl" target="_blank" rel="noopener noreferrer">
         <img
           [src]="imgSrc"
           [alt]="_slotId"
