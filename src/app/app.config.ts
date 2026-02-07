@@ -13,6 +13,7 @@ import { routes } from './app.routes';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth, connectAuthEmulator } from '@angular/fire/auth';
 import { provideFirestore, getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
+import { provideStorage, getStorage, connectStorageEmulator } from '@angular/fire/storage';
 import { environment } from '../environments/environment';
 import { AdService } from './services/ad.service';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -52,6 +53,15 @@ export const appConfig: ApplicationConfig = {
         connectFirestoreEmulator(fs, 'localhost', 8080);
       }
       return fs;
+    }),
+
+    provideStorage(() => {
+      const st = getStorage();
+      if (!environment.production && environment.useEmulators) {
+        // Storage-Emulator (Standard-Port 9199)
+        connectStorageEmulator(st, 'localhost', 9199);
+      }
+      return st;
     }),
 
     provideAppInitializer(() => {

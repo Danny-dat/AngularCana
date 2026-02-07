@@ -178,11 +178,13 @@ export class AdService {
         startWith(null),
         map((d: any) => {
           const ts = this.toIsoSafe(d?.updatedAt);
+          const imgUrl = typeof d?.imgUrl === 'string' ? (d.imgUrl as string) : null;
           return {
             id,
             linkEnabled: typeof d?.linkEnabled === 'boolean' ? d.linkEnabled : true,
             linkUrl: (d?.linkUrl ?? null) as string | null,
             activeExt: (d?.activeExt ?? null) as AdSlotConfig['activeExt'] | null,
+            imgUrl,
             configUpdatedAt: ts ?? undefined,
           } as Partial<AdSlotConfig> & { id: string };
         }),
@@ -192,6 +194,7 @@ export class AdService {
             (a?.linkEnabled ?? true) === (b?.linkEnabled ?? true) &&
             (a?.linkUrl ?? null) === (b?.linkUrl ?? null) &&
             (a?.activeExt ?? null) === (b?.activeExt ?? null) &&
+            (a?.imgUrl ?? null) === (b?.imgUrl ?? null) &&
             (a?.configUpdatedAt ?? '') === (b?.configUpdatedAt ?? ''),
         ),
       );
@@ -208,13 +211,16 @@ export class AdService {
           linkEnabled: cfg.linkEnabled ?? prev.linkEnabled ?? true,
           linkUrl: cfg.linkUrl ?? null,
           activeExt: (cfg.activeExt ?? prev.activeExt ?? 'webp') as any,
+          imgUrl: cfg.imgUrl
+            ? this.withVersion(cfg.imgUrl as string, cfg.configUpdatedAt)
+            : prev.imgUrl,
           configUpdatedAt: cfg.configUpdatedAt ?? prev.configUpdatedAt,
         };
         current[id] = next;
 
-        // Bei Konfig-Aenderung: Override neu pruefen, damit Banner sofort aktualisiert
-        // (und mit configUpdatedAt als Cache-Bust)
-        this.refreshOverrideFor(id).catch(() => {});
+        // Kompatibilität: wenn kein imgUrl im Doc steht, versuchen wir weiterhin
+        // das alte "Server-Override" über /assets/promo (HEAD) zu refreshen.
+        if (!cfg.imgUrl) this.refreshOverrideFor(id).catch(() => {});
       }
 
       this.slots$.next(current);
@@ -229,6 +235,13 @@ export class AdService {
 
     const merged: AdSlotConfig = { ...current, ...res };
     this.slots$.next({ ...this.slots$.value, [id]: merged });
+  }
+
+  /** Fuegt einen Cache-Bust Parameter hinzu (funktioniert fuer URLs mit/ohne Query). */
+  private withVersion(url: string, version?: string) {
+    if (!version) return url;
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}v=${encodeURIComponent(version)}`;
   }
 
   private toIsoSafe(v: any): string | null {

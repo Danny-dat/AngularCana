@@ -1,6 +1,9 @@
 export interface AdSlotConfig {
   id: string;
   imgUrl: string; // endgültige URL (mit ?v= Cache-Bust)
+
+  /** Optional: Wenn gesetzt, kommt das Bild direkt aus Firestore/Storage (hat Vorrang vor /assets Overrides) */
+  manualImgUrl?: string | null;
   linkUrl?: string | null;
   /** Link deaktivieren (falls du das Banner nur anzeigen willst) */
   linkEnabled?: boolean;

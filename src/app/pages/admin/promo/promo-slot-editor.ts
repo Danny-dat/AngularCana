@@ -4,6 +4,12 @@ import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Firestore, doc, docData, setDoc, serverTimestamp } from '@angular/fire/firestore';
+import {
+  Storage,
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from '@angular/fire/storage';
 
 import { Observable, Subscription, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
@@ -55,6 +61,7 @@ const IMAGE_RULES = {
 })
 export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   private afs = inject(Firestore, { optional: true });
+  private storage = inject(Storage, { optional: true });
   private snack = inject(MatSnackBar, { optional: true });
 
   @Input({ required: true }) slotId!: string;
@@ -93,6 +100,8 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
   selectedFile: File | null = null;
   previewUrl: string | null = null;
   fileError: string | null = null;
+
+  uploading = false;
 
   // aktuelle Konfig (aus Firestore)
   current: {
@@ -139,6 +148,19 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
         },
         { emitEvent: false },
       );
+
+      // Reactive-Forms: disabled state nicht im Template setzen
+      if (this.current.linkEnabled) {
+        this.form.controls.linkUrl.enable({ emitEvent: false });
+      } else {
+        this.form.controls.linkUrl.disable({ emitEvent: false });
+      }
+    });
+
+    // Toggle disabled/enabled sauber über FormControl
+    this.form.controls.linkEnabled.valueChanges.subscribe((enabled) => {
+      if (enabled) this.form.controls.linkUrl.enable({ emitEvent: false });
+      else this.form.controls.linkUrl.disable({ emitEvent: false });
     });
   }
 
@@ -220,33 +242,65 @@ export class PromoSlotEditorComponent implements OnInit, OnDestroy {
 
   /** Speichert Link + preferred Ext + bump timestamp (Clients refreshen Banner) */
   async save() {
+    const afs = this.afs;
+    if (!afs) return;
+
+    const linkEnabled = !!this.form.controls.linkEnabled.value;
+    const linkUrl = (this.form.controls.linkUrl.value ?? '').trim();
+    const finalUrl = linkEnabled ? linkUrl || null : null;
+
     try {
-      const afs = this.afs;
-      if (!afs) return;
-      const linkEnabled = !!this.form.controls.linkEnabled.value;
-      const linkUrl = (this.form.controls.linkUrl.value ?? '').trim();
+      // 1) optional: Bild hochladen
+      let imgUrl: string | null = null;
+      let activeExt: AdSlotConfig['activeExt'] = this.current.activeExt ?? 'webp';
 
-      // Wenn Link deaktiviert -> URL null
-      const finalUrl = linkEnabled ? linkUrl || null : null;
+      if (this.selectedFile) {
+        const storage = this.storage;
+        if (!storage) {
+          this.snack?.open('Storage nicht initialisiert (AngularFire Storage).', 'OK', {
+            duration: 2500,
+          });
+          return;
+        }
 
-      const r = doc(afs, 'adSlots', this.slotId);
+        this.uploading = true;
+        const prepared = await this.prepareFile(this.selectedFile);
+        activeExt = this.nextExt();
+
+        const path = `promo/${this.slotId}/banner.${activeExt}`;
+        const r = storageRef(storage, path);
+
+        const contentType =
+          activeExt === 'svg' ? 'image/svg+xml' : activeExt === 'webp' ? 'image/webp' : null;
+
+        await uploadBytes(r, prepared, {
+          contentType: contentType ?? undefined,
+          cacheControl: 'public,max-age=31536000',
+        });
+
+        imgUrl = await getDownloadURL(r);
+      }
+
+      // 2) Firestore speichern (Link + ext + imgUrl)
+      const docRef = doc(afs, 'adSlots', this.slotId);
       await setDoc(
-        r,
+        docRef,
         {
           linkEnabled,
           linkUrl: finalUrl,
-          activeExt: this.nextExt(),
+          activeExt,
+          ...(imgUrl ? { imgUrl } : {}),
           updatedAt: serverTimestamp(),
         },
         { merge: true },
       );
 
       this.snack?.open('Promo gespeichert ✅', 'OK', { duration: 2000 });
-
-      // optional: nach speichern selection zuruecksetzen
       this.resetSelection();
     } catch {
       this.snack?.open('Speichern fehlgeschlagen ❌', 'OK', { duration: 3000 });
+    } finally {
+      this.uploading = false;
     }
   }
 

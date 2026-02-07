@@ -30,7 +30,7 @@
   text-decoration: none;
 }
 /* Bildfläche */
-.ad-img {
+.promo-img {
   display: block;
   width: 100%;
   aspect-ratio: var(--ratio);

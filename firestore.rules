@@ -1,0 +1,605 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================
+    // CONFIG / AUTH
+    // =========================
+    function ownerUids() {
+      return [
+        "ZAz0Bnde5zYIS8qCDT86aOvEDX52",
+        "I1G1BWLcpUTcVU3smdRF1fmgPCR2",
+        "mUaEdJMTlVX5rRJBTsMEYialWtD2"
+      ];
+    }
+
+
+
+    function isOwnerUid(uid) {
+      return uid in ownerUids();
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isSignedIn() && (request.auth.uid in ownerUids());
+    }
+
+    // Admin-Doc Existenz (ohne Block-Check)
+    function isAdminDoc(uid) {
+      return exists(/databases/$(database)/documents/admins/$(uid));
+    }
+
+    // Admin = AdminDoc existiert UND nicht geblockt
+    function isAdmin() {
+      return isSignedIn()
+        && isAdminDoc(request.auth.uid)
+        && !isBlocked(request.auth.uid);
+    }
+
+    // Staff = Owner oder Admin
+    function isStaff() {
+      return isOwner() || isAdmin();
+    }
+
+    // Owner darf niemals durch Block-Checks ausgesperrt werden
+    function okUser() {
+      return isSignedIn() && (isOwner() || !isBlocked(request.auth.uid));
+    }
+
+    // =========================
+    // BLOCKING (BAN / LOCK / DELETE)
+    // =========================
+    function banDoc(uid) {
+      return get(/databases/$(database)/documents/banlist/$(uid));
+    }
+
+    function hasBanDoc(uid) {
+      return exists(/databases/$(database)/documents/banlist/$(uid));
+    }
+
+    function isBanned(uid) {
+      return hasBanDoc(uid)
+        && banDoc(uid).data.type == "ban"
+        && (
+          !('until' in banDoc(uid).data)
+          || banDoc(uid).data.until == null
+          || (
+            (banDoc(uid).data.until is timestamp)
+            && (banDoc(uid).data.until > request.time)
+          )
+        );
+    }
+
+    function isLocked(uid) {
+      return hasBanDoc(uid)
+        && banDoc(uid).data.type == "lock"
+        && (
+          !('until' in banDoc(uid).data)
+          || banDoc(uid).data.until == null
+          || (
+            (banDoc(uid).data.until is timestamp)
+            && (banDoc(uid).data.until > request.time)
+          )
+        );
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function isDeleted(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && ('status' in userDoc(uid).data)
+        && ('deletedAt' in userDoc(uid).data.status)
+        && userDoc(uid).data.status.deletedAt != null;
+    }
+
+    function isBlocked(uid) {
+      return isBanned(uid) || isLocked(uid) || isDeleted(uid);
+    }
+
+    function isBannedOrLocked(uid) {
+      return isBanned(uid) || isLocked(uid);
+    }
+
+    // =========================
+    // INVITES HELPERS (Spark Plan)
+    // =========================
+    function inviteDoc(code) {
+      return get(/databases/$(database)/documents/invites/$(code));
+    }
+
+    function hasInvite(code) {
+      return exists(/databases/$(database)/documents/invites/$(code));
+    }
+
+    function inviteNotExpired(code) {
+      return !('expiresAt' in inviteDoc(code).data)
+        || inviteDoc(code).data.expiresAt == null
+        || inviteDoc(code).data.expiresAt > request.time;
+    }
+
+    function inviteRedeemedBy(code, uid) {
+      return hasInvite(code)
+        && inviteNotExpired(code)
+        && ('usedBy' in inviteDoc(code).data)
+        && inviteDoc(code).data.usedBy == uid;
+    }
+
+    function inviteRoleIs(code, role) {
+      return hasInvite(code)
+        && ('roleToAssign' in inviteDoc(code).data)
+        && inviteDoc(code).data.roleToAssign == role;
+    }
+
+    // =========================
+    // ADMINS
+    // =========================
+    match /admins/{uid} {
+      // self zuerst (stabil)
+      allow get: if (isSignedIn() && request.auth.uid == uid) || isStaff();
+      allow list: if isStaff();
+
+      allow create: if
+        (
+          isStaff() && !isOwnerUid(uid)
+        )
+        ||
+        (
+          isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasAny(['inviteCode'])
+          && request.resource.data.inviteCode is string
+          && request.resource.data.inviteCode.size() >= 20
+          && inviteRedeemedBy(request.resource.data.inviteCode, uid)
+          && inviteRoleIs(request.resource.data.inviteCode, "admin")
+        );
+
+      allow update: if isStaff() && !isOwnerUid(uid);
+      allow delete: if isStaff() && !isOwnerUid(uid);
+    }
+
+    // =========================
+    // BANLIST
+    // =========================
+    match /banlist/{uid} {
+      allow get: if (isSignedIn() && request.auth.uid == uid) || isStaff();
+      allow list: if isStaff();
+      allow create, update, delete: if isStaff();
+    }
+
+    // =========================
+    // AUDIT LOGS
+    // =========================
+    match /audit_logs/{id} {
+      allow read: if isStaff();
+
+      allow create: if isStaff()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'timestamp','action','targetUid','actorUid','reason','meta'
+        ]);
+
+      allow update, delete: if false;
+    }
+
+    // =========================
+    // REPORTS
+    // =========================
+    match /reports/{id} {
+      allow create: if isSignedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.reasonCategory is string
+        && (
+          (
+            (isOwner() || !isBlocked(request.auth.uid))
+            && request.resource.data.reasonCategory in ['spam','harassment','hate','misinfo','illegal','other']
+          )
+          ||
+          (
+            isBannedOrLocked(request.auth.uid)
+            && request.resource.data.reasonCategory == 'appeal'
+          )
+        )
+        && (
+          !('reasonText' in request.resource.data)
+          || request.resource.data.reasonText == null
+          || (request.resource.data.reasonText is string && request.resource.data.reasonText.size() <= 300)
+        )
+        && (
+          request.resource.data.reasonCategory != 'other'
+          || (('reasonText' in request.resource.data) && request.resource.data.reasonText is string && request.resource.data.reasonText.size() >= 3)
+        )
+        && (
+          request.resource.data.reasonCategory != 'appeal'
+          || (
+            ('messageText' in request.resource.data)
+            && request.resource.data.messageText is string
+            && request.resource.data.messageText.size() >= 10
+            && request.resource.data.messageText.size() <= 1000
+            && ('reportedId' in request.resource.data)
+            && request.resource.data.reportedId == request.auth.uid
+          )
+        );
+
+      allow read, update, delete: if isStaff();
+    }
+
+    // =========================
+    // REACTIVATION REQUESTS
+    // =========================
+    match /reactivation_requests/{uid} {
+      allow read: if isStaff();
+
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && !isBannedOrLocked(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.status == "open";
+
+      allow update: if isStaff();
+      allow delete: if false;
+    }
+
+    // =========================
+    // INVITES
+    // =========================
+    match /invites/{code} {
+      allow get, list: if isStaff();
+
+      allow create: if isStaff()
+        && code.size() >= 20
+        && request.resource.data.keys().hasOnly([
+          'roleToAssign','createdBy','createdAt','expiresAt','usedBy','usedAt','note'
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && (request.resource.data.roleToAssign == "user" || request.resource.data.roleToAssign == "admin")
+        && (
+          !('expiresAt' in request.resource.data)
+          || request.resource.data.expiresAt == null
+          || request.resource.data.expiresAt is timestamp
+        )
+        && (!('usedBy' in request.resource.data) || request.resource.data.usedBy == null)
+        && (!('usedAt' in request.resource.data) || request.resource.data.usedAt == null);
+
+      allow update: if isSignedIn()
+        && code.size() >= 20
+        && inviteNotExpired(code)
+        && (
+          (!('usedBy' in resource.data) || resource.data.usedBy == null)
+          && (!('usedAt' in resource.data) || resource.data.usedAt == null)
+        )
+        && request.resource.data.diff(resource.data)
+            .changedKeys().hasOnly(['usedBy','usedAt'])
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.usedAt is timestamp;
+
+      allow delete: if isStaff();
+    }
+
+    // =========================
+    // USERS (PRIVATE)
+    // =========================
+    match /users/{uid} {
+      // Self get immer erlauben, damit isDeleted() nicht alles kaputt macht
+      allow get: if isSignedIn() && (request.auth.uid == uid || isStaff());
+      allow list: if isStaff();
+
+      allow create: if isSignedIn()
+        && !isBannedOrLocked(request.auth.uid)
+        && request.auth.uid == uid
+        && !('roles' in request.resource.data)
+        && !('status' in request.resource.data);
+
+      allow update: if okUser()
+        && (
+          isStaff()
+          || (
+            request.auth.uid == uid
+            && !request.resource.data.diff(resource.data)
+                .changedKeys().hasAny(['roles','status','createdAt'])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // =========================
+    // DISPLAY NAME REGISTRY
+    // =========================
+    match /display_names/{key} {
+      allow read: if okUser();
+      allow list: if isStaff();
+
+      allow create: if okUser()
+        && key.matches('^[a-z0-9_.]{3,20}$')
+        && request.resource.data.keys().hasOnly(['uid','displayName','createdAt','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.matches('^[A-Za-z0-9_.]{3,20}$')
+        && ( !('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp || request.resource.data.createdAt == null )
+        && ( !('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp || request.resource.data.updatedAt == null );
+
+      allow update: if okUser()
+        && key.matches('^[a-z0-9_.]{3,20}$')
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','displayName','createdAt','updatedAt'])
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.matches('^[A-Za-z0-9_.]{3,20}$');
+
+      allow delete: if isStaff()
+        || (okUser() && resource.data.uid == request.auth.uid);
+    }
+
+    // =========================
+    // PUBLIC PROFILE
+    // =========================
+    match /profiles_public/{uid} {
+      allow read: if okUser();
+
+      allow create, update: if okUser()
+        && (request.auth.uid == uid || isStaff())
+        && request.resource.data.keys().hasOnly([
+          'displayName','username','usernameKey',
+          'photoURL',
+          'bio','website','locationText','socials',
+          'lastLocation','lastActiveAt',
+          'createdAt','updatedAt'
+        ]);
+
+      allow delete: if isStaff();
+    }
+
+    // =========================
+    // FRIEND PROFILES
+    // =========================
+    match /profiles_friends/{uid} {
+      allow read: if okUser()
+        && (request.auth.uid == uid
+            || (resource.data.allowed != null
+                && request.auth.uid in resource.data.allowed));
+
+      allow create, update, delete: if okUser() && request.auth.uid == uid;
+    }
+
+    // =========================
+    // CONSUMPTIONS
+    // =========================
+    match /consumptions/{id} {
+      allow get: if okUser()
+        && (resource.data.userId == request.auth.uid || isStaff());
+
+      allow list: if okUser()
+        && (resource.data.userId == request.auth.uid || isStaff());
+
+      allow create: if okUser()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if okUser()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // =========================
+    // NOTIFICATIONS
+    // =========================
+    match /notifications/{id} {
+      allow create: if okUser()
+        && request.resource.data.senderId == request.auth.uid;
+
+      allow read, update, delete: if okUser()
+        && resource.data.recipientId == request.auth.uid;
+    }
+
+    // =========================
+    // FRIEND REQUESTS
+    // =========================
+    match /friend_requests/{id} {
+
+      function allowedTransition(old, neu) {
+        return (
+          (old == 'pending'  && (neu in ['accepted','declined','cancelled','blocked'])) ||
+          (old == 'accepted' && (neu in ['removed','blocked'])) ||
+          (old == 'declined' && (neu in ['blocked'])) ||
+          (old == 'blocked'  && (neu in ['removed','accepted'])) ||
+          (old == 'removed'  && (neu in ['blocked']))
+        );
+      }
+
+      allow create: if okUser()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.fromUid != request.resource.data.toUid
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2
+        && request.resource.data.participants.hasAll([
+             request.resource.data.fromUid,
+             request.resource.data.toUid
+           ])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is timestamp
+        && (!('respondedAt' in request.resource.data)
+            || request.resource.data.respondedAt is timestamp);
+
+      allow read: if okUser()
+        && (request.auth.uid == resource.data.fromUid
+            || request.auth.uid == resource.data.toUid
+            || (resource.data.participants != null
+                && request.auth.uid in resource.data.participants));
+
+      allow update: if okUser()
+        && (request.auth.uid == resource.data.fromUid
+            || request.auth.uid == resource.data.toUid)
+        && request.resource.data.fromUid == resource.data.fromUid
+        && request.resource.data.toUid == resource.data.toUid
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status','respondedAt'])
+        && (!('respondedAt' in request.resource.data)
+            || request.resource.data.respondedAt is timestamp)
+        && allowedTransition(resource.data.status, request.resource.data.status);
+
+      allow delete: if okUser()
+        && (request.auth.uid == resource.data.fromUid
+            || request.auth.uid == resource.data.toUid);
+    }
+
+    // =========================
+    // CHATS / MESSAGES
+    // =========================
+    match /chats/{chatId} {
+      function chat() {
+        return get(/databases/$(database)/documents/chats/$(chatId));
+      }
+      function isChannel() {
+        return chat().data.type == 'channel';
+      }
+      function isParticipant() {
+        return chat().data.participants != null
+               && request.auth.uid in chat().data.participants;
+      }
+
+      allow create: if okUser();
+
+      allow read: if okUser() && (isChannel() || isParticipant());
+
+      allow update: if okUser()
+        && (
+          (isChannel() && (!('type' in request.resource.data) || request.resource.data.type == 'channel'))
+          || isParticipant()
+          || (request.resource.data.participants != null && request.auth.uid in request.resource.data.participants)
+        );
+    }
+
+    match /chats/{chatId}/throttle/{uid} {
+      allow read, write: if okUser() && request.auth.uid == uid;
+    }
+
+    match /chats/{chatId}/messages/{msgId} {
+      function chat() {
+        return get(/databases/$(database)/documents/chats/$(chatId));
+      }
+      function isChannel() {
+        return chat().data.type == 'channel';
+      }
+      function isParticipant() {
+        return chat().data.participants != null
+               && request.auth.uid in chat().data.participants;
+      }
+
+      allow read: if okUser() && (isChannel() || isParticipant());
+
+      allow create: if okUser()
+        && (isChannel() || isParticipant())
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && (
+          !exists(/databases/$(database)/documents/chats/$(chatId)/throttle/$(request.auth.uid))
+          ||
+          request.time.toMillis()
+            - get(/databases/$(database)/documents/chats/$(chatId)/throttle/$(request.auth.uid))
+                .data.lastSentAt.toMillis()
+            >= 1000
+        );
+
+      allow update, delete: if false;
+    }
+
+    // =========================
+    // PRESENCE / EVENTS / AGGREGATES / BANNERS / ADSLOTS
+    // =========================
+    match /presence/{uid} {
+      allow read: if okUser();
+      allow create, update: if okUser() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    match /events/{id} {
+      allow read: if okUser();
+      allow create, delete: if isStaff();
+      allow update: if okUser();
+    }
+
+    match /event_suggestions/{id} {
+      // User darf vorschlagen, aber nicht wenn geblockt (Owner immer ok)
+      allow create: if okUser();
+
+      allow read: if isStaff()
+        || (isSignedIn() && resource.data.createdBy == request.auth.uid);
+
+      allow update: if isStaff()
+        || (okUser()
+            && resource.data.createdBy == request.auth.uid
+            && resource.data.status == "open");
+
+      allow delete: if isStaff()
+        || (okUser()
+            && resource.data.createdBy == request.auth.uid
+            && resource.data.status == "open");
+    }
+
+    match /aggregates/{docId} {
+      allow read: if isStaff();
+      allow write: if false;
+
+      match /{subCol}/{aggId} {
+        allow read: if isStaff();
+        allow write: if false;
+      }
+    }
+
+    match /banners/{bannerId} {
+      allow read: if okUser();
+      allow create, update, delete: if isStaff();
+    }
+
+    match /adSlots/{slotId} {
+      // optional public read (für Login / Promo Anzeige ohne Auth)
+      allow read: if request.auth == null || okUser();
+      allow create, update, delete: if isStaff();
+    }
+
+    // =========================
+    // STATS
+    // =========================
+    function isStatsDayId(day) {
+      return day.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+    function isBreakdownKind(kind) {
+      return kind in ['products','devices','locations','pairs','hours','weekdays','geo'];
+    }
+
+    match /stats_meta/{id} {
+      allow read: if isStaff();
+      allow create, update, delete: if isStaff() && id == 'global';
+    }
+
+    match /stats_daily/{day} {
+      allow read: if isStaff();
+      allow create, update, delete: if isStaff() && isStatsDayId(day);
+
+      match /{kind}/{key} {
+        allow read: if isStaff();
+        allow create, update, delete: if isStaff()
+          && isStatsDayId(day)
+          && isBreakdownKind(kind);
+      }
+    }
+
+    match /{path=**}/{kind}/{key} {
+      allow read: if isStaff()
+        && kind in ['products','devices','locations','pairs','hours','weekdays','geo'];
+    }
+
+    // =========================
+    // DEFAULT DENY
+    // =========================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

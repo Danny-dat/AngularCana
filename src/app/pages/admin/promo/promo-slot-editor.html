@@ -22,9 +22,9 @@
 
       <div class="paths">
         <div class="path-row">
-          <div class="lbl">Server-Pfad (Override):</div>
-          <code>{{ serverTargetPath() }}</code>
-          <button mat-icon-button type="button" (click)="copyPath(serverTargetPath())" aria-label="Pfad kopieren">
+          <div class="lbl">Firebase Storage Pfad:</div>
+          <code>promo/{{ slotId }}/banner.{{ nextExt() }}</code>
+          <button mat-icon-button type="button" (click)="copyPath('promo/' + slotId + '/banner.' + nextExt())" aria-label="Pfad kopieren">
             <mat-icon>content_copy</mat-icon>
           </button>
         </div>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="small">
-          Hinweis: Im Browser kannst du keine Dateien direkt auf den Server schreiben. Nutze „Download“, lade die Datei per FTP nach <b>{{ serverTargetPath() }}</b> hoch (ueberschreibt die alte), dann hier <b>Speichern</b> klicken.
+          Sobald du ein Bild auswählst und <b>Speichern</b> klickst, wird es direkt nach Firebase Storage hochgeladen und auf der Live-Seite sofort angezeigt.
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Weiterleitungs-Link (https://...)</mat-label>
-          <input matInput formControlName="linkUrl" [disabled]="!form.controls.linkEnabled.value" />
+          <input matInput formControlName="linkUrl" />
           <mat-hint>Wenn deaktiviert, ist das Banner nicht klickbar.</mat-hint>
           <mat-error *ngIf="form.controls.linkEnabled.value && form.controls.linkUrl.invalid">
             Bitte gueltige URL eintragen (mind. http(s)://...)
@@ -88,19 +88,14 @@
         </mat-form-field>
 
         <div class="btns">
-          <button mat-stroked-button type="button" (click)="downloadPrepared()" [disabled]="!selectedFile || !!fileError">
-            <mat-icon>download</mat-icon>
-            Datei vorbereiten
-          </button>
-
-          <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
+          <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid || uploading || !!fileError">
             <mat-icon>save</mat-icon>
-            Speichern
+            @if (uploading) { Speichere… } @else { Speichern }
           </button>
         </div>
 
         <div class="small">
-          <b>Empfehlung (damit der Server nicht zugemuellt wird):</b> Nutze nur <code>banner.webp</code> (oder <code>banner.svg</code>) und ueberschreibe die Datei jedes Mal. Dann bleibt der Ordner sauber.
+          <b>Hinweis:</b> Der Dateiname ist immer <code>banner.webp</code> (oder <code>banner.svg</code>). Beim nächsten Upload wird die Datei überschrieben.
         </div>
       </div>
     </div>
