@@ -69,7 +69,6 @@ export const appConfig: ApplicationConfig = {
       const platformId = inject(PLATFORM_ID);
 
       if (isPlatformBrowser(platformId)) {
-        ads.init(); // Defaults setzen + Overrides prüfen
       }
       // nichts zurückgeben nötig; Promise wäre auch erlaubt
     }),
