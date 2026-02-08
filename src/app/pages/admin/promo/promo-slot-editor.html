@@ -21,22 +21,6 @@
       <promo-slot [slotId]="slotId" data-variant="wide"></promo-slot>
 
       <div class="paths">
-        <div class="path-row">
-          <div class="lbl">Firebase Storage Pfad:</div>
-          <code>promo/{{ slotId }}/banner.{{ nextExt() }}</code>
-          <button mat-icon-button type="button" (click)="copyPath('promo/' + slotId + '/banner.' + nextExt())" aria-label="Pfad kopieren">
-            <mat-icon>content_copy</mat-icon>
-          </button>
-        </div>
-
-        <div class="path-row">
-          <div class="lbl">Assets-Fallback (Build):</div>
-          <code>{{ assetsTargetPath() }}</code>
-          <button mat-icon-button type="button" (click)="copyPath(assetsTargetPath())" aria-label="Pfad kopieren">
-            <mat-icon>content_copy</mat-icon>
-          </button>
-        </div>
-
         <div class="small">
           Sobald du ein Bild auswählst und <b>Speichern</b> klickst, wird es direkt nach Firebase Storage hochgeladen und auf der Live-Seite sofort angezeigt.
         </div>

@@ -356,7 +356,7 @@ export class EventsComponent {
   /** Öffnet erst Modal; bei „Nicht mehr fragen“ direkt Maps */
   openRoute(e: EventItem) {
     if (this.skipConfirm()) {
-      // 👉 leeren Tab sofort öffnen, dann URL berechnen
+      // leeren Tab sofort öffnen, dann URL berechnen
       const popup = this.openBlankTab();
       this.openMaps(e, 'walking', popup);
       return;
@@ -383,7 +383,7 @@ export class EventsComponent {
     this.confirmOpen.set(false);
 
     if (e) {
-      // 👉 leeren Tab sofort öffnen (innerhalb des Click-Handlers)
+      // leeren Tab sofort öffnen (innerhalb des Click-Handlers)
       const popup = this.openBlankTab();
       await this.openMaps(e, 'walking', popup);
     }
