@@ -3,7 +3,7 @@
   min-height: calc(100vh - 40px);
 }
 
-.logo { width:120px; height:120px; margin-top:20px; border-radius:50%; object-fit:cover; }
+.logo { width:130px; height:110px; margin-top:20px; border-radius:30%; object-fit:cover; }
 
 .landing-form {
   width:100%; max-width:400px; padding:30px; box-sizing:border-box; text-align:center;
